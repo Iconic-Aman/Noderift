@@ -1,0 +1,279 @@
+
+<style>
+  .layer { border-radius: 12px; border: 0.5px solid var(--color-border-tertiary); margin-bottom: 10px; overflow: hidden; }
+  .layer-header { padding: 10px 16px; display: flex; align-items: center; gap: 10px; cursor: pointer; user-select: none; }
+  .layer-title { font-size: 14px; font-weight: 500; color: var(--color-text-primary); flex: 1; }
+  .layer-badge { font-size: 11px; padding: 2px 10px; border-radius: 20px; white-space: nowrap; font-weight: 500; }
+  .layer-body { padding: 0 16px 14px; border-top: 0.5px solid var(--color-border-tertiary); }
+  .tech-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 8px; margin-top: 12px; }
+  .tech-card { background: var(--color-background-primary); border: 0.5px solid var(--color-border-tertiary); border-radius: 8px; padding: 10px 12px; }
+  .tech-name { font-size: 13px; font-weight: 500; color: var(--color-text-primary); margin-bottom: 2px; }
+  .tech-role { font-size: 11px; color: var(--color-text-secondary); line-height: 1.4; }
+  .alt-tag { font-size: 11px; color: var(--color-text-tertiary); margin-top: 4px; }
+  .warn-box { background: var(--color-background-warning); border: 0.5px solid var(--color-border-tertiary); border-radius: 8px; padding: 10px 14px; margin-top: 12px; font-size: 12px; color: var(--color-text-warning); line-height: 1.5; }
+  .tip-box { background: var(--color-background-info); border: 0.5px solid var(--color-border-tertiary); border-radius: 8px; padding: 10px 14px; margin-top: 12px; font-size: 12px; color: var(--color-text-info); line-height: 1.5; }
+
+  .l1 .layer-header { background: #EEEDFE; } .l1 .layer-badge { background: #CECBF6; color: #3C3489; }
+  .l2 .layer-header { background: #E1F5EE; } .l2 .layer-badge { background: #9FE1CB; color: #085041; }
+  .l3 .layer-header { background: #FAEEDA; } .l3 .layer-badge { background: #FAC775; color: #633806; }
+  .l4 .layer-header { background: #E6F1FB; } .l4 .layer-badge { background: #B5D4F4; color: #0C447C; }
+  .l5 .layer-header { background: #FAECE7; } .l5 .layer-badge { background: #F5C4B3; color: #712B13; }
+  .l6 .layer-header { background: #F1EFE8; } .l6 .layer-badge { background: #D3D1C7; color: #444441; }
+
+  @media (prefers-color-scheme: dark) {
+    .l1 .layer-header { background: #26215C; } .l1 .layer-badge { background: #3C3489; color: #CECBF6; }
+    .l2 .layer-header { background: #04342C; } .l2 .layer-badge { background: #085041; color: #9FE1CB; }
+    .l3 .layer-header { background: #412402; } .l3 .layer-badge { background: #633806; color: #FAC775; }
+    .l4 .layer-header { background: #042C53; } .l4 .layer-badge { background: #0C447C; color: #B5D4F4; }
+    .l5 .layer-header { background: #4A1B0C; } .l5 .layer-badge { background: #712B13; color: #F5C4B3; }
+    .l6 .layer-header { background: #2C2C2A; } .l6 .layer-badge { background: #444441; color: #D3D1C7; }
+  }
+</style>
+
+<h2 class="sr-only">Full tech stack for building Noderift (an n8n-like workflow automation tool)</h2>
+
+<div style="font-size: 13px; color: var(--color-text-secondary); margin-bottom: 14px;">Click any layer to expand. Green = your top picks. Alternatives shown where relevant.</div>
+
+<div class="layer l1">
+  <div class="layer-header" onclick="toggle('l1')">
+    <span class="layer-badge">Layer 1</span>
+    <span class="layer-title">Canvas UI — the node editor</span>
+    <span style="font-size:12px;color:var(--color-text-tertiary)" id="l1-arr">▾</span>
+  </div>
+  <div class="layer-body" id="l1-body">
+    <div class="tip-box">React Flow is the right choice. It handles drag-and-drop nodes, bezier edges, custom node types, zoom/pan, and minimap out of the box. Used by Retool, Stripe, and many others for exactly this use case.</div>
+    <div class="tech-grid">
+      <div class="tech-card">
+        <div class="tech-name">React Flow ✓</div>
+        <div class="tech-role">Node canvas, edges, drag-drop, zoom/pan</div>
+        <div class="alt-tag">npmjs: @xyflow/react</div>
+      </div>
+      <div class="tech-card">
+        <div class="tech-name">React + Vite</div>
+        <div class="tech-role">Frontend framework + fast dev bundler</div>
+        <div class="alt-tag">Alt: Next.js if you need SSR</div>
+      </div>
+      <div class="tech-card">
+        <div class="tech-name">Zustand</div>
+        <div class="tech-role">Canvas state — nodes, edges, selections</div>
+        <div class="alt-tag">Alt: Jotai, Redux Toolkit</div>
+      </div>
+      <div class="tech-card">
+        <div class="tech-name">Tailwind CSS</div>
+        <div class="tech-role">Node styling, sidebar, panels</div>
+        <div class="alt-tag">Alt: shadcn/ui components</div>
+      </div>
+      <div class="tech-card">
+        <div class="tech-name">Monaco Editor</div>
+        <div class="tech-role">Code node editor with syntax highlight</div>
+        <div class="alt-tag">Same editor as VS Code</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="layer l2">
+  <div class="layer-header" onclick="toggle('l2')">
+    <span class="layer-badge">Layer 2</span>
+    <span class="layer-title">Backend API — workflow CRUD + auth</span>
+    <span style="font-size:12px;color:var(--color-text-tertiary)" id="l2-arr">▾</span>
+  </div>
+  <div class="layer-body" id="l2-body">
+    <div class="tech-grid">
+      <div class="tech-card">
+        <div class="tech-name">FastAPI ✓</div>
+        <div class="tech-role">REST API — save/load workflows, trigger executions</div>
+        <div class="alt-tag">Alt: Node.js + Express/Hono</div>
+      </div>
+      <div class="tech-card">
+        <div class="tech-name">PostgreSQL</div>
+        <div class="tech-role">Store workflows, credentials, execution history</div>
+        <div class="alt-tag">Workflows stored as JSON in JSONB col</div>
+      </div>
+      <div class="tech-card">
+        <div class="tech-name">SQLAlchemy + Alembic</div>
+        <div class="tech-role">ORM + schema migrations</div>
+        <div class="alt-tag">Alt: Prisma if using Node</div>
+      </div>
+      <div class="tech-card">
+        <div class="tech-name">JWT + OAuth2</div>
+        <div class="tech-role">Auth — user login, API keys</div>
+        <div class="alt-tag">Alt: Clerk or Auth0 for quick start</div>
+      </div>
+      <div class="tech-card">
+        <div class="tech-name">Redis</div>
+        <div class="tech-role">Execution queue, caching, pub/sub for logs</div>
+        <div class="alt-tag">Required for async jobs</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="layer l3">
+  <div class="layer-header" onclick="toggle('l3')">
+    <span class="layer-badge">Layer 3</span>
+    <span class="layer-title">Execution engine — workflow runner</span>
+    <span style="font-size:12px;color:var(--color-text-tertiary)" id="l3-arr">▾</span>
+  </div>
+  <div class="layer-body" id="l3-body">
+    <div class="warn-box">This is the hardest layer to build. Noderift's core is essentially a DAG executor — it reads the node graph and runs nodes in dependency order, passing data between them. You build this yourself in Python.</div>
+    <div class="tech-grid">
+      <div class="tech-card">
+        <div class="tech-name">Custom DAG runner ✓</div>
+        <div class="tech-role">Read workflow JSON → execute nodes in order → pass data</div>
+        <div class="alt-tag">Build with Python asyncio</div>
+      </div>
+      <div class="tech-card">
+        <div class="tech-name">Celery + Redis</div>
+        <div class="tech-role">Async task queue — execute workflows in background</div>
+        <div class="alt-tag">Alt: ARQ (async), RQ</div>
+      </div>
+      <div class="tech-card">
+        <div class="tech-name">LangGraph ✓</div>
+        <div class="tech-role">AI agent nodes — multi-step reasoning, tool use, memory</div>
+        <div class="alt-tag">Only for AI agent sub-workflows</div>
+      </div>
+      <div class="tech-card">
+        <div class="tech-name">LangChain</div>
+        <div class="tech-role">LLM integrations, prompts, chains inside AI nodes</div>
+        <div class="alt-tag">Works alongside LangGraph</div>
+      </div>
+      <div class="tech-card">
+        <div class="tech-name">Temporal.io</div>
+        <div class="tech-role">Durable workflows — retries, timeouts, long-running flows</div>
+        <div class="alt-tag">Alt: Prefect, Airflow (heavier)</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="layer l4">
+  <div class="layer-header" onclick="toggle('l4')">
+    <span class="layer-badge">Layer 4</span>
+    <span class="layer-title">Node integrations — connectors</span>
+    <span style="font-size:12px;color:var(--color-text-tertiary)" id="l4-arr">▾</span>
+  </div>
+  <div class="layer-body" id="l4-body">
+    <div class="tech-grid">
+      <div class="tech-card">
+        <div class="tech-name">httpx / requests</div>
+        <div class="tech-role">Generic HTTP node for any REST API</div>
+        <div class="alt-tag">Core of 80% of integrations</div>
+      </div>
+      <div class="tech-card">
+        <div class="tech-name">Playwright</div>
+        <div class="tech-role">Browser automation node — scraping, clicking</div>
+        <div class="alt-tag">Alt: Puppeteer (Node)</div>
+      </div>
+      <div class="tech-card">
+        <div class="tech-name">Composio</div>
+        <div class="tech-role">Pre-built connectors — Gmail, Slack, Sheets, 200+ apps</div>
+        <div class="alt-tag">Saves months of OAuth work</div>
+      </div>
+      <div class="tech-card">
+        <div class="tech-name">Pydantic</div>
+        <div class="tech-role">Node input/output schema validation</div>
+        <div class="alt-tag">Required for type safety</div>
+      </div>
+      <div class="tech-card">
+        <div class="tech-name">Docker sandbox</div>
+        <div class="tech-role">Isolate user code nodes safely</div>
+        <div class="alt-tag">Alt: Firecracker MicroVMs</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="layer l5">
+  <div class="layer-header" onclick="toggle('l5')">
+    <span class="layer-badge">Layer 5</span>
+    <span class="layer-title">Triggers — how workflows start</span>
+    <span style="font-size:12px;color:var(--color-text-tertiary)" id="l5-arr">▾</span>
+  </div>
+  <div class="layer-body" id="l5-body">
+    <div class="tech-grid">
+      <div class="tech-card">
+        <div class="tech-name">APScheduler</div>
+        <div class="tech-role">Cron / scheduled triggers inside Python</div>
+        <div class="alt-tag">Alt: Celery Beat</div>
+      </div>
+      <div class="tech-card">
+        <div class="tech-name">Webhook endpoints</div>
+        <div class="tech-role">Trigger via HTTP POST — Stripe, GitHub, etc.</div>
+        <div class="alt-tag">FastAPI route per workflow</div>
+      </div>
+      <div class="tech-card">
+        <div class="tech-name">WebSockets</div>
+        <div class="tech-role">Stream live execution logs to the UI</div>
+        <div class="alt-tag">FastAPI + WebSocket or SSE</div>
+      </div>
+      <div class="tech-card">
+        <div class="tech-name">Ngrok / Cloudflare Tunnel</div>
+        <div class="tech-role">Expose local webhooks in dev</div>
+        <div class="alt-tag">Dev only</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="layer l6">
+  <div class="layer-header" onclick="toggle('l6')">
+    <span class="layer-badge">Layer 6</span>
+    <span class="layer-title">Infra + deployment</span>
+    <span style="font-size:12px;color:var(--color-text-tertiary)" id="l6-arr">▾</span>
+  </div>
+  <div class="layer-body" id="l6-body">
+    <div class="tech-grid">
+      <div class="tech-card">
+        <div class="tech-name">Docker + Compose</div>
+        <div class="tech-role">Self-host packaging — API, worker, DB, Redis</div>
+        <div class="alt-tag">Essential for open-source release</div>
+      </div>
+      <div class="tech-card">
+        <div class="tech-name">Railway / Render</div>
+        <div class="tech-role">Managed cloud deploy for early stage</div>
+        <div class="alt-tag">Alt: AWS ECS, GCP Cloud Run</div>
+      </div>
+      <div class="tech-card">
+        <div class="tech-name">Pgvector</div>
+        <div class="tech-role">Persistent vector memory for AI agents</div>
+        <div class="alt-tag">Postgres extension — no extra DB</div>
+      </div>
+      <div class="tech-card">
+        <div class="tech-name">S3 / Cloudflare R2</div>
+        <div class="tech-role">Store execution artifacts, file outputs</div>
+        <div class="alt-tag">R2 is free egress</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div style="background: var(--color-background-secondary); border: 0.5px solid var(--color-border-tertiary); border-radius: 12px; padding: 14px 16px; margin-top: 4px;">
+  <div style="font-size: 13px; font-weight: 500; color: var(--color-text-primary); margin-bottom: 8px;">Recommended start order</div>
+  <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+    <span style="font-size:12px;background:var(--color-background-primary);border:0.5px solid var(--color-border-tertiary);border-radius:6px;padding:4px 10px;color:var(--color-text-primary)">1. React Flow canvas</span>
+    <span style="font-size:12px;color:var(--color-text-tertiary);padding:4px 0">→</span>
+    <span style="font-size:12px;background:var(--color-background-primary);border:0.5px solid var(--color-border-tertiary);border-radius:6px;padding:4px 10px;color:var(--color-text-primary)">2. FastAPI + Postgres</span>
+    <span style="font-size:12px;color:var(--color-text-tertiary);padding:4px 0">→</span>
+    <span style="font-size:12px;background:var(--color-background-primary);border:0.5px solid var(--color-border-tertiary);border-radius:6px;padding:4px 10px;color:var(--color-text-primary)">3. DAG executor</span>
+    <span style="font-size:12px;color:var(--color-text-tertiary);padding:4px 0">→</span>
+    <span style="font-size:12px;background:var(--color-background-primary);border:0.5px solid var(--color-border-tertiary);border-radius:6px;padding:4px 10px;color:var(--color-text-primary)">4. HTTP + Code nodes</span>
+    <span style="font-size:12px;color:var(--color-text-tertiary);padding:4px 0">→</span>
+    <span style="font-size:12px;background:var(--color-background-primary);border:0.5px solid var(--color-border-tertiary);border-radius:6px;padding:4px 10px;color:var(--color-text-primary)">5. LangGraph AI nodes</span>
+  </div>
+</div>
+
+<script>
+const bodies = {};
+const arrows = {};
+document.querySelectorAll('.layer-body').forEach(el => { bodies[el.id] = el; el.style.display = 'none'; });
+document.querySelectorAll('[id$="-arr"]').forEach(el => { arrows[el.id] = el; });
+function toggle(id) {
+  const body = bodies[id + '-body'];
+  const arr = arrows[id + '-arr'];
+  const open = body.style.display !== 'none';
+  body.style.display = open ? 'none' : 'block';
+  arr.textContent = open ? '▾' : '▴';
+}
+toggle('l1'); toggle('l2'); toggle('l3');
+</script>

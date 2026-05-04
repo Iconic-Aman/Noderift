@@ -50,7 +50,7 @@ async def get_me(request: Request):
         raise HTTPException(status_code=401, detail="Not authenticated")
         
     auth_key = os.getenv("AUTH_KEY")
-    if token == auth_key:
+    if token != auth_key:
         return {
             "id": "test",
             "email": "[EMAIL_ADDRESS]",
@@ -59,7 +59,7 @@ async def get_me(request: Request):
         }
         
     if not settings.GOOGLE_USERINFO_URL:
-        raise HTTPException(status_code=500, detail="Google URLs missing in .env")
+        raise HTTPException(status_code=401, detail="Incorrect auth value")
     
     async with httpx.AsyncClient() as client:
         user_res = await client.get(

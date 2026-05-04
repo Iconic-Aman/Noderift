@@ -1,9 +1,11 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from datetime import datetime, timezone
 
 from core.config import settings
+from core.security import AuthMiddleware, bearer_scheme
+from api.routes import auth
 
 app = FastAPI(
     title="Noderift API",
@@ -11,6 +13,7 @@ app = FastAPI(
     version="0.1.0",
     docs_url="/docs",
     redoc_url="/redoc",
+    dependencies=[Depends(bearer_scheme)],
 )
 
 # ---------------------------------------------------------------------------
@@ -23,6 +26,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+app.add_middleware(AuthMiddleware)
+
+app.include_router(auth.router)
 
 
 # ---------------------------------------------------------------------------

@@ -16,6 +16,15 @@ class Settings(BaseSettings):
     # Redis (added in Phase 3)
     REDIS_URL: str = ""
 
+    # Google Auth & External URLs
+    GOOGLE_CLIENT_ID: str = ""
+    GOOGLE_CLIENT_SECRET: str = ""
+    GOOGLE_REDIRECT_URI: str = ""
+    FRONTEND_URL: str = ""
+    GOOGLE_AUTH_URL: str = ""
+    GOOGLE_TOKEN_URL: str = ""
+    GOOGLE_USERINFO_URL: str = ""
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",

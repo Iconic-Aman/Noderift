@@ -50,46 +50,24 @@ code → test locally → git push → Render auto-deploys → verify live URL �
 **Router:** `backend/api/routes/auth.py`
 **Prefix:** `/auth`
 
+**Auth Strategy:**
+1. Check `Authorization: Bearer <token>` header (for testing/Swagger).
+2. Fallback to `access_token` cookie (set by Google OAuth).
+
 | Method | Path | Auth | Description |
 |--------|------|------|-------------|
-| `POST` | `/auth/register` | ❌ | Create new user account |
-| `POST` | `/auth/login` | ❌ | Login → returns JWT access token |
-| `GET` | `/auth/me` | ✅ JWT | Get current user profile |
-| `POST` | `/auth/logout` | ✅ JWT | Invalidate token (client-side) |
-| `POST` | `/auth/refresh` | ✅ JWT | Refresh access token |
+| `GET` | `/auth/google/login` | ❌ | Redirect to Google OAuth consent screen |
+| `GET` | `/auth/google/callback` | ❌ | Handle Google callback, set HTTP-only cookie |
+| `GET` | `/auth/me` | ✅ Cookie/Header | Get current user profile |
+| `POST` | `/auth/logout` | ✅ Cookie/Header | Clear auth cookie |
 
-### POST `/auth/register`
+### GET `/auth/google/login`
+Redirects browser to Google consent screen.
+
+### GET `/auth/google/callback`
 ```json
-// Request
-{
-  "email": "user@example.com",
-  "password": "securepassword123",
-  "name": "Jane Doe"
-}
-
-// Response 201
-{
-  "id": "uuid",
-  "email": "user@example.com",
-  "name": "Jane Doe",
-  "created_at": "2025-05-03T08:30:00Z"
-}
-```
-
-### POST `/auth/login`
-```json
-// Request
-{
-  "email": "user@example.com",
-  "password": "securepassword123"
-}
-
-// Response 200
-{
-  "access_token": "eyJhbGci...",
-  "token_type": "bearer",
-  "expires_in": 3600
-}
+// Response 302 Redirect to Frontend
+// Sets Cookie: access_token=eyJhbGci...; HttpOnly; Secure; SameSite=Lax
 ```
 
 ### GET `/auth/me`
@@ -97,8 +75,9 @@ code → test locally → git push → Render auto-deploys → verify live URL �
 // Response 200
 {
   "id": "uuid",
-  "email": "user@example.com",
+  "email": "user@gmail.com",
   "name": "Jane Doe",
+  "picture": "https://...",
   "created_at": "2025-05-03T08:30:00Z"
 }
 ```
@@ -452,10 +431,10 @@ Authorization: Bearer <access_token>
 |---|--------|------|------|-------|
 | 1 | GET | `/health` | ❌ | Step 1 |
 | 2 | GET | `/` | ❌ | Step 1 |
-| 3 | POST | `/auth/register` | ❌ | Step 2 |
-| 4 | POST | `/auth/login` | ❌ | Step 2 |
+| 3 | GET | `/auth/google/login` | ❌ | Step 2 |
+| 4 | GET | `/auth/google/callback` | ❌ | Step 2 |
 | 5 | GET | `/auth/me` | ✅ | Step 2 |
-| 6 | POST | `/auth/refresh` | ✅ | Step 2 |
+| 6 | POST | `/auth/logout` | ✅ | Step 2 |
 | 7 | POST | `/workflows` | ✅ | Step 3 |
 | 8 | GET | `/workflows` | ✅ | Step 3 |
 | 9 | GET | `/workflows/{id}` | ✅ | Step 3 |

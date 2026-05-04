@@ -5,6 +5,7 @@ from datetime import datetime, timezone
 
 from core.config import settings
 from core.security import AuthMiddleware, bearer_scheme
+from api.routes import auth
 
 app = FastAPI(
     title="Noderift API",
@@ -26,6 +27,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 app.add_middleware(AuthMiddleware)
+
+app.include_router(auth.router)
 
 
 # ---------------------------------------------------------------------------

@@ -69,3 +69,35 @@ def delete_workflow(workflow_id: str, db: Session = Depends(get_db), current_use
         raise HTTPException(status_code=404, detail="Workflow not found")
     db.delete(wf)
     db.commit()
+
+
+@router.patch("/{workflow_id}/activate", response_model=WorkflowSchema)
+def activate_workflow(workflow_id: str, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    """Toggle is_active on a workflow."""
+    wf = db.query(Workflow).filter(Workflow.id == workflow_id, Workflow.user_id == current_user.id).first()
+    if not wf:
+        raise HTTPException(status_code=404, detail="Workflow not found")
+    wf.is_active = not wf.is_active
+    wf.updated_at = datetime.now(timezone.utc)
+    db.commit()
+    db.refresh(wf)
+    return wf
+
+
+@router.post("/{workflow_id}/duplicate", response_model=WorkflowSchema, status_code=201)
+def duplicate_workflow(workflow_id: str, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    """Clone a workflow — copies graph, resets is_active to False."""
+    wf = db.query(Workflow).filter(Workflow.id == workflow_id, Workflow.user_id == current_user.id).first()
+    if not wf:
+        raise HTTPException(status_code=404, detail="Workflow not found")
+    clone = Workflow(
+        user_id=current_user.id,
+        name=f"Copy of {wf.name}",
+        description=wf.description,
+        graph=wf.graph,
+        is_active=False,
+    )
+    db.add(clone)
+    db.commit()
+    db.refresh(clone)
+    return clone

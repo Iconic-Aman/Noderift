@@ -16,6 +16,9 @@ class Settings(BaseSettings):
     # Redis (added in Phase 3)
     REDIS_URL: str = ""
 
+    # Supabase direct Postgres URL
+    SUPABASE_URL: str = ""
+
     # Google Auth & External URLs
     GOOGLE_CLIENT_ID: str = ""
     GOOGLE_CLIENT_SECRET: str = ""

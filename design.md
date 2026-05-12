@@ -470,3 +470,84 @@ Step 1 → FastAPI skeleton  →  Deploy to Render  →  Step 2 → Models + Aut
 ```
 
 See [`api.md`](./api.md) for the full FastAPI endpoint reference used across all phases.
+
+---
+
+## 10. Database Schema Design
+
+```mermaid
+erDiagram
+    USERS ||--o{ WORKFLOWS : owns
+    USERS ||--o{ CREDENTIALS : owns
+    WORKFLOWS ||--o{ EXECUTIONS : "has history of"
+    WORKFLOWS ||--o| WEBHOOKS : "triggered by"
+    WORKFLOWS ||--o| CRON_TRIGGERS : "scheduled by"
+    EXECUTIONS ||--o{ NODE_LOGS : "contains steps"
+
+    USERS {
+        uuid id PK
+        string email UK
+        string name
+        string picture
+        datetime created_at
+    }
+
+    WORKFLOWS {
+        uuid id PK
+        uuid user_id FK
+        string name
+        string description
+        jsonb graph "ReactFlow Nodes & Edges"
+        boolean is_active
+        datetime created_at
+        datetime updated_at
+    }
+
+    EXECUTIONS {
+        uuid id PK
+        uuid workflow_id FK
+        string status "pending|running|success|failed|cancelled"
+        string triggered_by "manual|webhook|cron"
+        datetime started_at
+        datetime finished_at
+    }
+
+    NODE_LOGS {
+        uuid id PK
+        uuid execution_id FK
+        string node_id "Node ID from ReactFlow"
+        string node_type
+        string status "success|failed"
+        jsonb input
+        jsonb output
+        int duration_ms
+        datetime started_at
+        datetime finished_at
+    }
+
+    WEBHOOKS {
+        uuid id PK
+        uuid workflow_id FK
+        string slug UK
+        string secret
+        datetime created_at
+    }
+
+    CRON_TRIGGERS {
+        uuid id PK
+        uuid workflow_id FK
+        string cron_expression
+        string timezone
+        datetime next_run_at
+        boolean is_active
+    }
+
+    CREDENTIALS {
+        uuid id PK
+        uuid user_id FK
+        string name
+        string type "api_key|oauth2|basic_auth"
+        string encrypted_data "AES encrypted"
+        datetime created_at
+    }
+```

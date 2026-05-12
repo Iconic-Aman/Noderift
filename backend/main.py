@@ -2,10 +2,11 @@ from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from datetime import datetime, timezone
+import uvicorn
 
 from core.config import settings
 from core.security import AuthMiddleware, bearer_scheme
-from api.routes import auth
+from api.routes import auth, workflows, credentials
 
 app = FastAPI(
     title="Noderift API",
@@ -29,6 +30,8 @@ app.add_middleware(
 app.add_middleware(AuthMiddleware)
 
 app.include_router(auth.router)
+app.include_router(workflows.router)
+app.include_router(credentials.router)
 
 
 # ---------------------------------------------------------------------------
@@ -69,3 +72,7 @@ async def global_exception_handler(request, exc):
             }
         },
     )
+
+
+if __name__ == "__main__":
+    uvicorn.run(app, host="localhost", port=8000)

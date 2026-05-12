@@ -2,6 +2,7 @@ from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from datetime import datetime, timezone
+import uvicorn
 
 from core.config import settings
 from core.security import AuthMiddleware, bearer_scheme
@@ -71,3 +72,7 @@ async def global_exception_handler(request, exc):
             }
         },
     )
+
+
+if __name__ == "__main__":
+    uvicorn.run(app, host="localhost", port=8000)

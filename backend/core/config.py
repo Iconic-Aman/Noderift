@@ -1,11 +1,13 @@
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from typing import List
-
+import os
+from dotenv import load_dotenv
+load_dotenv()
 
 class Settings(BaseSettings):
     # App
     ENVIRONMENT: str = "development"
-    SECRET_KEY: str = "change-me-in-production"
+    SECRET_KEY: str = os.getenv("ENCRYPTION_KEY")
 
     # CORS — comma-separated list of allowed origins
     ALLOWED_ORIGINS: List[str] = ["http://localhost:5173", "http://localhost:3000"]

@@ -38,3 +38,4 @@ class Settings(BaseSettings):
 
 
 settings = Settings()
+print(type(settings.SECRET_KEY))

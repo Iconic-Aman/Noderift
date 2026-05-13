@@ -306,16 +306,16 @@ Node registry maps `node_type` strings to classes — DAG runner resolves them a
 ### Phase 1 — Foundation (Week 1–2)
 **Goal:** Repo setup, auth, basic CRUD
 
-- [ ] Init monorepo: `frontend/` + `backend/`
-- [ ] Docker Compose: Postgres + Redis + API + Frontend
-- [ ] FastAPI skeleton: health check, CORS, error handlers
-- [ ] SQLAlchemy models: `users`, `workflows`
-- [ ] Alembic migrations
-- [ ] Auth: JWT login + register endpoints
-- [ ] `GET/POST/PUT/DELETE /workflows` CRUD
-- [ ] React + Vite init with Tailwind
-- [ ] Login / register UI pages
-- [ ] Dashboard page (list workflows)
+- ✅ Init monorepo: `frontend/` + `backend/`
+- ✅ Docker Compose: Postgres + Redis + API + Frontend
+- ✅ FastAPI skeleton: health check, CORS, error handlers
+- ✅ SQLAlchemy models: `users`, `workflows`
+- ✅ Alembic migrations
+- ✅ Auth: JWT login + register endpoints
+- ✅ `GET/POST/PUT/DELETE /workflows` CRUD
+- ✅ React + Vite init with Tailwind
+- ✅ Login / register UI pages
+- ✅ Dashboard page (list workflows)
 
 **Deliverable:** Login works. You can create/list/delete workflows via API.
 

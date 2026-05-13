@@ -20,6 +20,7 @@ import { NodePalette } from "@/components/workflow/node-palette";
 import { NodeConfigPanel } from "@/components/workflow/node-config-panel";
 import { TopNavbar } from "@/components/workflow/top-navbar";
 import { WorkflowNode } from "@/components/workflow/workflow-node";
+import { AIChatPanel } from "@/components/workflow/ai-chat-panel";
 import { NodeData } from "@/types/workflow";
 
 const nodeTypes: NodeTypes = {
@@ -110,8 +111,16 @@ export default function App() {
             className="bg-slate-950"
           >
             <Background variant={BackgroundVariant.Dots} gap={20} size={1} color="#334155" />
-            <Controls position="bottom-left" />
-            <MiniMap position="bottom-right" />
+            <Controls 
+              position="bottom-left" 
+              className="!bg-slate-800/80 !border-slate-700 !rounded-lg !shadow-xl [&>button]:!bg-slate-800 [&>button]:!border-slate-700 [&>button]:!text-slate-300 [&>button:hover]:!bg-slate-700"
+            />
+            <MiniMap 
+              position="bottom-right"
+              className="!bg-slate-800/80 !border-slate-700 !rounded-lg"
+              nodeColor="#3b82f6"
+              maskColor="rgba(15, 23, 42, 0.8)"
+            />
           </ReactFlow>
         </div>
         <NodeConfigPanel
@@ -121,6 +130,7 @@ export default function App() {
             setNodes((nds) => nds.map((n) => (n.id === id ? { ...n, data: { ...n.data, config } } : n)));
           }}
         />
+        <AIChatPanel />
       </div>
     </div>
   );

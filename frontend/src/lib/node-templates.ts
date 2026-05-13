@@ -1,7 +1,7 @@
-import { triggerTemplates } from "./triggers";
-import { actionTemplates } from "./actions";
-import { aiTemplates } from "./ai";
-import { logicTemplates } from "./logic";
+import { triggerTemplates } from "./node-templates/triggers";
+import { actionTemplates } from "./node-templates/actions";
+import { aiTemplates } from "./node-templates/ai";
+import { logicTemplates } from "./node-templates/logic";
 
 export const nodeTemplates = [
   ...triggerTemplates,

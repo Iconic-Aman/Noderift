@@ -16,7 +16,7 @@ export function TopNavbar({ workflowName, onNameChange, status, onSave, onRun }:
     setIsEditing(false);
   };
 
-  const statusCfg = {
+  const statusCfg: Record<string, { label: string; icon: any; cls: string; spin?: boolean }> = {
     idle: { label: "Idle", icon: Clock, cls: "bg-slate-700/50 text-slate-400 border-slate-600/50" },
     running: { label: "Running", icon: Loader2, cls: "bg-blue-500/10 text-blue-400 border-blue-500/30", spin: true },
     success: { label: "Success", icon: Check, cls: "bg-green-500/10 text-green-400 border-green-500/30" },

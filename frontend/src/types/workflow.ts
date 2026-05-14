@@ -1,9 +1,9 @@
-export interface NodeData {
+export interface NodeData extends Record<string, unknown> {
   label: string;
-  icon: string;
+  icon: any;
   category: string;
   color: string;
-  config: Record<string, any>;
+  config: Record<string, unknown>;
 }
 
 export interface NodeTemplate {

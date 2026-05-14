@@ -1,15 +1,15 @@
-FROM node:20-slim AS base
-ENV PNPM_HOME="/pnpm"
-ENV PATH="$PNPM_HOME:$PATH"
-RUN corepack enable
-
+# Build stage
+FROM node:20-slim AS build
 WORKDIR /app
-
-COPY package.json ./
+COPY package.json package-lock.json* ./
 RUN npm install
-
 COPY . .
+RUN npm run build
 
-EXPOSE 5173
-
-CMD ["npm", "run", "dev", "--", "--host"]
+# Production stage
+FROM nginx:alpine
+COPY --from=build /app/dist /usr/share/nginx/html
+# Custom nginx config to handle SPA routing if needed
+RUN echo "server { listen 80; location / { root /usr/share/nginx/html; index index.html; try_files \$uri \$uri/ /index.html; } }" > /etc/nginx/conf.d/default.conf
+EXPOSE 80
+CMD ["nginx", "-g", "daemon off;"]

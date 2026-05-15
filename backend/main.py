@@ -11,9 +11,9 @@ from api.routes import auth, workflows, credentials
 app = FastAPI(
     title="Noderift API",
     description="Workflow automation platform — visual node editor with DAG execution engine.",
-    version="0.1.0",
-    docs_url="/docs",
-    redoc_url="/redoc",
+    version="0.1.0",\
+    docs_url="/api/docs",
+    redoc_url="/api/redoc",
     dependencies=[Depends(bearer_scheme)],
 )
 

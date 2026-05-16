@@ -29,9 +29,9 @@ app.add_middleware(
 )
 app.add_middleware(AuthMiddleware)
 
-app.include_router(auth.router)
-app.include_router(workflows.router)
-app.include_router(credentials.router)
+app.include_router(auth.router, prefix= "/api", tags=["auth"])
+app.include_router(workflows.router, prefix= "/api", tags=["workflows"])
+app.include_router(credentials.router, prefix= "/api", tags=["credentials"])
 
 
 # ---------------------------------------------------------------------------

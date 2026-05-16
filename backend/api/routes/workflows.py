@@ -8,8 +8,13 @@ from api.deps import get_current_user
 from models.user import User
 from models.workflow import Workflow
 from schemas.workflow import WorkflowCreate, WorkflowUpdate, Workflow as WorkflowSchema, WorkflowShort
+from core.security import bearer_scheme
 
-router = APIRouter(prefix="/workflows", tags=["workflows"])
+router = APIRouter(
+    prefix="/workflows",
+    tags=["workflows"],
+    dependencies=[Depends(bearer_scheme)]
+)
 
 
 @router.get("/", response_model=List[WorkflowShort])

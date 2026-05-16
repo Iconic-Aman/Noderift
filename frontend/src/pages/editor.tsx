@@ -1,4 +1,5 @@
-import { useState, useCallback, useRef, DragEvent } from "react";
+import { useState, useCallback, useRef, DragEvent, useEffect } from "react";
+import { useParams, useNavigate } from "react-router-dom";
 import {
   ReactFlow,
   addEdge,
@@ -22,19 +23,55 @@ import { TopNavbar } from "@/components/workflow/top-navbar";
 import { WorkflowNode } from "@/components/workflow/workflow-node";
 import { AIChatPanel } from "@/components/workflow/ai-chat-panel";
 import { NodeData } from "@/types/workflow";
+import { apiFetch } from "@/lib/api";
 
 const nodeTypes = {
   workflowNode: WorkflowNode,
 };
 
-export default function App() {
+export default function Editor() {
+  const { id } = useParams();
+  const navigate = useNavigate();
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
   const [nodes, setNodes, onNodesChange] = useNodesState<Node<NodeData>>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
   const [selectedNode, setSelectedNode] = useState<Node<NodeData> | null>(null);
-  const [workflowName, setWorkflowName] = useState("Untitled Workflow");
+  const [workflowName, setWorkflowName] = useState("Loading...");
   const [status, setStatus] = useState<"idle" | "running" | "success">("idle");
   const [rfInstance, setRfInstance] = useState<ReactFlowInstance<Node<NodeData>, Edge> | null>(null);
+
+  useEffect(() => {
+    if (!id) return;
+    const fetchWorkflow = async () => {
+      try {
+        const wf = await apiFetch(`/workflows/${id}`);
+        setWorkflowName(wf.name);
+        if (wf.graph && wf.graph.nodes) {
+          setNodes(wf.graph.nodes);
+          setEdges(wf.graph.edges || []);
+        }
+      } catch (err) {
+        console.error("Failed to load workflow", err);
+      }
+    };
+    fetchWorkflow();
+  }, [id, setNodes, setEdges]);
+
+  const onSave = async () => {
+    if (!id || !rfInstance) return;
+    try {
+      await apiFetch(`/workflows/${id}`, {
+        method: "PATCH",
+        body: JSON.stringify({
+          name: workflowName,
+          graph: { nodes, edges },
+        }),
+      });
+      console.log("Workflow saved");
+    } catch (err) {
+      console.error("Failed to save workflow", err);
+    }
+  };
 
   const onConnect = useCallback(
     (params: Connection) => setEdges((eds) => addEdge(params, eds)),
@@ -86,7 +123,7 @@ export default function App() {
         workflowName={workflowName}
         onNameChange={setWorkflowName}
         status={status}
-        onSave={() => console.log("Save", { nodes, edges })}
+        onSave={onSave}
         onRun={() => {
           setStatus("running");
           setTimeout(() => setStatus("success"), 2000);

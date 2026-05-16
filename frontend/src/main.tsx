@@ -1,8 +1,9 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
-import App from './App'
+import Editor from './pages/editor'
 import { Login } from './pages/login'
+import { Dashboard } from './pages/dashboard'
 import './index.css'
 
 const PrivateRoute = ({ children }: { children: React.ReactNode }) => {
@@ -15,7 +16,8 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
     <BrowserRouter>
       <Routes>
         <Route path="/login" element={<Login />} />
-        <Route path="/" element={<PrivateRoute><App /></PrivateRoute>} />
+        <Route path="/" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
+        <Route path="/editor/:id" element={<PrivateRoute><Editor /></PrivateRoute>} />
       </Routes>
     </BrowserRouter>
   </React.StrictMode>,

@@ -5,9 +5,14 @@ import httpx
 from core.config import settings
 from dotenv import load_dotenv
 load_dotenv()
+from fastapi import Depends
 import os
+from core.security import bearer_scheme
 
-router = APIRouter(prefix="/auth", tags=["auth"])
+router = APIRouter(
+    prefix="/auth", 
+    tags=["auth"],
+    dependencies=[Depends(bearer_scheme)])
 
 @router.get("/google/login")
 async def google_login():

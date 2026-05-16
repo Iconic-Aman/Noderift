@@ -10,8 +10,13 @@ from api.deps import get_current_user
 from models.user import User
 from models.credential import Credential
 from schemas.credential import CredentialCreate, Credential as CredentialSchema
+from core.security import bearer_scheme
 
-router = APIRouter(prefix="/credentials", tags=["credentials"])
+router = APIRouter(
+    prefix="/credentials",
+    tags=["credentials"],
+    dependencies=[Depends(bearer_scheme)]
+)
 
 # SECRET_KEY must be a valid 32-url-safe-base64-encoded bytes key (Fernet format)
 _fernet = Fernet(settings.SECRET_KEY.encode())

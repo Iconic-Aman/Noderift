@@ -1,24 +1,25 @@
 from pydantic_settings import BaseSettings, SettingsConfigDict
-from typing import List
+from typing import List, Optional
 import os
 from dotenv import load_dotenv
+
 load_dotenv()
 
 class Settings(BaseSettings):
     # App
     ENVIRONMENT: str = "development"
-    SECRET_KEY: str = os.getenv("ENCRYPTION_KEY")
+    SECRET_KEY: str = os.getenv("SECRET_KEY") or os.getenv("ENCRYPTION_KEY") or "dev_secret_key_123"
 
     # CORS — comma-separated list of allowed origins
     ALLOWED_ORIGINS: List[str] = ["http://localhost:5173", "http://localhost:3000"]
 
-    # Database (added in Step 2)
+    # Database
     DATABASE_URL: str = ""
 
-    # Redis (added in Phase 3)
+    # Redis
     REDIS_URL: str = ""
 
-    # Supabase direct Postgres URL
+    # Supabase
     SUPABASE_URL: str = ""
 
     # Google Auth & External URLs
@@ -36,6 +37,4 @@ class Settings(BaseSettings):
         extra="ignore",
     )
 
-
 settings = Settings()
-print(type(settings.SECRET_KEY))

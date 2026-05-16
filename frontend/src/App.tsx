@@ -23,7 +23,7 @@ import { WorkflowNode } from "@/components/workflow/workflow-node";
 import { AIChatPanel } from "@/components/workflow/ai-chat-panel";
 import { NodeData } from "@/types/workflow";
 
-const nodeTypes: NodeTypes = {
+const nodeTypes = {
   workflowNode: WorkflowNode,
 };
 
@@ -34,15 +34,15 @@ export default function App() {
   const [selectedNode, setSelectedNode] = useState<Node<NodeData> | null>(null);
   const [workflowName, setWorkflowName] = useState("Untitled Workflow");
   const [status, setStatus] = useState<"idle" | "running" | "success">("idle");
-  const [rfInstance, setRfInstance] = useState<ReactFlowInstance | null>(null);
+  const [rfInstance, setRfInstance] = useState<ReactFlowInstance<Node<NodeData>, Edge> | null>(null);
 
   const onConnect = useCallback(
     (params: Connection) => setEdges((eds) => addEdge(params, eds)),
     [setEdges]
   );
 
-  const onNodeClick = useCallback((_: React.MouseEvent, node: Node) => {
-    setSelectedNode(node as Node<NodeData>);
+  const onNodeClick = useCallback((_: React.MouseEvent, node: Node<NodeData>) => {
+    setSelectedNode(node);
   }, []);
 
   const onPaneClick = useCallback(() => setSelectedNode(null), []);
@@ -95,7 +95,7 @@ export default function App() {
       <div className="flex flex-1 overflow-hidden">
         <NodePalette />
         <div ref={reactFlowWrapper} className="relative flex-1">
-          <ReactFlow
+          <ReactFlow<Node<NodeData>, Edge>
             nodes={nodes}
             edges={edges}
             onNodesChange={onNodesChange}

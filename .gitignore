@@ -1,0 +1,52 @@
+# ── Secrets ──────────────────────────────────────────────────────────────────
+.env
+.env.*
+!.env.example
+
+# ── Agent rules (local only) ──────────────────────────────────────────────────
+.agents/
+
+# ── Python ───────────────────────────────────────────────────────────────────
+__pycache__/
+workflow-automation-canvas
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg
+*.egg-info/
+dist/
+build/
+.eggs/
+.venv/
+venv/
+env/
+*.pyc
+
+# ── Node / Frontend ───────────────────────────────────────────────────────────
+node_modules/
+dist/
+.next/
+.nuxt/
+*.local
+
+# ── IDE ───────────────────────────────────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# ── Docker ────────────────────────────────────────────────────────────────────
+*.log
+docker-compose.override.yml
+
+# ── Alembic ───────────────────────────────────────────────────────────────────
+backend/migrations/versions/*.pyc
+
+# ── Misc ─────────────────────────────────────────────────────────────────────
+*.coverage
+.pytest_cache/
+htmlcov/
+.mypy_cache/

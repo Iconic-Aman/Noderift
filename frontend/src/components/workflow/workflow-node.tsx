@@ -1,9 +1,18 @@
 import { memo } from "react";
-import { Handle, Position, NodeProps, Node } from "@xyflow/react";
+import { Handle, Position, NodeProps, Node, useReactFlow } from "@xyflow/react";
+import { X } from "lucide-react";
 import { NodeData } from "@/types/workflow";
 import { NodeIcon } from "./node-icons";
 
-export const WorkflowNode = memo(({ data, selected }: NodeProps<Node<NodeData>>) => {
+export const WorkflowNode = memo(({ id, data, selected }: NodeProps<Node<NodeData>>) => {
+  const { setNodes, setEdges } = useReactFlow();
+
+  const onDelete = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setNodes((nodes) => nodes.filter((n) => n.id !== id));
+    setEdges((edges) => edges.filter((edge) => edge.source !== id && edge.target !== id));
+  };
+
   return (
     <div
       className={`
@@ -23,6 +32,14 @@ export const WorkflowNode = memo(({ data, selected }: NodeProps<Node<NodeData>>)
           : "0 4px 20px rgba(0, 0, 0, 0.3)",
       }}
     >
+      {selected && (
+        <button
+          onClick={onDelete}
+          className="absolute -top-3 -right-3 z-10 flex h-6 w-6 items-center justify-center rounded-full bg-slate-800 border border-slate-600 text-slate-400 hover:bg-red-500 hover:text-white hover:border-red-500 transition-all shadow-lg opacity-0 group-hover:opacity-100"
+        >
+          <X className="h-3 w-3" />
+        </button>
+      )}
       <Handle
         type="target"
         position={Position.Left}

@@ -107,6 +107,8 @@ export default function App() {
             onDrop={onDrop}
             onDragOver={onDragOver}
             nodeTypes={nodeTypes}
+            deleteKeyCode={['Backspace', 'Delete']}
+            selectionKeyCode={['Shift']}
             fitView
             className="bg-slate-950"
           >

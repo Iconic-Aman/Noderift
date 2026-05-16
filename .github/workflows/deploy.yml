@@ -20,5 +20,6 @@ jobs:
 
           script: |
             cd ${{ secrets.EC2_PATH }}
-            git pull origin testing
+            git fetch origin testing
+            git reset --hard origin/testing
             docker compose up -d --build

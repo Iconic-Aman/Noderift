@@ -18,23 +18,11 @@ export function Login() {
 
     try {
       if (isLogin) {
-        const formData = new FormData();
-        formData.append("username", email); // OAuth2 expects username
-        formData.append("password", password);
-        
-        const data = await apiFetch("/auth/token", {
-          method: "POST",
-          body: formData,
-        });
-        localStorage.setItem("noderift_token", data.access_token);
+        // Just use a test token for dev mode or a real key
+        localStorage.setItem("noderift_token", password || "test_token");
         navigate("/");
       } else {
-        await apiFetch("/auth/register", {
-          method: "POST",
-          body: JSON.stringify({ email, password }),
-        });
-        setIsLogin(true);
-        setError("Registered! Please login.");
+        setError("Use Google Login instead or contact admin.");
       }
     } catch (err: any) {
       setError(err.message || "Failed to authenticate");

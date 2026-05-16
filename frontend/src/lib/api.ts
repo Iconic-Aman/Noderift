@@ -1,4 +1,4 @@
-export const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
+export const API_URL = import.meta.env.VITE_API_URL;
 
 export async function apiFetch(endpoint: string, options: RequestInit = {}) {
   const token = localStorage.getItem("noderift_token");
@@ -6,7 +6,7 @@ export async function apiFetch(endpoint: string, options: RequestInit = {}) {
   
   if (token) {
     headers.set("Authorization", `Bearer ${token}`);
-  }
+  } 
   
   if (!(options.body instanceof FormData)) {
     headers.set("Content-Type", "application/json");

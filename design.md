@@ -324,13 +324,13 @@ Node registry maps `node_type` strings to classes — DAG runner resolves them a
 ### Phase 2 — Canvas UI (Week 3–4)
 **Goal:** Visual node editor working in browser
 
-- [ ] Install `@xyflow/react`
-- [ ] Canvas page with drag-drop nodes
+- [x] Install `@xyflow/react`
+- [x] Canvas page with drag-drop nodes
 - [ ] Zustand store: `useWorkflowStore` (nodes, edges)
-- [ ] Node palette sidebar (searchable)
-- [ ] Custom node component (input/output handles, label)
-- [ ] Edge connection logic
-- [ ] Config panel — click node → see settings form
+- [x] Node palette sidebar (searchable)
+- [x] Custom node component (input/output handles, label)
+- [x] Edge connection logic
+- [x] Config panel — click node → see settings form
 - [ ] Save workflow graph (serialize to JSON → POST to API)
 - [ ] Load workflow from API → render on canvas
 - [ ] Monaco Editor embedded in Code node config

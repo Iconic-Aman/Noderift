@@ -4,15 +4,16 @@ services:
     environment:
       DATABASE_URL: ${DATABASE_URL}
       ENVIRONMENT: ${ENVIRONMENT:-development}
-      SECRET_KEY: ${ENCRYPTION_KEY}
+      SECRET_KEY: ${SECRET_KEY}
     ports:
       - "8000:8000"
 
   frontend:
-    build: ./frontend
+    build: 
+      context: ./frontend
+      args:
+        VITE_API_URL: http://localhost:8000/api
     ports:
       - "3000:80"
-    environment:
-      VITE_API_URL: http://backend:8000
     depends_on:
       - backend

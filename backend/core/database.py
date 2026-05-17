@@ -3,7 +3,7 @@ from sqlalchemy.orm import sessionmaker, declarative_base
 from core.config import settings
 
 # Fallback to sqlite if DATABASE_URL is missing
-SQLALCHEMY_DATABASE_URL = settings.DATABASE_URL if settings.DATABASE_URL else "sqlite:///./noderift.db"
+SQLALCHEMY_DATABASE_URL = settings.db_url or "sqlite:///./noderift.db"
 
 # connect_args={"check_same_thread": False} is needed only for SQLite
 connect_args = {"check_same_thread": False} if SQLALCHEMY_DATABASE_URL.startswith("sqlite") else {}

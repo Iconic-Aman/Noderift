@@ -5,6 +5,9 @@ services:
       DATABASE_URL: ${DATABASE_URL}
       ENVIRONMENT: ${ENVIRONMENT:-development}
       SECRET_KEY: ${SECRET_KEY}
+    volumes:
+      - ./backend:/app
+    network_mode: host  
     ports:
       - "8000:8000"
 

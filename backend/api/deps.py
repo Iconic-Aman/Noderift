@@ -2,11 +2,15 @@ from fastapi import Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 from core.database import get_db
 from models.user import User
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 def get_current_user(request: Request, db: Session = Depends(get_db)) -> User:
     """Extract token from request state (set by AuthMiddleware) and return DB user."""
     token = getattr(request.state, "token", None)
+    logger.warning(f"[AUTH] token received: {repr(token)}")
     if not token:
         raise HTTPException(status_code=401, detail="Not authenticated")
 
@@ -19,7 +23,7 @@ def get_current_user(request: Request, db: Session = Depends(get_db)) -> User:
             user = User(
                 id=str(uuid4()),
                 email="dev@test.com",
-                hashed_password="test",
+                name="Dev User",
                 created_at=datetime.now(timezone.utc)
             )
             db.add(user)

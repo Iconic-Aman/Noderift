@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils";
 export function TopNavbar({ workflowName, onNameChange, status, onSave, onRun }: any) {
   const [isEditing, setIsEditing] = useState(false);
   const [editValue, setEditValue] = useState(workflowName);
+  const [saveState, setSaveState] = useState<"idle" | "saving" | "saved">("idle");
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -14,6 +15,13 @@ export function TopNavbar({ workflowName, onNameChange, status, onSave, onRun }:
   const handleSubmit = () => {
     onNameChange(editValue.trim() || workflowName);
     setIsEditing(false);
+  };
+
+  const handleSave = async () => {
+    setSaveState("saving");
+    await onSave();
+    setSaveState("saved");
+    setTimeout(() => setSaveState("idle"), 2000);
   };
 
   const statusCfg: Record<string, { label: string; icon: any; cls: string; spin?: boolean }> = {
@@ -43,7 +51,10 @@ export function TopNavbar({ workflowName, onNameChange, status, onSave, onRun }:
           <cfg.icon className={cn("h-3 w-3", cfg.spin && "animate-spin")} />
           <span>{cfg.label}</span>
         </div>
-        <button onClick={onSave} className="flex items-center gap-2 rounded-lg border border-slate-700 bg-slate-800 px-3 py-1.5 text-sm hover:bg-slate-700"><Save className="h-4 w-4" />Save</button>
+        <button onClick={handleSave} disabled={saveState === "saving"} className="flex items-center gap-2 rounded-lg border border-slate-700 bg-slate-800 px-3 py-1.5 text-sm hover:bg-slate-700 disabled:opacity-50">
+          {saveState === "saving" ? <Loader2 className="h-4 w-4 animate-spin" /> : saveState === "saved" ? <Check className="h-4 w-4 text-green-400" /> : <Save className="h-4 w-4" />}
+          {saveState === "saving" ? "Saving..." : saveState === "saved" ? "Saved!" : "Save"}
+        </button>
         <button onClick={onRun} disabled={status === "running"} className="flex items-center gap-2 rounded-lg bg-blue-600 px-3 py-1.5 text-sm text-white hover:bg-blue-500 disabled:opacity-50"><Play className="h-4 w-4" />Run</button>
       </div>
     </div>

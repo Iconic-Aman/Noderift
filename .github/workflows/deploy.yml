@@ -29,11 +29,25 @@ jobs:
             sed -i '/^ALLOWED_ORIGINS=/d' .env
             sed -i '/^DATABASE_URL=/d' .env
             sed -i '/^SECRET_KEY=/d' .env
+            sed -i '/^GOOGLE_CLIENT_ID=/d' .env
+            sed -i '/^GOOGLE_CLIENT_SECRET=/d' .env
+            sed -i '/^GOOGLE_REDIRECT_URI=/d' .env
+            sed -i '/^FRONTEND_URL=/d' .env
+            sed -i '/^GOOGLE_AUTH_URL=/d' .env
+            sed -i '/^GOOGLE_TOKEN_URL=/d' .env
+            sed -i '/^GOOGLE_USERINFO_URL=/d' .env
             
             echo "ALLOWED_HOST=${{ vars.ALLOWED_HOST }}" >> .env
             echo "VITE_API_URL=${{ vars.VITE_API_URL }}" >> .env
             echo "ALLOWED_ORIGINS=${{ vars.ALLOWED_ORIGINS }}" >> .env
             echo "DATABASE_URL=${{ secrets.DATABASE_URL }}" >> .env
             echo "SECRET_KEY=${{ secrets.SECRET_KEY }}" >> .env
+            echo "GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}" >> .env
+            echo "GOOGLE_CLIENT_SECRET=${{ secrets.GOOGLE_CLIENT_SECRET }}" >> .env
+            echo "GOOGLE_REDIRECT_URI=${{ vars.GOOGLE_REDIRECT_URI }}" >> .env
+            echo "FRONTEND_URL=${{ vars.FRONTEND_URL }}" >> .env
+            echo "GOOGLE_AUTH_URL=${{ vars.GOOGLE_AUTH_URL }}" >> .env
+            echo "GOOGLE_TOKEN_URL=${{ vars.GOOGLE_TOKEN_URL }}" >> .env
+            echo "GOOGLE_USERINFO_URL=${{ vars.GOOGLE_USERINFO_URL }}" >> .env
 
             docker compose up -d --build

@@ -23,7 +23,13 @@ jobs:
             git fetch origin testing
             git reset --hard origin/testing
 
-            # Inject the GitHub Variable into the .env file before starting Docker
+            # Inject the GitHub Variables into the .env file before starting Docker
+            sed -i '/^ALLOWED_HOST=/d' .env
+            sed -i '/^VITE_API_URL=/d' .env
+            sed -i '/^ALLOWED_ORIGINS=/d' .env
+            
             echo "ALLOWED_HOST=${{ vars.ALLOWED_HOST }}" >> .env
+            echo "VITE_API_URL=${{ vars.VITE_API_URL }}" >> .env
+            echo "ALLOWED_ORIGINS=${{ vars.ALLOWED_ORIGINS }}" >> .env
 
             docker compose up -d --build

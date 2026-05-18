@@ -52,18 +52,36 @@ def get_workflow(workflow_id: str, db: Session = Depends(get_db), current_user: 
     return wf
 
 
+import logging
+
+logger = logging.getLogger(__name__)
+
 @router.patch("/{workflow_id}", response_model=WorkflowSchema)
 def update_workflow(workflow_id: str, body: WorkflowUpdate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     """Partial update — name, description, graph, or is_active."""
+    logger.warning(f"[PATCH WORKFLOW] Attempting to update workflow_id: {workflow_id} for user: {current_user.id}")
+    
     wf = db.query(Workflow).filter(Workflow.id == workflow_id, Workflow.user_id == current_user.id).first()
     if not wf:
+        logger.warning(f"[PATCH WORKFLOW] Workflow {workflow_id} not found for user {current_user.id}")
         raise HTTPException(status_code=404, detail="Workflow not found")
-    for field, value in body.model_dump(exclude_none=True).items():
-        setattr(wf, field, value)
-    wf.updated_at = datetime.now(timezone.utc)
-    db.commit()
-    db.refresh(wf)
-    return wf
+        
+    try:
+        update_data = body.model_dump(exclude_none=True)
+        logger.warning(f"[PATCH WORKFLOW] Updating fields: {list(update_data.keys())}")
+        
+        for field, value in update_data.items():
+            setattr(wf, field, value)
+        wf.updated_at = datetime.now(timezone.utc)
+        
+        db.commit()
+        db.refresh(wf)
+        logger.warning(f"[PATCH WORKFLOW] Successfully updated workflow {workflow_id}")
+        return wf
+    except Exception as e:
+        logger.error(f"[PATCH WORKFLOW] Database error during update: {str(e)}")
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
 
 
 @router.delete("/{workflow_id}", status_code=204)

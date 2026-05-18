@@ -22,4 +22,8 @@ jobs:
             cd ${{ secrets.EC2_PATH }}
             git fetch origin testing
             git reset --hard origin/testing
+
+            # Inject the GitHub Variable into the .env file before starting Docker
+            echo "ALLOWED_HOST=${{ vars.ALLOWED_HOST }}" >> .env
+
             docker compose up -d --build

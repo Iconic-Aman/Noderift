@@ -12,9 +12,9 @@ app = FastAPI(
     title="Noderift API",
     description="Workflow automation platform — visual node editor with DAG execution engine.",
     version="0.1.0",
-    docs_url="/docs",
-    redoc_url="/redoc",
-    openapi_url="/openapi.json"
+    docs_url="/api/docs",
+    redoc_url="/api/redoc",
+    openapi_url="/api/openapi.json"
 )
 
 # ---------------------------------------------------------------------------

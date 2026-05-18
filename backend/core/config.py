@@ -19,11 +19,9 @@ class Settings(BaseSettings):
     # Redis
     REDIS_URL: str = ""
 
-    SUPABASE_URL: str = ""
-
     @property
     def db_url(self) -> str:
-        return self.DATABASE_URL or self.SUPABASE_URL
+        return self.DATABASE_URL
 
     # Google Auth & External URLs
     GOOGLE_CLIENT_ID: str = ""

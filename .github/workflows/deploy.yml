@@ -27,9 +27,13 @@ jobs:
             sed -i '/^ALLOWED_HOST=/d' .env
             sed -i '/^VITE_API_URL=/d' .env
             sed -i '/^ALLOWED_ORIGINS=/d' .env
+            sed -i '/^DATABASE_URL=/d' .env
+            sed -i '/^SECRET_KEY=/d' .env
             
             echo "ALLOWED_HOST=${{ vars.ALLOWED_HOST }}" >> .env
             echo "VITE_API_URL=${{ vars.VITE_API_URL }}" >> .env
             echo "ALLOWED_ORIGINS=${{ vars.ALLOWED_ORIGINS }}" >> .env
+            echo "DATABASE_URL=${{ secrets.DATABASE_URL }}" >> .env
+            echo "SECRET_KEY=${{ secrets.SECRET_KEY }}" >> .env
 
             docker compose up -d --build

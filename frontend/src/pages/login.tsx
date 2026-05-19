@@ -1,14 +1,8 @@
-import { useState, useEffect } from "react";
+import { useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Zap } from "lucide-react";
-import { apiFetch } from "@/lib/api";
 
 export function Login() {
-  const [isLogin, setIsLogin] = useState(true);
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
 
@@ -20,24 +14,8 @@ export function Login() {
     }
   }, [searchParams, navigate]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError("");
-    setLoading(true);
-
-    try {
-      if (isLogin) {
-        // Just use a test token for dev mode or a real key
-        localStorage.setItem("noderift_token", password || "test_token");
-        navigate("/");
-      } else {
-        setError("User already exists");
-      }
-    } catch (err: any) {
-      setError(err.message || "Failed to authenticate");
-    } finally {
-      setLoading(false);
-    }
+  const handleGoogleLogin = () => {
+    window.location.href = `${import.meta.env.VITE_API_URL || 'http://localhost:8000/api'}/auth/google/login`;
   };
 
   return (
@@ -47,54 +25,14 @@ export function Login() {
           <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-blue-600 shadow-lg shadow-blue-500/20">
             <Zap className="h-6 w-6 text-white" />
           </div>
-          <h2 className="text-xl font-bold text-white">{isLogin ? "Welcome back" : "Create account"}</h2>
-        </div>
-
-        {error && (
-          <div className="mb-4 rounded-lg bg-red-500/10 p-3 text-center text-sm text-red-400">
-            {error}
-          </div>
-        )}
-
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="mb-1.5 block text-xs font-medium text-slate-400">Email</label>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-sm text-slate-200 outline-none focus:border-blue-500"
-              required
-            />
-          </div>
-          <div>
-            <label className="mb-1.5 block text-xs font-medium text-slate-400">Password</label>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-sm text-slate-200 outline-none focus:border-blue-500"
-              required
-            />
-          </div>
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full rounded-lg bg-blue-600 py-2.5 text-sm font-medium text-white transition-colors hover:bg-blue-500 disabled:opacity-50"
-          >
-            {loading ? "Please wait..." : isLogin ? "Sign In" : "Sign Up"}
-          </button>
-        </form>
-
-        <div className="mt-6 flex items-center justify-between">
-          <span className="w-1/5 border-b border-slate-700 lg:w-1/4"></span>
-          <span className="text-xs text-center text-slate-500 uppercase">Or continue with</span>
-          <span className="w-1/5 border-b border-slate-700 lg:w-1/4"></span>
+          <h2 className="text-xl font-bold text-white">Welcome to Noderift</h2>
+          <p className="text-sm text-slate-400 text-center">Sign in to access your workflows</p>
         </div>
 
         <button
-          onClick={() => window.location.href = `${import.meta.env.VITE_API_URL || 'http://localhost:8000/api'}/auth/google/login`}
-          className="mt-4 flex w-full items-center justify-center gap-2 rounded-lg border border-slate-700 bg-slate-800 py-2.5 text-sm font-medium text-white transition-colors hover:bg-slate-700"
+          id="google-login-btn"
+          onClick={handleGoogleLogin}
+          className="flex w-full items-center justify-center gap-3 rounded-lg border border-slate-700 bg-slate-800 py-3 text-sm font-medium text-white transition-colors hover:bg-slate-700"
         >
           <svg className="h-5 w-5" viewBox="0 0 24 24">
             <path
@@ -114,17 +52,11 @@ export function Login() {
               fill="#EA4335"
             />
           </svg>
-          Google
+          Continue with Google
         </button>
 
-        <p className="mt-6 text-center text-xs text-slate-400">
-          {isLogin ? "Don't have an account? " : "Already have an account? "}
-          <button
-            onClick={() => setIsLogin(!isLogin)}
-            className="font-medium text-blue-400 hover:text-blue-300"
-          >
-            {isLogin ? "Sign up" : "Log in"}
-          </button>
+        <p className="mt-6 text-center text-xs text-slate-500">
+          By signing in, you agree to our terms of service.
         </p>
       </div>
     </div>

@@ -33,7 +33,7 @@ async def google_login():
         logger.error("[STEP 1] GOOGLE_CLIENT_ID is empty — OAuth will fail")
         raise HTTPException(status_code=500, detail="Google OAuth not configured")
 
-    url = f"{settings.GOOGLE_AUTH_URL}?response_type=code&client_id={settings.GOOGLE_CLIENT_ID}&redirect_uri={settings.GOOGLE_REDIRECT_URI}&scope=openid%20email%20profile&access_type=offline"
+    url = f"{settings.GOOGLE_AUTH_URL}?response_type=code&client_id={settings.GOOGLE_CLIENT_ID}&redirect_uri={settings.GOOGLE_REDIRECT_URI}&scope=openid%20email%20profile&access_type=offline&prompt=select_account"
     logger.info(f"[STEP 1] Redirecting to Google: {url}")
     return RedirectResponse(url)
 

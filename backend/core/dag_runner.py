@@ -108,7 +108,16 @@ class DAGRunner:
 
         for node_dict in sorted_nodes:
             node_id = node_dict["id"]
-            node_type = node_dict.get("type", "")
+            # Extract actual type prefix from ID (e.g. "http-1716..." -> "http")
+            raw_type = node_id.split("-")[0] if "-" in node_id else node_dict.get("type", "")
+            
+            # Map frontend types to backend registered types
+            type_mapping = {
+                "http": "http_request",
+                "code": "code"
+            }
+            node_type = type_mapping.get(raw_type, raw_type)
+            
             node_config = node_dict.get("data", {})
             node_name = node_config.get("label", node_type)
 

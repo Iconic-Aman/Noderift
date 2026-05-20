@@ -2,10 +2,7 @@ import { useState, useCallback, useRef, DragEvent, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
   ReactFlow,
-  addEdge,
   Connection,
-  useNodesState,
-  useEdgesState,
   Controls,
   MiniMap,
   Background,
@@ -24,6 +21,7 @@ import { WorkflowNode } from "@/components/workflow/workflow-node";
 import { AIChatPanel } from "@/components/workflow/ai-chat-panel";
 import { NodeData } from "@/types/workflow";
 import { apiFetch } from "@/lib/api";
+import { useWorkflowStore } from "@/store/workflowStore";
 
 const nodeTypes = {
   workflowNode: WorkflowNode,
@@ -33,9 +31,12 @@ export default function Editor() {
   const { id } = useParams();
   const navigate = useNavigate();
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
-  const [nodes, setNodes, onNodesChange] = useNodesState<Node<NodeData>>([]);
-  const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
-  const [selectedNode, setSelectedNode] = useState<Node<NodeData> | null>(null);
+  const { 
+    nodes, edges, selectedNode, 
+    onNodesChange, onEdgesChange, onConnect, 
+    setNodes, setEdges, setSelectedNode, addNode, updateNodeConfig 
+  } = useWorkflowStore();
+  
   const [workflowName, setWorkflowName] = useState("Loading...");
   const [status, setStatus] = useState<"idle" | "running" | "success">("idle");
   const [rfInstance, setRfInstance] = useState<ReactFlowInstance<Node<NodeData>, Edge> | null>(null);
@@ -73,16 +74,11 @@ export default function Editor() {
     }
   };
 
-  const onConnect = useCallback(
-    (params: Connection) => setEdges((eds) => addEdge(params, eds)),
-    [setEdges]
-  );
-
   const onNodeClick = useCallback((_: React.MouseEvent, node: Node<NodeData>) => {
     setSelectedNode(node);
-  }, []);
+  }, [setSelectedNode]);
 
-  const onPaneClick = useCallback(() => setSelectedNode(null), []);
+  const onPaneClick = useCallback(() => setSelectedNode(null), [setSelectedNode]);
 
   const onDragOver = useCallback((event: DragEvent) => {
     event.preventDefault();
@@ -112,9 +108,9 @@ export default function Editor() {
           config: {},
         },
       };
-      setNodes((nds) => nds.concat(newNode));
+      addNode(newNode);
     },
-    [rfInstance, setNodes]
+    [rfInstance, addNode]
   );
 
   return (
@@ -165,9 +161,7 @@ export default function Editor() {
         <NodeConfigPanel
           node={selectedNode}
           onClose={() => setSelectedNode(null)}
-          onConfigChange={(id, config) => {
-            setNodes((nds) => nds.map((n) => (n.id === id ? { ...n, data: { ...n.data, config } } : n)));
-          }}
+          onConfigChange={updateNodeConfig}
         />
         <AIChatPanel />
       </div>

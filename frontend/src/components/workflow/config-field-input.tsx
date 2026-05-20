@@ -1,5 +1,6 @@
 import { ConfigField } from "@/types/workflow";
 import { cn } from "@/lib/utils";
+import Editor from "@monaco-editor/react";
 
 interface Props {
   field: ConfigField;
@@ -11,6 +12,24 @@ export function ConfigFieldInput({ field, value, onChange }: Props) {
   const baseCls = "w-full rounded-lg border border-slate-700 bg-slate-800/80 px-3 py-2 text-sm text-slate-200 outline-none focus:border-slate-600 transition-colors";
 
   switch (field.type) {
+    case "code":
+      return (
+        <div className="h-[200px] w-full overflow-hidden rounded-lg border border-slate-700">
+          <Editor
+            height="100%"
+            defaultLanguage="python"
+            theme="vs-dark"
+            value={value || field.defaultValue || ""}
+            onChange={(val) => onChange(val)}
+            options={{
+              minimap: { enabled: false },
+              fontSize: 12,
+              scrollBeyondLastLine: false,
+              padding: { top: 8, bottom: 8 },
+            }}
+          />
+        </div>
+      );
     case "textarea":
       return <textarea value={value || ""} onChange={e => onChange(e.target.value)} placeholder={field.placeholder} rows={3} className={cn(baseCls, "resize-none")} />;
     case "select":

@@ -5,6 +5,8 @@
 
 # ── Agent rules (local only) ──────────────────────────────────────────────────
 .agents/
+LEARNING/
+Noderift_Complete_DevOps_Guide.pdf
 
 # ── Python ───────────────────────────────────────────────────────────────────
 __pycache__/

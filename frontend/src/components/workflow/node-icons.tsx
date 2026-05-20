@@ -1,5 +1,5 @@
 import {
-  Webhook, Clock, Mail, Globe, Database, GitBranch, Layers, Repeat, Timer, Merge, Brain, Search, Zap, LucideIcon
+  Webhook, Clock, Mail, Globe, Database, GitBranch, Layers, Repeat, Timer, Merge, Brain, Search, Zap, Code, LucideIcon
 } from "lucide-react";
 
 const SlackIcon = ({ className, style }: { className?: string; style?: React.CSSProperties }) => (
@@ -23,7 +23,7 @@ const OpenAI = ({ className, style }: { className?: string; style?: React.CSSPro
 export const iconMap: Record<string, LucideIcon | React.ComponentType<any>> = {
   webhook: Webhook, clock: Clock, mail: Mail, slack: SlackIcon, gmail: GmailIcon, globe: Globe,
   database: Database, openai: OpenAI, brain: Brain, "git-branch": GitBranch, layers: Layers,
-  repeat: Repeat, timer: Timer, merge: Merge, search: Search, zap: Zap,
+  repeat: Repeat, timer: Timer, merge: Merge, search: Search, zap: Zap, code: Code,
 };
 
 export function NodeIcon({ icon, className = "", color }: { icon: string; className?: string; color?: string }) {

@@ -19,7 +19,7 @@ export interface NodeTemplate {
 export interface ConfigField {
   name: string;
   label: string;
-  type: "text" | "textarea" | "select" | "number" | "toggle";
+  type: "text" | "textarea" | "select" | "number" | "toggle" | "code";
   placeholder?: string;
   options?: { label: string; value: string }[];
   required?: boolean;

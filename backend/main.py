@@ -6,7 +6,7 @@ import uvicorn
 
 from core.config import settings
 from core.security import AuthMiddleware, bearer_scheme
-from api.routes import auth, workflows, credentials
+from api.routes import auth, workflows, credentials, executions, websocket
 
 app = FastAPI(
     title="Noderift API",
@@ -32,6 +32,8 @@ app.add_middleware(AuthMiddleware)
 app.include_router(auth.router, prefix="/api", tags=["auth"])
 app.include_router(workflows.router, prefix="/api", tags=["workflows"])
 app.include_router(credentials.router, prefix="/api", tags=["credentials"])
+app.include_router(executions.router, prefix="/api", tags=["executions"])
+app.include_router(websocket.router, tags=["websockets"])
 
 
 # ---------------------------------------------------------------------------

@@ -2,12 +2,10 @@ import { useState, useCallback, useRef, DragEvent, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
   ReactFlow,
-  Connection,
   Controls,
   MiniMap,
   Background,
   BackgroundVariant,
-  NodeTypes,
   ReactFlowInstance,
   Node,
   Edge,
@@ -22,6 +20,9 @@ import { AIChatPanel } from "@/components/workflow/ai-chat-panel";
 import { NodeData } from "@/types/workflow";
 import { apiFetch } from "@/lib/api";
 import { useWorkflowStore } from "@/store/workflowStore";
+import { useExecution } from "@/hooks/useExecution";
+import { useWebSocket } from "@/hooks/useWebSocket";
+import { ExecutionPanel } from "@/components/workflow/execution-panel";
 
 const nodeTypes = {
   workflowNode: WorkflowNode,
@@ -38,8 +39,29 @@ export default function Editor() {
   } = useWorkflowStore();
   
   const [workflowName, setWorkflowName] = useState("Loading...");
-  const [status, setStatus] = useState<"idle" | "running" | "success">("idle");
   const [rfInstance, setRfInstance] = useState<ReactFlowInstance<Node<NodeData>, Edge> | null>(null);
+
+  // Execution integration
+  const { triggerExecution, loading } = useExecution();
+  const [activeExecutionId, setActiveExecutionId] = useState<string | null>(null);
+  const [isExecutionPanelOpen, setIsExecutionPanelOpen] = useState(false);
+  const [executionStatus, setExecutionStatus] = useState<"idle" | "running" | "success">("idle");
+  
+  const { logs, setLogs } = useWebSocket(activeExecutionId);
+
+  // Sync execution status from live websocket event logs
+  useEffect(() => {
+    if (logs.length > 0) {
+      const lastLog = logs[logs.length - 1];
+      if (lastLog.type === "workflow_started") {
+        setExecutionStatus("running");
+      } else if (lastLog.type === "workflow_success") {
+        setExecutionStatus("success");
+      } else if (lastLog.type === "workflow_failed") {
+        setExecutionStatus("idle");
+      }
+    }
+  }, [logs]);
 
   useEffect(() => {
     if (!id) return;
@@ -68,9 +90,26 @@ export default function Editor() {
           graph: { nodes, edges },
         }),
       });
-      console.log("Workflow saved");
     } catch (err) {
       console.error("Failed to save workflow", err);
+    }
+  };
+
+  const handleRun = async () => {
+    if (!id) return;
+    // Auto-save graph before running
+    await onSave();
+    
+    setLogs([]);
+    setExecutionStatus("running");
+    setIsExecutionPanelOpen(true);
+
+    try {
+      const runData = await triggerExecution(id);
+      setActiveExecutionId(runData.id);
+    } catch (err) {
+      console.error("Failed to execute workflow", err);
+      setExecutionStatus("idle");
     }
   };
 
@@ -118,12 +157,10 @@ export default function Editor() {
       <TopNavbar
         workflowName={workflowName}
         onNameChange={setWorkflowName}
-        status={status}
+        status={executionStatus}
         onSave={onSave}
-        onRun={() => {
-          setStatus("running");
-          setTimeout(() => setStatus("success"), 2000);
-        }}
+        onRun={handleRun}
+        onHistory={() => navigate(`/history/${id}`)}
       />
       <div className="flex flex-1 overflow-hidden">
         <NodePalette />
@@ -165,6 +202,15 @@ export default function Editor() {
         />
         <AIChatPanel />
       </div>
+
+      <ExecutionPanel
+        isOpen={isExecutionPanelOpen}
+        onClose={() => setIsExecutionPanelOpen(false)}
+        logs={logs}
+        status={executionStatus}
+        onRun={handleRun}
+        loading={loading}
+      />
     </div>
   );
 }

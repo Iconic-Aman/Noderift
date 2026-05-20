@@ -123,7 +123,7 @@ async def get_me(request: Request):
         return {
             "id": "test",
             "email": "[EMAIL_ADDRESS]",
-            "name": "Aman Kumar",
+            "name": "Test User",
             "created_at": "2025-05-03T08:30:00Z"
         }
         

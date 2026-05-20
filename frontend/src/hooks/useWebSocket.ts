@@ -23,7 +23,7 @@ export function useWebSocket(executionId: string | null) {
       return;
     }
 
-    const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:8000/api";
+    const apiUrl = import.meta.env.VITE_API_URL;
     const wsProto = apiUrl.startsWith("https") ? "wss" : "ws";
     const urlObj = new URL(apiUrl);
     const wsUrl = `${wsProto}://${urlObj.host}/ws/executions/${executionId}/logs`;

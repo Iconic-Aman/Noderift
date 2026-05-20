@@ -15,7 +15,7 @@ export function Login() {
   }, [searchParams, navigate]);
 
   const handleGoogleLogin = () => {
-    window.location.href = `${import.meta.env.VITE_API_URL || 'http://localhost:8000/api'}/auth/google/login`;
+    window.location.href = `${import.meta.env.VITE_API_URL}/auth/google/login`;
   };
 
   return (

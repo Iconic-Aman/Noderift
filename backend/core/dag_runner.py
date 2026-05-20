@@ -13,7 +13,7 @@ from nodes import get_node_class, NodeInput
 class DAGRunner:
     def __init__(self, execution_id: str):
         self.execution_id = execution_id
-        self.redis_client = aioredis.from_url(settings.REDIS_URL or "redis://localhost:6379/0")
+        self.redis_client = aioredis.from_url(settings.REDIS_URL)
 
     async def publish_log(self, event_type: str, data: dict):
         """Publish status update to Redis pub/sub for live streaming."""

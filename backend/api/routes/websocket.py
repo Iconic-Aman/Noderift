@@ -13,7 +13,7 @@ async def websocket_execution_logs(websocket: WebSocket, execution_id: str):
     """WebSocket endpoint to subscribe to execution pub/sub logs."""
     await websocket.accept()
     
-    redis_client = aioredis.from_url(settings.REDIS_URL or "redis://localhost:6379/0")
+    redis_client = aioredis.from_url(settings.REDIS_URL)
     pubsub = redis_client.pubsub()
     channel = f"execution:{execution_id}:logs"
     

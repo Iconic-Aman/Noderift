@@ -4,8 +4,8 @@ from core.config import settings
 # Initialize Celery app
 celery_app = Celery(
     "noderift",
-    broker=settings.REDIS_URL or "redis://localhost:6379/0",
-    backend=settings.REDIS_URL or "redis://localhost:6379/0",
+    broker=settings.REDIS_URL,
+    backend=settings.REDIS_URL,
 )
 
 # Optional Celery configuration

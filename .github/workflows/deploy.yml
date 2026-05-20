@@ -36,6 +36,7 @@ jobs:
             sed -i '/^GOOGLE_AUTH_URL=/d' .env
             sed -i '/^GOOGLE_TOKEN_URL=/d' .env
             sed -i '/^GOOGLE_USERINFO_URL=/d' .env
+            sed -i '/^REDIS_URL=/d' .env
             
             echo "ALLOWED_HOST=${{ vars.ALLOWED_HOST }}" >> .env
             echo "VITE_API_URL=${{ vars.VITE_API_URL }}" >> .env
@@ -49,5 +50,6 @@ jobs:
             echo "GOOGLE_AUTH_URL=${{ vars.GOOGLE_AUTH_URL }}" >> .env
             echo "GOOGLE_TOKEN_URL=${{ vars.GOOGLE_TOKEN_URL }}" >> .env
             echo "GOOGLE_USERINFO_URL=${{ vars.GOOGLE_USERINFO_URL }}" >> .env
+            echo "REDIS_URL=redis://redis:6379/0" >> .env
 
-            docker compose up -d --build
+            docker compose -f docker-compose.prod.yml up -d --build

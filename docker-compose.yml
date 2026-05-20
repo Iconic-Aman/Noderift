@@ -5,6 +5,7 @@ services:
       DATABASE_URL: ${DATABASE_URL}
       ENVIRONMENT: ${ENVIRONMENT:-development}
       SECRET_KEY: ${SECRET_KEY}
+      REDIS_URL: ${REDIS_URL:-redis://localhost:6379/0}
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
       GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
       GOOGLE_REDIRECT_URI: ${GOOGLE_REDIRECT_URI}
@@ -30,4 +31,32 @@ services:
     ports:
       - "3000:3000"
     depends_on:
+      - backend
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+
+  worker:
+    build: ./backend
+    environment:
+      DATABASE_URL: ${DATABASE_URL}
+      ENVIRONMENT: ${ENVIRONMENT:-development}
+      SECRET_KEY: ${SECRET_KEY}
+      REDIS_URL: ${REDIS_URL:-redis://localhost:6379/0}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
+      GOOGLE_REDIRECT_URI: ${GOOGLE_REDIRECT_URI}
+      FRONTEND_URL: ${FRONTEND_URL}
+      GOOGLE_AUTH_URL: ${GOOGLE_AUTH_URL}
+      GOOGLE_TOKEN_URL: ${GOOGLE_TOKEN_URL}
+      GOOGLE_USERINFO_URL: ${GOOGLE_USERINFO_URL}
+    volumes:
+      - .:/workspace
+    working_dir: /workspace
+    network_mode: host
+    command: celery -A worker.worker.celery_app worker --loglevel=info
+    depends_on:
+      - redis
       - backend

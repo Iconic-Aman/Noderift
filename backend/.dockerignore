@@ -1,0 +1,9 @@
+noderift-venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+.vscode/
+.env
+.env.*

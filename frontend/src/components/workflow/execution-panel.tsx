@@ -66,70 +66,127 @@ export function ExecutionPanel({ isOpen, onClose, logs, status, onRun, loading }
             <Terminal className="mb-2 h-8 w-8 opacity-40" />
             <p>No execution logs yet. Hit 'Run' to execute.</p>
           </div>
-        ) : (
-          <div className="space-y-2">
-            {logs.map((log, idx) => {
-              const isNodeEvent = log.type.startsWith("node_");
-              const isExpandable = !!(log.output || log.error);
-              const nodeId = log.node_id || `log-${idx}`;
-              const isExpanded = expandedNodes[nodeId];
+        ) : (() => {
+          const unifiedLogs: Array<{
+            id: string;
+            name: string;
+            type: string;
+            status: "running" | "success" | "failed" | "system";
+            message: string;
+            duration_ms?: number;
+            output?: any;
+            error?: any;
+          }> = [];
 
-              return (
-                <div key={idx} className="rounded border border-slate-800/60 bg-slate-950/40 p-2">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      {log.type === "node_started" && <Loader2 className="h-3.5 w-3.5 animate-spin text-blue-400" />}
-                      {log.type === "node_success" && <CheckCircle2 className="h-3.5 w-3.5 text-green-400" />}
-                      {log.type === "node_failed" && <AlertTriangle className="h-3.5 w-3.5 text-red-400" />}
-                      
-                      <span className="font-semibold text-slate-200">
-                        {log.node_name || "System"}
-                      </span>
-                      <span className="text-[10px] text-slate-500">({log.node_type || "system"})</span>
-                      
-                      <span className="text-[10px] text-slate-400">
-                        {log.type === "node_started" && "executing..."}
-                        {log.type === "node_success" && "completed"}
-                        {log.type === "node_failed" && "failed"}
-                      </span>
+          const nodeIndexMap: Record<string, number> = {};
+
+          logs.forEach((log) => {
+            if (log.node_id) {
+              const existingIdx = nodeIndexMap[log.node_id];
+              if (existingIdx !== undefined) {
+                const entry = unifiedLogs[existingIdx];
+                if (log.type === "node_success") {
+                  entry.status = "success";
+                  entry.duration_ms = log.duration_ms;
+                  entry.output = log.output;
+                } else if (log.type === "node_failed") {
+                  entry.status = "failed";
+                  entry.duration_ms = log.duration_ms;
+                  entry.error = log.error;
+                }
+              } else {
+                nodeIndexMap[log.node_id] = unifiedLogs.length;
+                unifiedLogs.push({
+                  id: log.node_id,
+                  name: log.node_name || "Node",
+                  type: log.node_type || "node",
+                  status: log.type === "node_started" ? "running" :
+                          log.type === "node_success" ? "success" : "failed",
+                  message: "",
+                  duration_ms: log.duration_ms,
+                  output: log.output,
+                  error: log.error,
+                });
+              }
+            } else {
+              unifiedLogs.push({
+                id: `system-${unifiedLogs.length}`,
+                name: "System",
+                type: "system",
+                status: "system",
+                message: log.type === "workflow_started" ? "Workflow execution started" :
+                         log.type === "workflow_success" ? "Workflow execution completed successfully" :
+                         log.type === "workflow_failed" ? `Workflow execution failed: ${log.error}` :
+                         "System event",
+              });
+            }
+          });
+
+          return (
+            <div className="space-y-2">
+              {unifiedLogs.map((log) => {
+                const isNode = log.status !== "system";
+                const isExpandable = isNode && !!(log.output || log.error);
+                const isExpanded = expandedNodes[log.id];
+
+                return (
+                  <div key={log.id} className="rounded border border-slate-800/60 bg-slate-950/40 p-2">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        {log.status === "running" && <Loader2 className="h-3.5 w-3.5 animate-spin text-blue-400" />}
+                        {log.status === "success" && <CheckCircle2 className="h-3.5 w-3.5 text-green-400" />}
+                        {log.status === "failed" && <AlertTriangle className="h-3.5 w-3.5 text-red-400" />}
+                        {log.status === "system" && <Terminal className="h-3.5 w-3.5 text-slate-400" />}
+                        
+                        <span className="font-semibold text-slate-200">
+                          {log.name}
+                        </span>
+                        {isNode && <span className="text-[10px] text-slate-500">({log.type})</span>}
+                        
+                        <span className="text-[10px] text-slate-400">
+                          {log.status === "running" && "executing..."}
+                          {log.status === "success" && "completed"}
+                          {log.status === "failed" && "failed"}
+                          {log.status === "system" && log.message}
+                        </span>
+                      </div>
+
+                      <div className="flex items-center gap-3">
+                        {log.duration_ms !== undefined && (
+                          <span className="text-[10px] text-slate-500">{log.duration_ms}ms</span>
+                        )}
+                        {isExpandable && (
+                          <button
+                            onClick={() => toggleExpand(log.id)}
+                            className="flex items-center gap-1 text-[10px] text-blue-400 hover:underline"
+                          >
+                            {isExpanded ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
+                            {isExpanded ? "Hide Details" : "Show Details"}
+                          </button>
+                        )}
+                      </div>
                     </div>
 
-                    <div className="flex items-center gap-3">
-                      {log.duration_ms !== undefined && (
-                        <span className="text-[10px] text-slate-500">{log.duration_ms}ms</span>
-                      )}
-                      {isExpandable && (
-                        <button
-                          onClick={() => toggleExpand(nodeId)}
-                          className="flex items-center gap-1 text-[10px] text-blue-400 hover:underline"
-                        >
-                          {isExpanded ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
-                          {isExpanded ? "Hide Details" : "Show Details"}
-                        </button>
-                      )}
-                    </div>
+                    {isExpanded && isExpandable && (
+                      <div className="mt-2 border-t border-slate-800/80 pt-2 text-[11px]">
+                        {log.error ? (
+                          <pre className="overflow-x-auto rounded bg-red-950/20 p-2 text-red-400 whitespace-pre-wrap font-sans">
+                            {log.error}
+                          </pre>
+                        ) : (
+                          <pre className="overflow-x-auto rounded bg-slate-900/60 p-2 text-blue-300 whitespace-pre-wrap">
+                            {JSON.stringify(log.output, null, 2)}
+                          </pre>
+                        )}
+                      </div>
+                    )}
                   </div>
-
-                  {/* Collapsible details (output or error block) */}
-                  {isExpanded && isExpandable && (
-                    <div className="mt-2 border-t border-slate-800/80 pt-2 text-[11px]">
-                      {log.error ? (
-                        <pre className="overflow-x-auto rounded bg-red-950/20 p-2 text-red-400 whitespace-pre-wrap font-sans">
-                          {log.error}
-                        </pre>
-                      ) : (
-                        <pre className="overflow-x-auto rounded bg-slate-900/60 p-2 text-blue-300 whitespace-pre-wrap">
-                          {JSON.stringify(log.output, null, 2)}
-                        </pre>
-                      )}
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-            <div ref={logsEndRef} />
-          </div>
-        )}
+                );
+              })}
+              <div ref={logsEndRef} />
+            </div>
+          );
+        })()}
       </div>
     </div>
   );

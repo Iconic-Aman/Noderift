@@ -118,8 +118,9 @@ class DAGRunner:
             }
             node_type = type_mapping.get(raw_type, raw_type)
             
-            node_config = node_dict.get("data", {})
-            node_name = node_config.get("label", node_type)
+            node_data = node_dict.get("data", {})
+            node_config = node_data.get("config", {})
+            node_name = node_data.get("label", node_type)
 
             # Create node log record
             node_log = NodeLog(

@@ -44,7 +44,7 @@ export function NodePalette() {
   const filtered = nodeTemplates.filter(n => n.label.toLowerCase().includes(q.toLowerCase()));
 
   return (
-    <div className="flex h-full w-[260px] shrink-0 flex-col border-r border-slate-800 bg-slate-900">
+    <div className="flex h-full w-full shrink-0 flex-col border-r border-slate-800 bg-slate-900">
       <div className="border-b border-slate-800 p-4">
         <div className="relative">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />

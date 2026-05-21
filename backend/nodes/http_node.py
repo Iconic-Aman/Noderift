@@ -3,6 +3,49 @@ from typing import Any, Dict
 from nodes.base import BaseNode, NodeInput, NodeOutput
 from nodes import register_node
 
+import re
+
+def resolve_template(text: str, inputs_data: dict) -> str:
+    if not isinstance(text, str):
+        return text
+
+    def replace_match(match):
+        expr = match.group(1).strip()
+        parts = expr.split(".")
+        
+        # Try to resolve from _upstream
+        upstream = inputs_data.get("_upstream", {})
+        if parts[0] in upstream:
+            curr = upstream[parts[0]]
+            for part in parts[1:]:
+                if isinstance(curr, dict) and part in curr:
+                    curr = curr[part]
+                else:
+                    return match.group(0)
+            return str(curr)
+
+        # Try to resolve directly from inputs_data
+        curr = inputs_data
+        for part in parts:
+            if isinstance(curr, dict) and part in curr:
+                curr = curr[part]
+            else:
+                return match.group(0)
+        return str(curr)
+
+    text = re.sub(r"\{\{([^}]+)\}\}", replace_match, text)
+    text = re.sub(r"\{([^}]+)\}", replace_match, text)
+    return text
+
+def resolve_value(val: Any, inputs_data: dict) -> Any:
+    if isinstance(val, str):
+        return resolve_template(val, inputs_data)
+    elif isinstance(val, dict):
+        return {k: resolve_value(v, inputs_data) for k, v in val.items()}
+    elif isinstance(val, list):
+        return [resolve_value(v, inputs_data) for v in val]
+    return val
+
 @register_node
 class HttpRequestNode(BaseNode):
     node_type = "http_request"
@@ -19,20 +62,14 @@ class HttpRequestNode(BaseNode):
         if not url:
             raise ValueError("URL is required for HTTP Request node")
 
-        # Support templating or string format with inputs if keys match
-        # e.g., if url contains {variable}, format it using inputs.data
+        # Resolve templated expressions recursively from input data
         if inputs.data:
             try:
-                url = url.format(**inputs.data)
-                # Formats query params too if they are strings
-                params = {k: (v.format(**inputs.data) if isinstance(v, str) else v) for k, v in params.items()}
-                # Format headers
-                headers = {k: (v.format(**inputs.data) if isinstance(v, str) else v) for k, v in headers.items()}
-                # Format body if it is string
-                if isinstance(body, str):
-                    body = body.format(**inputs.data)
-            except Exception as e:
-                # Fallback to original if formatting fails
+                url = resolve_value(url, inputs.data)
+                params = resolve_value(params, inputs.data)
+                headers = resolve_value(headers, inputs.data)
+                body = resolve_value(body, inputs.data)
+            except Exception:
                 pass
 
         async with httpx.AsyncClient(timeout=30.0) as client:

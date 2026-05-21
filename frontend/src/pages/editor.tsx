@@ -23,6 +23,8 @@ import { useWorkflowStore } from "@/store/workflowStore";
 import { useExecution } from "@/hooks/useExecution";
 import { useWebSocket } from "@/hooks/useWebSocket";
 import { ExecutionPanel } from "@/components/workflow/execution-panel";
+import { ChevronLeft, ChevronRight } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 const nodeTypes = {
   workflowNode: WorkflowNode,
@@ -40,6 +42,54 @@ export default function Editor() {
   
   const [workflowName, setWorkflowName] = useState("Loading...");
   const [rfInstance, setRfInstance] = useState<ReactFlowInstance<Node<NodeData>, Edge> | null>(null);
+
+  // Sidebar toggle states
+  const [isLeftOpen, setIsLeftOpen] = useState(true);
+  const [isRightOpen, setIsRightOpen] = useState(true);
+
+  // Resizable sidebar states
+  const [leftWidth, setLeftWidth] = useState(260);
+  const [rightWidth, setRightWidth] = useState(300);
+  const [isResizingLeft, setIsResizingLeft] = useState(false);
+  const [isResizingRight, setIsResizingRight] = useState(false);
+
+  const startLeftResize = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    setIsResizingLeft(true);
+  }, []);
+
+  const startRightResize = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    setIsResizingRight(true);
+  }, []);
+
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (isResizingLeft) {
+        const newWidth = Math.max(200, Math.min(500, e.clientX));
+        setLeftWidth(newWidth);
+      }
+      if (isResizingRight) {
+        const newWidth = Math.max(250, Math.min(600, window.innerWidth - e.clientX));
+        setRightWidth(newWidth);
+      }
+    };
+
+    const handleMouseUp = () => {
+      setIsResizingLeft(false);
+      setIsResizingRight(false);
+    };
+
+    if (isResizingLeft || isResizingRight) {
+      window.addEventListener("mousemove", handleMouseMove);
+      window.addEventListener("mouseup", handleMouseUp);
+    }
+
+    return () => {
+      window.removeEventListener("mousemove", handleMouseMove);
+      window.removeEventListener("mouseup", handleMouseUp);
+    };
+  }, [isResizingLeft, isResizingRight]);
 
   // Execution integration
   const { triggerExecution, loading } = useExecution();
@@ -165,6 +215,7 @@ export default function Editor() {
 
   const onNodeClick = useCallback((_: React.MouseEvent, node: Node<NodeData>) => {
     setSelectedNode(node);
+    setIsRightOpen(true);
   }, [setSelectedNode]);
 
   const onPaneClick = useCallback(() => setSelectedNode(null), [setSelectedNode]);
@@ -203,7 +254,10 @@ export default function Editor() {
   );
 
   return (
-    <div className="flex h-screen w-full flex-col bg-slate-950 text-slate-200">
+    <div className={cn(
+      "flex h-screen w-full flex-col bg-slate-950 text-slate-200",
+      (isResizingLeft || isResizingRight) && "select-none cursor-col-resize"
+    )}>
       <TopNavbar
         workflowName={workflowName}
         onNameChange={setWorkflowName}
@@ -213,7 +267,33 @@ export default function Editor() {
         onHistory={() => navigate(`/history/${id}`)}
       />
       <div className="flex flex-1 overflow-hidden">
-        <NodePalette />
+        {/* Left Sliding Sidebar */}
+        <div className="relative flex h-full shrink-0 z-10">
+          <div
+            className={cn("overflow-hidden flex flex-col h-full", !isResizingLeft && "transition-all duration-300")}
+            style={{ width: isLeftOpen ? `${leftWidth}px` : "0px" }}
+          >
+            <NodePalette />
+          </div>
+          <button
+            onClick={() => setIsLeftOpen(!isLeftOpen)}
+            className="absolute top-1/2 -right-3.5 z-20 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-full border border-slate-800 bg-slate-900 text-slate-400 hover:text-white shadow-lg hover:bg-slate-800 transition-all cursor-pointer"
+            style={{ transform: "translateX(50%)" }}
+          >
+            {isLeftOpen ? <ChevronLeft className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+          </button>
+          {isLeftOpen && (
+            <div
+              onMouseDown={startLeftResize}
+              className={cn(
+                "absolute top-0 right-0 w-1.5 h-full cursor-col-resize hover:bg-blue-500/40 active:bg-blue-500 transition-all z-10",
+                isResizingLeft && "bg-blue-500/40 w-1.5"
+              )}
+              style={{ transform: "translateX(50%)" }}
+            />
+          )}
+        </div>
+
         <div ref={reactFlowWrapper} className="relative flex-1">
           <ReactFlow<Node<NodeData>, Edge>
             nodes={nodes}
@@ -245,11 +325,39 @@ export default function Editor() {
             />
           </ReactFlow>
         </div>
-        <NodeConfigPanel
-          node={selectedNode}
-          onClose={() => setSelectedNode(null)}
-          onConfigChange={updateNodeConfig}
-        />
+
+        {/* Right Sliding Sidebar */}
+        {selectedNode && (
+          <div className="relative flex h-full shrink-0 z-10">
+            <button
+              onClick={() => setIsRightOpen(!isRightOpen)}
+              className="absolute top-1/2 -left-3.5 z-20 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-full border border-slate-800 bg-slate-900 text-slate-400 hover:text-white shadow-lg hover:bg-slate-800 transition-all cursor-pointer"
+              style={{ transform: "translateX(-50%)" }}
+            >
+              {isRightOpen ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
+            </button>
+            <div
+              className={cn("overflow-hidden flex flex-col h-full", !isResizingRight && "transition-all duration-300")}
+              style={{ width: isRightOpen ? `${rightWidth}px` : "0px" }}
+            >
+              <NodeConfigPanel
+                node={selectedNode}
+                onClose={() => setSelectedNode(null)}
+                onConfigChange={updateNodeConfig}
+              />
+            </div>
+            {isRightOpen && (
+              <div
+                onMouseDown={startRightResize}
+                className={cn(
+                  "absolute top-0 left-0 w-1.5 h-full cursor-col-resize hover:bg-blue-500/40 active:bg-blue-500 transition-all z-10",
+                  isResizingRight && "bg-blue-500/40 w-1.5"
+                )}
+                style={{ transform: "translateX(-50%)" }}
+              />
+            )}
+          </div>
+        )}
         <AIChatPanel />
       </div>
 

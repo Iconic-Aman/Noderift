@@ -1,5 +1,5 @@
 import { useState, DragEvent } from "react";
-import { Search, Zap, Play, Brain, GitBranch, ChevronDown } from "lucide-react";
+import { Search, Zap, Play, Brain, GitBranch, ChevronDown, Lock } from "lucide-react";
 import { nodeTemplates } from "@/lib/node-templates";
 import { NodeTemplate } from "@/types/workflow";
 import { NodeIcon } from "./node-icons";
@@ -13,7 +13,13 @@ const categories = [
 ];
 
 function DraggableNode({ node }: { node: NodeTemplate }) {
+  const isLocked = node.id !== "http" && node.id !== "code";
+
   const onDragStart = (event: DragEvent<HTMLDivElement>) => {
+    if (isLocked) {
+      event.preventDefault();
+      return;
+    }
     event.dataTransfer.setData("application/reactflow/type", node.id);
     event.dataTransfer.setData("application/reactflow/label", node.label);
     event.dataTransfer.setData("application/reactflow/icon", node.icon);
@@ -24,15 +30,24 @@ function DraggableNode({ node }: { node: NodeTemplate }) {
 
   return (
     <div
-      draggable onDragStart={onDragStart}
-      className="group flex items-center gap-3 rounded-lg border border-slate-700/50 bg-slate-800/50 px-3 py-2.5 transition-all hover:border-slate-600 hover:bg-slate-700/50 cursor-grab active:cursor-grabbing"
+      draggable={!isLocked}
+      onDragStart={!isLocked ? onDragStart : undefined}
+      className={cn(
+        "group flex items-center gap-3 rounded-lg border px-3 py-2.5 transition-all select-none",
+        isLocked
+          ? "border-slate-800 bg-slate-900/30 opacity-40 cursor-not-allowed"
+          : "border-slate-700/50 bg-slate-800/50 hover:border-slate-600 hover:bg-slate-700/50 cursor-grab active:cursor-grabbing"
+      )}
     >
-      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md" style={{ backgroundColor: `${node.color}20` }}>
-        <NodeIcon icon={node.icon} color={node.color} className="h-4 w-4" />
+      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md" style={{ backgroundColor: isLocked ? "#47556910" : `${node.color}20` }}>
+        <NodeIcon icon={node.icon} color={isLocked ? "#475569" : node.color} className="h-4 w-4" />
       </div>
       <div className="min-w-0 flex-1">
-        <p className="truncate text-sm font-medium text-slate-200">{node.label}</p>
-        <p className="truncate text-xs text-slate-500">{node.description}</p>
+        <div className="flex items-center gap-1.5">
+          <p className={cn("truncate text-sm font-medium", isLocked ? "text-slate-500" : "text-slate-200")}>{node.label}</p>
+          {isLocked && <Lock className="h-3 w-3 text-slate-500 shrink-0 animate-pulse" />}
+        </div>
+        <p className={cn("truncate text-xs", isLocked ? "text-slate-600" : "text-slate-500")}>{isLocked ? "Coming Soon" : node.description}</p>
       </div>
     </div>
   );

@@ -23,7 +23,7 @@ import { useWorkflowStore } from "@/store/workflowStore";
 import { useExecution } from "@/hooks/useExecution";
 import { useWebSocket } from "@/hooks/useWebSocket";
 import { ExecutionPanel } from "@/components/workflow/execution-panel";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, Terminal } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const nodeTypes = {
@@ -213,6 +213,24 @@ export default function Editor() {
     }
   };
 
+  const handleRunNode = async (nodeId: string) => {
+    if (!id) return;
+    // Auto-save graph before running
+    await onSave();
+    
+    setLogs([]);
+    setExecutionStatus("running");
+    setIsExecutionPanelOpen(true);
+
+    try {
+      const runData = await triggerExecution(id, nodeId);
+      setActiveExecutionId(runData.id);
+    } catch (err) {
+      console.error("Failed to execute node", err);
+      setExecutionStatus("idle");
+    }
+  };
+
   const onNodeClick = useCallback((_: React.MouseEvent, node: Node<NodeData>) => {
     setSelectedNode(node);
     setIsRightOpen(true);
@@ -344,6 +362,7 @@ export default function Editor() {
                 node={selectedNode}
                 onClose={() => setSelectedNode(null)}
                 onConfigChange={updateNodeConfig}
+                onRunNode={handleRunNode}
               />
             </div>
             {isRightOpen && (
@@ -360,6 +379,15 @@ export default function Editor() {
         )}
         <AIChatPanel />
       </div>
+
+      {/* Bottom Terminal Toggle Button */}
+      <button
+        onClick={() => setIsExecutionPanelOpen(!isExecutionPanelOpen)}
+        className="fixed bottom-4 left-1/2 z-30 flex -translate-x-1/2 items-center gap-1.5 rounded-full border border-slate-800 bg-slate-900/90 backdrop-blur-xl px-4 py-2.5 text-xs font-semibold text-slate-300 hover:text-white shadow-2xl hover:bg-slate-800 transition-all hover:scale-105 active:scale-95 cursor-pointer"
+      >
+        <Terminal className="h-3.5 w-3.5 text-blue-400" />
+        <span>{isExecutionPanelOpen ? "Hide Execution Logs" : "Show Execution Logs"}</span>
+      </button>
 
       <ExecutionPanel
         isOpen={isExecutionPanelOpen}

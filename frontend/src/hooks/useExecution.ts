@@ -16,11 +16,14 @@ export function useExecution() {
   const [error, setError] = useState<string | null>(null);
   const [activeExecution, setActiveExecution] = useState<ExecutionState | null>(null);
 
-  const triggerExecution = async (workflowId: string): Promise<ExecutionState> => {
+  const triggerExecution = async (workflowId: string, targetNodeId?: string): Promise<ExecutionState> => {
     setLoading(true);
     setError(null);
     try {
-      const data = await apiFetch(`/executions/${workflowId}`, {
+      const url = targetNodeId
+        ? `/executions/${workflowId}?target_node_id=${encodeURIComponent(targetNodeId)}`
+        : `/executions/${workflowId}`;
+      const data = await apiFetch(url, {
         method: "POST"
       });
       setActiveExecution(data);

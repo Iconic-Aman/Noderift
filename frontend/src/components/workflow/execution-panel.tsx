@@ -22,14 +22,14 @@ export function ExecutionPanel({ isOpen, onClose, logs, status, onRun, loading }
     }
   }, [logs]);
 
-  if (!isOpen) return null;
-
   const toggleExpand = (nodeId: string) => {
     setExpandedNodes((prev) => ({ ...prev, [nodeId]: !prev[nodeId] }));
   };
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-40 flex h-80 flex-col border-t border-slate-800 bg-slate-900/95 shadow-2xl backdrop-blur-md">
+    <div className={`fixed bottom-0 left-0 right-0 z-40 flex h-80 flex-col border-t border-slate-800 bg-slate-900/95 shadow-2xl backdrop-blur-md transition-all duration-300 transform ${
+      isOpen ? "translate-y-0" : "translate-y-full"
+    }`}>
       {/* Header */}
       <div className="flex h-11 items-center justify-between border-b border-slate-800 bg-slate-950/80 px-4">
         <div className="flex items-center gap-2">

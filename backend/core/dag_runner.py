@@ -56,7 +56,7 @@ class DAGRunner:
 
         return sorted_nodes
 
-    async def run(self):
+    async def run(self, target_node_id: str = None):
         """Execute the DAG."""
         db: Session = SessionLocal()
         execution = db.query(Execution).filter(Execution.id == self.execution_id).first()
@@ -108,6 +108,9 @@ class DAGRunner:
 
         for node_dict in sorted_nodes:
             node_id = node_dict["id"]
+            if target_node_id and node_id != target_node_id:
+                continue
+
             # Extract actual type prefix from ID (e.g. "http-1716..." -> "http")
             raw_type = node_id.split("-")[0] if "-" in node_id else node_dict.get("type", "")
             
@@ -182,6 +185,9 @@ class DAGRunner:
                     "output": node_output.data,
                     "duration_ms": duration_ms
                 })
+
+                if target_node_id:
+                    break
 
             except Exception as e:
                 # Capture exact duration on failure too

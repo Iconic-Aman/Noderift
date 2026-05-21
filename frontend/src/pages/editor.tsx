@@ -63,6 +63,56 @@ export default function Editor() {
     }
   }, [logs]);
 
+  // Sync individual node execution states from live websocket logs
+  useEffect(() => {
+    const currentNodes = useWorkflowStore.getState().nodes;
+    if (logs.length === 0) {
+      const clearedNodes = currentNodes.map((n) => {
+        if (n.data.status) {
+          const { status, ...restData } = n.data;
+          return { ...n, data: restData as NodeData };
+        }
+        return n;
+      });
+      if (clearedNodes.some((n, i) => n.data.status !== currentNodes[i].data.status)) {
+        setNodes(clearedNodes);
+      }
+      return;
+    }
+
+    const latestStatuses: Record<string, "running" | "success" | "failed"> = {};
+    for (const log of logs) {
+      if (!log.node_id) continue;
+      if (log.type === "node_started") {
+        latestStatuses[log.node_id] = "running";
+      } else if (log.type === "node_success") {
+        latestStatuses[log.node_id] = "success";
+      } else if (log.type === "node_failed") {
+        latestStatuses[log.node_id] = "failed";
+      }
+    }
+
+    let hasChanges = false;
+    const updatedNodes = currentNodes.map((n) => {
+      const nextStatus = latestStatuses[n.id];
+      if (n.data.status !== nextStatus) {
+        hasChanges = true;
+        return {
+          ...n,
+          data: {
+            ...n.data,
+            status: nextStatus,
+          },
+        };
+      }
+      return n;
+    });
+
+    if (hasChanges) {
+      setNodes(updatedNodes);
+    }
+  }, [logs, setNodes]);
+
   useEffect(() => {
     if (!id) return;
     const fetchWorkflow = async () => {

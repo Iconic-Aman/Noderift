@@ -23,7 +23,7 @@ import { useWorkflowStore } from "@/store/workflowStore";
 import { useExecution } from "@/hooks/useExecution";
 import { useWebSocket } from "@/hooks/useWebSocket";
 import { ExecutionPanel } from "@/components/workflow/execution-panel";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, Terminal } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const nodeTypes = {
@@ -47,11 +47,13 @@ export default function Editor() {
   const [isLeftOpen, setIsLeftOpen] = useState(true);
   const [isRightOpen, setIsRightOpen] = useState(true);
 
-  // Resizable sidebar states
+  // Resizable sidebar and logs panel states
   const [leftWidth, setLeftWidth] = useState(260);
   const [rightWidth, setRightWidth] = useState(300);
+  const [panelHeight, setPanelHeight] = useState(320);
   const [isResizingLeft, setIsResizingLeft] = useState(false);
   const [isResizingRight, setIsResizingRight] = useState(false);
+  const [isResizingPanel, setIsResizingPanel] = useState(false);
 
   const startLeftResize = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
@@ -61,6 +63,11 @@ export default function Editor() {
   const startRightResize = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
     setIsResizingRight(true);
+  }, []);
+
+  const startPanelResize = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    setIsResizingPanel(true);
   }, []);
 
   useEffect(() => {
@@ -73,14 +80,19 @@ export default function Editor() {
         const newWidth = Math.max(250, Math.min(600, window.innerWidth - e.clientX));
         setRightWidth(newWidth);
       }
+      if (isResizingPanel) {
+        const newHeight = Math.max(150, Math.min(600, window.innerHeight - e.clientY));
+        setPanelHeight(newHeight);
+      }
     };
 
     const handleMouseUp = () => {
       setIsResizingLeft(false);
       setIsResizingRight(false);
+      setIsResizingPanel(false);
     };
 
-    if (isResizingLeft || isResizingRight) {
+    if (isResizingLeft || isResizingRight || isResizingPanel) {
       window.addEventListener("mousemove", handleMouseMove);
       window.addEventListener("mouseup", handleMouseUp);
     }
@@ -89,7 +101,7 @@ export default function Editor() {
       window.removeEventListener("mousemove", handleMouseMove);
       window.removeEventListener("mouseup", handleMouseUp);
     };
-  }, [isResizingLeft, isResizingRight]);
+  }, [isResizingLeft, isResizingRight, isResizingPanel]);
 
   // Execution integration
   const { triggerExecution, loading } = useExecution();
@@ -213,6 +225,24 @@ export default function Editor() {
     }
   };
 
+  const handleRunNode = async (nodeId: string) => {
+    if (!id) return;
+    // Auto-save graph before running
+    await onSave();
+    
+    setLogs([]);
+    setExecutionStatus("running");
+    setIsExecutionPanelOpen(true);
+
+    try {
+      const runData = await triggerExecution(id, nodeId);
+      setActiveExecutionId(runData.id);
+    } catch (err) {
+      console.error("Failed to execute node", err);
+      setExecutionStatus("idle");
+    }
+  };
+
   const onNodeClick = useCallback((_: React.MouseEvent, node: Node<NodeData>) => {
     setSelectedNode(node);
     setIsRightOpen(true);
@@ -256,7 +286,8 @@ export default function Editor() {
   return (
     <div className={cn(
       "flex h-screen w-full flex-col bg-slate-950 text-slate-200",
-      (isResizingLeft || isResizingRight) && "select-none cursor-col-resize"
+      (isResizingLeft || isResizingRight) && "select-none cursor-col-resize",
+      isResizingPanel && "select-none cursor-row-resize"
     )}>
       <TopNavbar
         workflowName={workflowName}
@@ -344,6 +375,7 @@ export default function Editor() {
                 node={selectedNode}
                 onClose={() => setSelectedNode(null)}
                 onConfigChange={updateNodeConfig}
+                onRunNode={handleRunNode}
               />
             </div>
             {isRightOpen && (
@@ -361,6 +393,15 @@ export default function Editor() {
         <AIChatPanel />
       </div>
 
+      {/* Bottom Terminal Toggle Button */}
+      <button
+        onClick={() => setIsExecutionPanelOpen(!isExecutionPanelOpen)}
+        className="fixed bottom-4 left-1/2 z-30 flex -translate-x-1/2 items-center gap-1.5 rounded-full border border-slate-800 bg-slate-900/90 backdrop-blur-xl px-4 py-2.5 text-xs font-semibold text-slate-300 hover:text-white shadow-2xl hover:bg-slate-800 transition-all hover:scale-105 active:scale-95 cursor-pointer"
+      >
+        <Terminal className="h-3.5 w-3.5 text-blue-400" />
+        <span>{isExecutionPanelOpen ? "Hide Execution Logs" : "Show Execution Logs"}</span>
+      </button>
+
       <ExecutionPanel
         isOpen={isExecutionPanelOpen}
         onClose={() => setIsExecutionPanelOpen(false)}
@@ -368,6 +409,9 @@ export default function Editor() {
         status={executionStatus}
         onRun={handleRun}
         loading={loading}
+        panelHeight={panelHeight}
+        onMouseDownResize={startPanelResize}
+        isResizing={isResizingPanel}
       />
     </div>
   );

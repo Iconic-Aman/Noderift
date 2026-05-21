@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Node } from "@xyflow/react";
-import { X, Settings, Copy } from "lucide-react";
+import { X, Settings, Copy, Play } from "lucide-react";
 import { NodeData } from "@/types/workflow";
 import { getNodeTemplate } from "@/lib/node-templates";
 import { NodeIcon } from "./node-icons";
@@ -12,9 +12,10 @@ interface Props {
   node: Node<NodeData> | null;
   onClose: () => void;
   onConfigChange: (id: string, config: Record<string, any>) => void;
+  onRunNode?: (nodeId: string) => void;
 }
 
-export function NodeConfigPanel({ node, onClose, onConfigChange }: Props) {
+export function NodeConfigPanel({ node, onClose, onConfigChange, onRunNode }: Props) {
   const [cfg, setCfg] = useState<Record<string, any>>({});
   const { edges, nodes } = useWorkflowStore();
   
@@ -48,7 +49,19 @@ export function NodeConfigPanel({ node, onClose, onConfigChange }: Props) {
                 <p className="text-xs capitalize text-slate-500">{node.data.category}</p>
               </div>
             </div>
-            <button onClick={onClose} className="p-1.5 text-slate-400 hover:bg-slate-800 rounded-lg"><X className="h-4 w-4" /></button>
+            <div className="flex items-center gap-1.5">
+              {onRunNode && (
+                <button
+                  onClick={() => onRunNode(node.id)}
+                  title="Run only this node"
+                  className="flex items-center gap-1 rounded bg-blue-600 hover:bg-blue-500 border border-blue-500/30 px-2 py-1 text-[11px] font-semibold text-white transition-all active:scale-95 cursor-pointer shadow-md"
+                >
+                  <Play className="h-3 w-3" />
+                  <span>Run Node</span>
+                </button>
+              )}
+              <button onClick={onClose} className="p-1.5 text-slate-400 hover:bg-slate-800 rounded-lg"><X className="h-4 w-4" /></button>
+            </div>
           </div>
           <div className="flex-1 overflow-y-auto p-4">
             <div className="mb-4 flex items-center gap-2 text-slate-400"><Settings className="h-4 w-4" /><span className="text-xs font-medium uppercase">Configuration</span></div>

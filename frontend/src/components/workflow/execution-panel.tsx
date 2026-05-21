@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { X, Play, Loader2, CheckCircle2, AlertTriangle, ChevronDown, ChevronRight, Terminal } from "lucide-react";
 import { LogMessage } from "../../hooks/useWebSocket";
+import { cn } from "../../lib/utils";
 
 interface ExecutionPanelProps {
   isOpen: boolean;
@@ -9,9 +10,22 @@ interface ExecutionPanelProps {
   status: string;
   onRun: () => void;
   loading: boolean;
+  panelHeight?: number;
+  onMouseDownResize?: (e: React.MouseEvent) => void;
+  isResizing?: boolean;
 }
 
-export function ExecutionPanel({ isOpen, onClose, logs, status, onRun, loading }: ExecutionPanelProps) {
+export function ExecutionPanel({
+  isOpen,
+  onClose,
+  logs,
+  status,
+  onRun,
+  loading,
+  panelHeight = 320,
+  onMouseDownResize,
+  isResizing = false
+}: ExecutionPanelProps) {
   const [expandedNodes, setExpandedNodes] = useState<Record<string, boolean>>({});
   const logsEndRef = useRef<HTMLDivElement>(null);
 
@@ -22,14 +36,28 @@ export function ExecutionPanel({ isOpen, onClose, logs, status, onRun, loading }
     }
   }, [logs]);
 
-  if (!isOpen) return null;
-
   const toggleExpand = (nodeId: string) => {
     setExpandedNodes((prev) => ({ ...prev, [nodeId]: !prev[nodeId] }));
   };
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-40 flex h-80 flex-col border-t border-slate-800 bg-slate-900/95 shadow-2xl backdrop-blur-md">
+    <div
+      className={cn(
+        "fixed bottom-0 left-0 right-0 z-40 flex flex-col border-t border-slate-800 bg-slate-900/95 shadow-2xl backdrop-blur-md overflow-hidden",
+        !isResizing && "transition-all duration-300"
+      )}
+      style={{ height: isOpen ? `${panelHeight}px` : "0px" }}
+    >
+      {isOpen && onMouseDownResize && (
+        <div
+          onMouseDown={onMouseDownResize}
+          className={cn(
+            "absolute top-0 left-0 right-0 h-1.5 cursor-row-resize hover:bg-blue-500/40 active:bg-blue-500 transition-all z-50",
+            isResizing && "bg-blue-500/40 h-1.5"
+          )}
+          style={{ transform: "translateY(-50%)" }}
+        />
+      )}
       {/* Header */}
       <div className="flex h-11 items-center justify-between border-b border-slate-800 bg-slate-950/80 px-4">
         <div className="flex items-center gap-2">

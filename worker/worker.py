@@ -11,8 +11,8 @@ from core.celery_app import celery_app
 from core.dag_runner import DAGRunner
 
 @celery_app.task(name="worker.run_workflow_task")
-def run_workflow_task(execution_id: str):
+def run_workflow_task(execution_id: str, target_node_id: str = None):
     """Celery task wrapper to execute workflow in async loop."""
     runner = DAGRunner(execution_id)
     # Run the async dag_runner using asyncio
-    return asyncio.run(runner.run())
+    return asyncio.run(runner.run(target_node_id))

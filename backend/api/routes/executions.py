@@ -21,6 +21,7 @@ router = APIRouter(
 @router.post("/{workflow_id}", response_model=ExecutionResponse, status_code=201)
 def trigger_execution(
     workflow_id: str,
+    target_node_id: str = None,
     triggered_by: str = "manual",
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
@@ -44,7 +45,7 @@ def trigger_execution(
 
     try:
         from core.celery_app import celery_app
-        celery_app.send_task("worker.run_workflow_task", args=[execution.id])
+        celery_app.send_task("worker.run_workflow_task", args=[execution.id, target_node_id])
     except Exception as e:
         # If queue fails, mark execution as failed instantly
         execution.status = "failed"

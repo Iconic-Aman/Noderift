@@ -47,11 +47,13 @@ export default function Editor() {
   const [isLeftOpen, setIsLeftOpen] = useState(true);
   const [isRightOpen, setIsRightOpen] = useState(true);
 
-  // Resizable sidebar states
+  // Resizable sidebar and logs panel states
   const [leftWidth, setLeftWidth] = useState(260);
   const [rightWidth, setRightWidth] = useState(300);
+  const [panelHeight, setPanelHeight] = useState(320);
   const [isResizingLeft, setIsResizingLeft] = useState(false);
   const [isResizingRight, setIsResizingRight] = useState(false);
+  const [isResizingPanel, setIsResizingPanel] = useState(false);
 
   const startLeftResize = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
@@ -61,6 +63,11 @@ export default function Editor() {
   const startRightResize = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
     setIsResizingRight(true);
+  }, []);
+
+  const startPanelResize = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    setIsResizingPanel(true);
   }, []);
 
   useEffect(() => {
@@ -73,14 +80,19 @@ export default function Editor() {
         const newWidth = Math.max(250, Math.min(600, window.innerWidth - e.clientX));
         setRightWidth(newWidth);
       }
+      if (isResizingPanel) {
+        const newHeight = Math.max(150, Math.min(600, window.innerHeight - e.clientY));
+        setPanelHeight(newHeight);
+      }
     };
 
     const handleMouseUp = () => {
       setIsResizingLeft(false);
       setIsResizingRight(false);
+      setIsResizingPanel(false);
     };
 
-    if (isResizingLeft || isResizingRight) {
+    if (isResizingLeft || isResizingRight || isResizingPanel) {
       window.addEventListener("mousemove", handleMouseMove);
       window.addEventListener("mouseup", handleMouseUp);
     }
@@ -89,7 +101,7 @@ export default function Editor() {
       window.removeEventListener("mousemove", handleMouseMove);
       window.removeEventListener("mouseup", handleMouseUp);
     };
-  }, [isResizingLeft, isResizingRight]);
+  }, [isResizingLeft, isResizingRight, isResizingPanel]);
 
   // Execution integration
   const { triggerExecution, loading } = useExecution();
@@ -274,7 +286,8 @@ export default function Editor() {
   return (
     <div className={cn(
       "flex h-screen w-full flex-col bg-slate-950 text-slate-200",
-      (isResizingLeft || isResizingRight) && "select-none cursor-col-resize"
+      (isResizingLeft || isResizingRight) && "select-none cursor-col-resize",
+      isResizingPanel && "select-none cursor-row-resize"
     )}>
       <TopNavbar
         workflowName={workflowName}
@@ -396,6 +409,9 @@ export default function Editor() {
         status={executionStatus}
         onRun={handleRun}
         loading={loading}
+        panelHeight={panelHeight}
+        onMouseDownResize={startPanelResize}
+        isResizing={isResizingPanel}
       />
     </div>
   );

@@ -1,8 +1,8 @@
 import { useState, useRef, useEffect } from "react";
-import { Save, Play, Check, Loader2, MoreHorizontal, Clock } from "lucide-react";
+import { Save, Play, Check, Loader2, Clock, Undo } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-export function TopNavbar({ workflowName, onNameChange, status, onSave, onRun, onHistory }: any) {
+export function TopNavbar({ workflowName, onNameChange, status, onSave, onRun, onHistory, onUndo }: any) {
   const [isEditing, setIsEditing] = useState(false);
   const [editValue, setEditValue] = useState(workflowName);
   const [saveState, setSaveState] = useState<"idle" | "saving" | "saved">("idle");
@@ -57,6 +57,14 @@ export function TopNavbar({ workflowName, onNameChange, status, onSave, onRun, o
             History
           </button>
         )}
+        <button
+          onClick={onUndo}
+          title="Ctrl + Z"
+          className="flex items-center gap-2 rounded-lg border border-slate-700 bg-slate-800 px-3 py-1.5 text-sm hover:bg-slate-700 text-slate-300 cursor-pointer shadow-md active:scale-95 transition-all"
+        >
+          <Undo className="h-4 w-4" />
+          <span>Undo</span>
+        </button>
         <button onClick={handleSave} disabled={saveState === "saving"} className="flex items-center gap-2 rounded-lg border border-slate-700 bg-slate-800 px-3 py-1.5 text-sm hover:bg-slate-700 disabled:opacity-50">
           {saveState === "saving" ? <Loader2 className="h-4 w-4 animate-spin" /> : saveState === "saved" ? <Check className="h-4 w-4 text-green-400" /> : <Save className="h-4 w-4" />}
           {saveState === "saving" ? "Saving..." : saveState === "saved" ? "Saved!" : "Save"}

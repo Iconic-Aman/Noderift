@@ -26,8 +26,14 @@ import { ExecutionPanel } from "@/components/workflow/execution-panel";
 import { ChevronLeft, ChevronRight, Terminal } from "lucide-react";
 import { cn } from "@/lib/utils";
 
+import { ButtonEdge } from "@/components/workflow/custom-edge";
+
 const nodeTypes = {
   workflowNode: WorkflowNode,
+};
+
+const edgeTypes = {
+  buttonEdge: ButtonEdge,
 };
 
 export default function Editor() {
@@ -37,7 +43,8 @@ export default function Editor() {
   const { 
     nodes, edges, selectedNode, 
     onNodesChange, onEdgesChange, onConnect, 
-    setNodes, setEdges, setSelectedNode, addNode, updateNodeConfig 
+    setNodes, setEdges, setSelectedNode, addNode, updateNodeConfig,
+    undo, takeHistorySnapshot
   } = useWorkflowStore();
   
   const [workflowName, setWorkflowName] = useState("Loading...");
@@ -175,6 +182,24 @@ export default function Editor() {
     }
   }, [logs, setNodes]);
 
+  // Keyboard Undo Shortcut listener
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === "z") {
+        e.preventDefault();
+        undo();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [undo]);
+
+  const onNodeDragStop = useCallback(() => {
+    takeHistorySnapshot();
+  }, [takeHistorySnapshot]);
+
   useEffect(() => {
     if (!id) return;
     const fetchWorkflow = async () => {
@@ -294,6 +319,7 @@ export default function Editor() {
         onNameChange={setWorkflowName}
         status={executionStatus}
         onSave={onSave}
+        onUndo={undo}
         onRun={handleRun}
         onHistory={() => navigate(`/history/${id}`)}
       />
@@ -338,6 +364,9 @@ export default function Editor() {
             onDrop={onDrop}
             onDragOver={onDragOver}
             nodeTypes={nodeTypes}
+            edgeTypes={edgeTypes}
+            defaultEdgeOptions={{ type: "buttonEdge" }}
+            onNodeDragStop={onNodeDragStop}
             deleteKeyCode={['Backspace', 'Delete']}
             selectionKeyCode={['Shift']}
             fitView

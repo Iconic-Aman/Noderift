@@ -6,7 +6,12 @@ import uvicorn
 
 from core.config import settings
 from core.security import AuthMiddleware, bearer_scheme
-from api.routes import auth, workflows, credentials, executions, websocket
+from api.routes import auth, workflows, credentials, executions, websocket, webhooks
+from core.scheduler import scheduler_manager
+from core.database import SessionLocal
+import logging
+
+logger = logging.getLogger("uvicorn")
 
 app = FastAPI(
     title="Noderift API",
@@ -34,6 +39,24 @@ app.include_router(workflows.router, prefix="/api", tags=["workflows"])
 app.include_router(credentials.router, prefix="/api", tags=["credentials"])
 app.include_router(executions.router, prefix="/api", tags=["executions"])
 app.include_router(websocket.router, tags=["websockets"])
+app.include_router(webhooks.router, prefix="/api", tags=["webhooks"])
+
+
+@app.on_event("startup")
+def startup_event():
+    logger.info("Starting background scheduler...")
+    scheduler_manager.start()
+    db = SessionLocal()
+    try:
+        scheduler_manager.sync_triggers(db)
+    finally:
+        db.close()
+
+
+@app.on_event("shutdown")
+def shutdown_event():
+    logger.info("Stopping background scheduler...")
+    scheduler_manager.shutdown()
 
 
 # ---------------------------------------------------------------------------

@@ -11,8 +11,9 @@ from models.workflow import Workflow
 from nodes import get_node_class, NodeInput
 
 class DAGRunner:
-    def __init__(self, execution_id: str):
+    def __init__(self, execution_id: str, trigger_payload: dict = None):
         self.execution_id = execution_id
+        self.trigger_payload = trigger_payload or {}
         self.redis_client = aioredis.from_url(settings.REDIS_URL)
 
     async def publish_log(self, event_type: str, data: dict):
@@ -117,7 +118,9 @@ class DAGRunner:
             # Map frontend types to backend registered types
             type_mapping = {
                 "http": "http_request",
-                "code": "code"
+                "code": "code",
+                "webhook": "webhook",
+                "schedule": "schedule"
             }
             node_type = type_mapping.get(raw_type, raw_type)
             
@@ -152,6 +155,10 @@ class DAGRunner:
                 input_data.update(parent_out)
                 # Keep nested reference
                 upstream_data[parent_id] = parent_out
+
+            # If trigger node and has no parents, inject trigger_payload
+            if (node_type == "webhook" or node_type == "schedule") and not parents:
+                input_data.update(self.trigger_payload)
 
             input_data["_upstream"] = upstream_data
             node_input = NodeInput(data=input_data)

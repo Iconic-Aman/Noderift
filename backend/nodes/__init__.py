@@ -21,3 +21,5 @@ def get_node_class(node_type: str):
 # Import nodes to trigger decorators
 from nodes.http_node import HttpRequestNode
 from nodes.code_node import CodeNode
+from nodes.webhook_node import WebhookNode
+from nodes.schedule_node import ScheduleNode

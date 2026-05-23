@@ -56,11 +56,11 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-  deploy:
+  deploy-testing:
     needs: build-and-push
+    if: github.ref_name == 'testing'
     runs-on: ubuntu-latest
-    environment:
-      name: ${{ github.ref_name == 'master' && 'production' || 'testing' }}
+    environment: testing
     steps:
       - name: Deploy via SSH
         uses: appleboy/ssh-action@v1.0.3
@@ -70,8 +70,8 @@ jobs:
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
             cd ${{ secrets.EC2_PATH }}
-            git fetch origin ${{ github.ref_name }}
-            git reset --hard origin/${{ github.ref_name }}
+            git fetch origin testing
+            git reset --hard origin/testing
 
             # Remove old values from .env
             sed -i '/^ALLOWED_HOST=/d' .env
@@ -105,11 +105,11 @@ jobs:
             echo "GOOGLE_TOKEN_URL=${{ vars.GOOGLE_TOKEN_URL }}" >> .env
             echo "GOOGLE_USERINFO_URL=${{ vars.GOOGLE_USERINFO_URL }}" >> .env
             echo "REDIS_URL=redis://redis:6379/0" >> .env
-            echo "DOCKER_IMAGE_BACKEND=${{ secrets.DOCKERHUB_USERNAME }}/noderift-backend:${{ env.IMAGE_TAG }}" >> .env
-            echo "DOCKER_IMAGE_FRONTEND=${{ secrets.DOCKERHUB_USERNAME }}/noderift-frontend:${{ env.IMAGE_TAG }}" >> .env
-            echo "DOCKER_IMAGE_WORKER=${{ secrets.DOCKERHUB_USERNAME }}/noderift-worker:${{ env.IMAGE_TAG }}" >> .env
+            echo "DOCKER_IMAGE_BACKEND=${{ secrets.DOCKERHUB_USERNAME }}/noderift-backend:test" >> .env
+            echo "DOCKER_IMAGE_FRONTEND=${{ secrets.DOCKERHUB_USERNAME }}/noderift-frontend:test" >> .env
+            echo "DOCKER_IMAGE_WORKER=${{ secrets.DOCKERHUB_USERNAME }}/noderift-worker:test" >> .env
 
-            # Log in to Docker Hub on the host (in case images are private)
+            # Log in to Docker Hub on the host
             if [ ! -z "${{ secrets.DOCKERHUB_USERNAME }}" ]; then
               echo "${{ secrets.DOCKERHUB_TOKEN }}" | docker login -u "${{ secrets.DOCKERHUB_USERNAME }}" --password-stdin
             fi
@@ -117,5 +117,68 @@ jobs:
             # Pull and restart containers
             docker compose -f docker-compose.prod.yml pull
             docker compose -f docker-compose.prod.yml up -d
+
+  deploy-production:
+    needs: build-and-push
+    if: github.ref_name == 'master'
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            cd ${{ secrets.EC2_PATH }}
+            git fetch origin master
+            git reset --hard origin/master
+
+            # Remove old values from .env
+            sed -i '/^ALLOWED_HOST=/d' .env
+            sed -i '/^VITE_API_URL=/d' .env
+            sed -i '/^ALLOWED_ORIGINS=/d' .env
+            sed -i '/^DATABASE_URL=/d' .env
+            sed -i '/^SECRET_KEY=/d' .env
+            sed -i '/^GOOGLE_CLIENT_ID=/d' .env
+            sed -i '/^GOOGLE_CLIENT_SECRET=/d' .env
+            sed -i '/^GOOGLE_REDIRECT_URI=/d' .env
+            sed -i '/^FRONTEND_URL=/d' .env
+            sed -i '/^GOOGLE_AUTH_URL=/d' .env
+            sed -i '/^GOOGLE_TOKEN_URL=/d' .env
+            sed -i '/^GOOGLE_USERINFO_URL=/d' .env
+            sed -i '/^REDIS_URL=/d' .env
+            sed -i '/^DOCKER_IMAGE_BACKEND=/d' .env
+            sed -i '/^DOCKER_IMAGE_FRONTEND=/d' .env
+            sed -i '/^DOCKER_IMAGE_WORKER=/d' .env
+
+            # Write new values to .env
+            echo "ALLOWED_HOST=${{ vars.ALLOWED_HOST }}" >> .env
+            echo "VITE_API_URL=${{ vars.VITE_API_URL }}" >> .env
+            echo "ALLOWED_ORIGINS=${{ vars.ALLOWED_ORIGINS }}" >> .env
+            echo "DATABASE_URL=${{ secrets.DATABASE_URL }}" >> .env
+            echo "SECRET_KEY=${{ secrets.SECRET_KEY }}" >> .env
+            echo "GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}" >> .env
+            echo "GOOGLE_CLIENT_SECRET=${{ secrets.GOOGLE_CLIENT_SECRET }}" >> .env
+            echo "GOOGLE_REDIRECT_URI=${{ vars.GOOGLE_REDIRECT_URI }}" >> .env
+            echo "FRONTEND_URL=${{ vars.FRONTEND_URL }}" >> .env
+            echo "GOOGLE_AUTH_URL=${{ vars.GOOGLE_AUTH_URL }}" >> .env
+            echo "GOOGLE_TOKEN_URL=${{ vars.GOOGLE_TOKEN_URL }}" >> .env
+            echo "GOOGLE_USERINFO_URL=${{ vars.GOOGLE_USERINFO_URL }}" >> .env
+            echo "REDIS_URL=redis://redis:6379/0" >> .env
+            echo "DOCKER_IMAGE_BACKEND=${{ secrets.DOCKERHUB_USERNAME }}/noderift-backend:latest" >> .env
+            echo "DOCKER_IMAGE_FRONTEND=${{ secrets.DOCKERHUB_USERNAME }}/noderift-frontend:latest" >> .env
+            echo "DOCKER_IMAGE_WORKER=${{ secrets.DOCKERHUB_USERNAME }}/noderift-worker:latest" >> .env
+
+            # Log in to Docker Hub on the host
+            if [ ! -z "${{ secrets.DOCKERHUB_USERNAME }}" ]; then
+              echo "${{ secrets.DOCKERHUB_TOKEN }}" | docker login -u "${{ secrets.DOCKERHUB_USERNAME }}" --password-stdin
+            fi
+
+            # Pull and restart containers
+            docker compose -f docker-compose.prod.yml pull
+            docker compose -f docker-compose.prod.yml up -d
+
 
 

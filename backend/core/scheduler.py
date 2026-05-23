@@ -7,7 +7,7 @@ from core.database import SessionLocal
 from models.cron_trigger import CronTrigger
 from models.workflow import Workflow
 from models.execution import Execution
-from worker import run_workflow_task
+from core.celery_app import celery_app
 
 logger = logging.getLogger(__name__)
 
@@ -96,7 +96,7 @@ class WorkflowScheduler:
                 "cron_expression": trigger.cron_expression,
                 "timezone": trigger.timezone
             }
-            run_workflow_task.delay(exc.id, trigger_payload=payload)
+            celery_app.send_task("worker.run_workflow_task", args=[exc.id], kwargs={"trigger_payload": payload})
             logger.warning(f"[SCHEDULER] Scheduled run triggered for workflow {workflow_id}, execution_id: {exc.id}")
 
             # Update next_run_at for subsequent execution

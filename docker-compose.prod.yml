@@ -1,5 +1,6 @@
 services:
   backend:
+    image: ${DOCKER_IMAGE_BACKEND:-noderift-backend:latest}
     build:
       context: ./backend
       dockerfile: Dockerfile
@@ -21,6 +22,7 @@ services:
       - redis
 
   frontend:
+    image: ${DOCKER_IMAGE_FRONTEND:-noderift-frontend:latest}
     build:
       context: ./frontend
       dockerfile: Dockerfile
@@ -37,6 +39,7 @@ services:
       - "6379"
 
   worker:
+    image: ${DOCKER_IMAGE_WORKER:-noderift-worker:latest}
     build:
       context: .
       dockerfile: worker/Dockerfile

@@ -8,7 +8,7 @@ load_dotenv()
 class Settings(BaseSettings):
     # App
     ENVIRONMENT: str = "development"
-    SECRET_KEY: str = os.getenv("SECRET_KEY") or os.getenv("ENCRYPTION_KEY") or "dev_secret_key_123"
+    SECRET_KEY: str = os.getenv("SECRET_KEY", "")
 
     # CORS — comma-separated list of allowed origins
     ALLOWED_ORIGINS: List[str] = ["http://localhost:5173", "http://localhost:3000"]
@@ -19,8 +19,9 @@ class Settings(BaseSettings):
     # Redis
     REDIS_URL: str = ""
 
-    # Supabase
-    SUPABASE_URL: str = ""
+    @property
+    def db_url(self) -> str:
+        return self.DATABASE_URL
 
     # Google Auth & External URLs
     GOOGLE_CLIENT_ID: str = ""

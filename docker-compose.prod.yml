@@ -1,6 +1,6 @@
 services:
   backend:
-    image: ${DOCKER_IMAGE_BACKEND:-noderift-backend:test}
+    image: ${DOCKER_IMAGE_BACKEND:-noderift-backend:latest}
     build:
       context: ./backend
       dockerfile: Dockerfile
@@ -17,19 +17,19 @@ services:
       GOOGLE_TOKEN_URL: ${GOOGLE_TOKEN_URL}
       GOOGLE_USERINFO_URL: ${GOOGLE_USERINFO_URL}
     ports:
-      - "8001:8000"
+      - "8000:8000"
     depends_on:
       - redis
 
   frontend:
-    image: ${DOCKER_IMAGE_FRONTEND:-noderift-frontend:test}
+    image: ${DOCKER_IMAGE_FRONTEND:-noderift-frontend:latest}
     build:
       context: ./frontend
       dockerfile: Dockerfile
       args:
         - VITE_API_URL=${VITE_API_URL:-/api}
     ports:
-      - "3001:80"   
+      - "3000:80"   
     depends_on:
       - backend
 
@@ -39,7 +39,7 @@ services:
       - "6379"
 
   worker:
-    image: ${DOCKER_IMAGE_WORKER:-noderift-worker:test}
+    image: ${DOCKER_IMAGE_WORKER:-noderift-worker:latest}
     build:
       context: .
       dockerfile: worker/Dockerfile

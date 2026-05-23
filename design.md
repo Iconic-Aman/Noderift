@@ -326,14 +326,14 @@ Node registry maps `node_type` strings to classes — DAG runner resolves them a
 
 - [x] Install `@xyflow/react`
 - [x] Canvas page with drag-drop nodes
-- [ ] Zustand store: `useWorkflowStore` (nodes, edges)
+- [x] Zustand store: `useWorkflowStore` (nodes, edges)
 - [x] Node palette sidebar (searchable)
 - [x] Custom node component (input/output handles, label)
 - [x] Edge connection logic
 - [x] Config panel — click node → see settings form
-- [ ] Save workflow graph (serialize to JSON → POST to API)
-- [ ] Load workflow from API → render on canvas
-- [ ] Monaco Editor embedded in Code node config
+- [x] Save workflow graph (serialize to JSON → POST to API)
+- [x] Load workflow from API → render on canvas
+- [x] Monaco Editor embedded in Code node config
 
 **Deliverable:** Designer can visually build a node graph and save/load it.
 

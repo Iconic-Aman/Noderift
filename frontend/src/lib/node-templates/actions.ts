@@ -74,4 +74,20 @@ export const actionTemplates: NodeTemplate[] = [
       { name: "query", label: "Query", type: "textarea", placeholder: "SELECT * FROM users" },
     ],
   },
+  {
+    id: "code",
+    label: "Code",
+    icon: "code",
+    category: "actions",
+    color: "#3b82f6",
+    description: "Run custom Python code",
+    configFields: [
+      { 
+        name: "code", 
+        label: "Python Code", 
+        type: "code", 
+        defaultValue: "def main(inputs):\n    # Write your logic here\n    return {\"status\": \"success\"}\n" 
+      },
+    ],
+  },
 ];

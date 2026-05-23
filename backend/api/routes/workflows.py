@@ -7,6 +7,8 @@ from core.database import get_db
 from api.deps import get_current_user
 from models.user import User
 from models.workflow import Workflow
+from models.webhook import Webhook
+from models.cron_trigger import CronTrigger
 from schemas.workflow import WorkflowCreate, WorkflowUpdate, Workflow as WorkflowSchema, WorkflowShort
 from core.security import bearer_scheme
 
@@ -52,18 +54,41 @@ def get_workflow(workflow_id: str, db: Session = Depends(get_db), current_user: 
     return wf
 
 
+import logging
+
+logger = logging.getLogger(__name__)
+
 @router.patch("/{workflow_id}", response_model=WorkflowSchema)
 def update_workflow(workflow_id: str, body: WorkflowUpdate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     """Partial update — name, description, graph, or is_active."""
+    logger.warning(f"[PATCH WORKFLOW] Attempting to update workflow_id: {workflow_id} for user: {current_user.id}")
+    
     wf = db.query(Workflow).filter(Workflow.id == workflow_id, Workflow.user_id == current_user.id).first()
     if not wf:
+        logger.warning(f"[PATCH WORKFLOW] Workflow {workflow_id} not found for user {current_user.id}")
         raise HTTPException(status_code=404, detail="Workflow not found")
-    for field, value in body.model_dump(exclude_none=True).items():
-        setattr(wf, field, value)
-    wf.updated_at = datetime.now(timezone.utc)
-    db.commit()
-    db.refresh(wf)
-    return wf
+        
+    try:
+        update_data = body.model_dump(exclude_none=True)
+        logger.warning(f"[PATCH WORKFLOW] Updating fields: {list(update_data.keys())}")
+        
+        for field, value in update_data.items():
+            setattr(wf, field, value)
+        wf.updated_at = datetime.now(timezone.utc)
+        
+        db.commit()
+        db.refresh(wf)
+        
+        # Sync triggers after saving graph changes
+        if body.graph is not None or body.is_active is not None:
+            sync_workflow_triggers(db, wf)
+            
+        logger.warning(f"[PATCH WORKFLOW] Successfully updated workflow {workflow_id}")
+        return wf
+    except Exception as e:
+        logger.error(f"[PATCH WORKFLOW] Database error during update: {str(e)}")
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
 
 
 @router.delete("/{workflow_id}", status_code=204)
@@ -86,6 +111,10 @@ def activate_workflow(workflow_id: str, db: Session = Depends(get_db), current_u
     wf.updated_at = datetime.now(timezone.utc)
     db.commit()
     db.refresh(wf)
+    
+    # Sync triggers on activation status toggle
+    sync_workflow_triggers(db, wf)
+    
     return wf
 
 
@@ -106,3 +135,99 @@ def duplicate_workflow(workflow_id: str, db: Session = Depends(get_db), current_
     db.commit()
     db.refresh(clone)
     return clone
+
+
+def sync_workflow_triggers(db: Session, workflow: Workflow):
+    graph = workflow.graph or {}
+    nodes = graph.get("nodes", [])
+    
+    has_webhook = False
+    has_schedule = False
+    cron_config = None
+    
+    for node in nodes:
+        node_id = node.get("id", "")
+        raw_type = node_id.split("-")[0] if "-" in node_id else node.get("type", "")
+        if raw_type == "webhook":
+            has_webhook = True
+        elif raw_type == "schedule":
+            has_schedule = True
+            cron_config = node.get("data", {}).get("config", {})
+            
+    # Sync Webhook table
+    db_hook = db.query(Webhook).filter(Webhook.workflow_id == workflow.id).first()
+    if has_webhook:
+        if not db_hook:
+            db_hook = Webhook(workflow_id=workflow.id)
+            db.add(db_hook)
+    else:
+        if db_hook:
+            db.delete(db_hook)
+            
+    # Sync CronTrigger table
+    db_cron = db.query(CronTrigger).filter(CronTrigger.workflow_id == workflow.id).first()
+    if has_schedule:
+        cron_expr = cron_config.get("cron", "0 * * * *") if cron_config else "0 * * * *"
+        timezone_val = cron_config.get("timezone", "UTC") if cron_config else "UTC"
+        
+        if db_cron:
+            db_cron.cron_expression = cron_expr
+            db_cron.timezone = timezone_val
+            db_cron.is_active = workflow.is_active
+        else:
+            db_cron = CronTrigger(
+                workflow_id=workflow.id,
+                cron_expression=cron_expr,
+                timezone=timezone_val,
+                is_active=workflow.is_active
+            )
+            db.add(db_cron)
+        db.commit()
+        db.refresh(db_cron)
+        
+        # Sync with APScheduler
+        from core.scheduler import scheduler_manager
+        if workflow.is_active:
+            scheduler_manager.add_workflow_job(
+                db_cron.id,
+                workflow.id,
+                db_cron.cron_expression,
+                db_cron.timezone
+            )
+        else:
+            scheduler_manager.remove_workflow_job(db_cron.id)
+    else:
+        if db_cron:
+            # Remove from APScheduler first
+            from core.scheduler import scheduler_manager
+            scheduler_manager.remove_workflow_job(db_cron.id)
+            db.delete(db_cron)
+            
+    db.commit()
+
+
+@router.get("/{workflow_id}/triggers")
+def get_workflow_triggers(workflow_id: str, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    """Get trigger details (webhook slug/secret and cron triggers) for a workflow."""
+    wf = db.query(Workflow).filter(Workflow.id == workflow_id, Workflow.user_id == current_user.id).first()
+    if not wf:
+        raise HTTPException(status_code=404, detail="Workflow not found")
+    
+    hook = db.query(Webhook).filter(Webhook.workflow_id == workflow_id).first()
+    cron = db.query(CronTrigger).filter(CronTrigger.workflow_id == workflow_id).first()
+    
+    return {
+        "webhook": {
+            "id": hook.id,
+            "slug": hook.slug,
+            "secret": hook.secret,
+            "created_at": hook.created_at
+        } if hook else None,
+        "cron": {
+            "id": cron.id,
+            "cron_expression": cron.cron_expression,
+            "timezone": cron.timezone,
+            "next_run_at": cron.next_run_at,
+            "is_active": cron.is_active
+        } if cron else None
+    }

@@ -20,3 +20,9 @@ alembic==1.13.1
 
 # Encryption
 cryptography==42.0.8
+
+# Task Queue
+celery==5.4.0
+redis==5.0.4
+apscheduler==3.10.4
+

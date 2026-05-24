@@ -4,7 +4,7 @@ from core.database import get_db
 from models.webhook import Webhook
 from models.workflow import Workflow
 from models.execution import Execution
-from worker import run_workflow_task
+from core.celery_app import celery_app
 
 router = APIRouter(
     prefix="/webhooks",
@@ -54,7 +54,7 @@ async def trigger_webhook(slug: str, request: Request, db: Session = Depends(get
         "headers": headers,
         "query": query_params
     }
-    run_workflow_task.delay(execution.id, trigger_payload=payload)
+    celery_app.send_task("worker.run_workflow_task", args=[execution.id], kwargs={"trigger_payload": payload})
 
     return {
         "execution_id": execution.id,

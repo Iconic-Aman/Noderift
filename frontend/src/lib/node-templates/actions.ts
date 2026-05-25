@@ -99,7 +99,7 @@ export const actionTemplates: NodeTemplate[] = [
         name: "code",
         label: "Python Code",
         type: "code",
-        defaultValue: "# Access input variables via input_data dictionary\n# Set output variables inside output_data dictionary\n\nprint(\"Executing custom code...\")\noutput_data = {\n    \"status\": \"success\"\n}\n" 
+        placeholder: "# input_data has outputs from previous nodes\n# set output_data dict to pass data forward"
       },
     ],
   },

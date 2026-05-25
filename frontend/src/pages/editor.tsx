@@ -80,7 +80,7 @@ export default function Editor() {
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
       if (isResizingLeft) {
-        const newWidth = Math.max(200, Math.min(500, e.clientX));
+        const newWidth = Math.max(40, Math.min(500, e.clientX));
         setLeftWidth(newWidth);
       }
       if (isResizingRight) {

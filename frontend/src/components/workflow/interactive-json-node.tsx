@@ -6,6 +6,12 @@ interface JSONNodeProps {
   indentLevel?: number;
 }
 
+// Converts dotted path "nodeId.a.b.c" -> input_data["nodeId"]["a"]["b"]["c"]
+function toPythonAccess(nodeId: string, path: string): string {
+  const parts = path.split(".");
+  return `input_data` + [nodeId, ...parts].map(p => `["${p}"]`).join("");
+}
+
 export const InteractiveJSONNode = ({ val, nodeId, path, isLast = true, indentLevel = 0 }: JSONNodeProps) => {
   const indent = "  ".repeat(indentLevel);
 
@@ -17,19 +23,20 @@ export const InteractiveJSONNode = ({ val, nodeId, path, isLast = true, indentLe
         <span>{"{"}</span>
         {keys.map((k, i) => {
           const nextPath = path ? `${path}.${k}` : k;
+          const templateVar = `{{${nodeId}.${nextPath}}}`;
+          const pythonVar = toPythonAccess(nodeId, nextPath);
           return (
             <div key={k} style={{ paddingLeft: "12px" }}>
               <span
                 draggable="true"
                 onDragStart={(e) => {
-                  e.dataTransfer.setData("text/plain", `{{${nodeId}.${nextPath}}}`);
+                  e.dataTransfer.setData("text/plain", templateVar);
+                  e.dataTransfer.setData("application/x-noderift-var", JSON.stringify({ template: templateVar, python: pythonVar }));
                   e.dataTransfer.effectAllowed = "copy";
                 }}
-                onClick={() => {
-                  navigator.clipboard.writeText(`{{${nodeId}.${nextPath}}}`);
-                }}
+                onClick={() => navigator.clipboard.writeText(templateVar)}
                 className="text-blue-400 font-semibold hover:underline cursor-grab select-none active:scale-95 text-[10px]"
-                title="Drag or click to copy variable"
+                title={`Drag into fields • Python: ${pythonVar}`}
               >
                 "{k}"
               </span>

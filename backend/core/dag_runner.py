@@ -151,8 +151,10 @@ class DAGRunner:
             upstream_data = {}
             for parent_id in parents:
                 parent_out = node_outputs.get(parent_id, {})
-                # Merge into a flat dictionary
+                # Merge into a flat dictionary (for backward compat)
                 input_data.update(parent_out)
+                # Also key by node ID so code can do input_data["node-id"]["key"]
+                input_data[parent_id] = parent_out
                 # Keep nested reference
                 upstream_data[parent_id] = parent_out
 

@@ -95,11 +95,11 @@ export const actionTemplates: NodeTemplate[] = [
     color: "#3b82f6",
     description: "Run custom Python code",
     configFields: [
-      { 
-        name: "code", 
-        label: "Python Code", 
-        type: "code", 
-        defaultValue: "def main(inputs):\n    # Write your logic here\n    return {\"status\": \"success\"}\n" 
+      {
+        name: "code",
+        label: "Python Code",
+        type: "code",
+        placeholder: "# input_data has outputs from previous nodes\n# set output_data dict to pass data forward"
       },
     ],
   },

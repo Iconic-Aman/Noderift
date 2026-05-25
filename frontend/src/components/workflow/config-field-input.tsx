@@ -15,12 +15,33 @@ export function ConfigFieldInput({ field, value, onChange }: Props) {
     e.stopPropagation();
   };
 
+  const handleDrop = (e: React.DragEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    e.preventDefault();
+    const text = e.dataTransfer.getData("text/plain");
+    if (text) {
+      const target = e.currentTarget;
+      const start = target.selectionStart || 0;
+      const end = target.selectionEnd || 0;
+      const val = target.value;
+      const nextVal = val.substring(0, start) + text + val.substring(end);
+      onChange(nextVal);
+      
+      // Refocus and place cursor right after inserted variable
+      setTimeout(() => {
+        target.focus();
+        target.setSelectionRange(start + text.length, start + text.length);
+      }, 0);
+    }
+  };
+
   switch (field.type) {
     case "code":
       return (
         <div 
           className="h-[200px] w-full overflow-hidden rounded-lg border border-slate-700 nodrag nopan"
           onKeyDown={handleKeyDown}
+          onDragOver={e => e.stopPropagation()}
+          onDrop={e => e.stopPropagation()}
         >
           <Editor
             height="100%"
@@ -38,7 +59,18 @@ export function ConfigFieldInput({ field, value, onChange }: Props) {
         </div>
       );
     case "textarea":
-      return <textarea value={value || ""} onChange={e => onChange(e.target.value)} onKeyDown={handleKeyDown} placeholder={field.placeholder} rows={3} className={cn(baseCls, "resize-none")} />;
+      return (
+        <textarea 
+          value={value || ""} 
+          onChange={e => onChange(e.target.value)} 
+          onKeyDown={handleKeyDown} 
+          onDragOver={e => e.preventDefault()}
+          onDrop={handleDrop}
+          placeholder={field.placeholder} 
+          rows={3} 
+          className={cn(baseCls, "resize-none")} 
+        />
+      );
     case "select":
       return (
         <select value={value || ""} onChange={e => onChange(e.target.value)} onKeyDown={handleKeyDown} className={baseCls}>
@@ -47,7 +79,18 @@ export function ConfigFieldInput({ field, value, onChange }: Props) {
         </select>
       );
     case "number":
-      return <input type="number" value={value ?? field.defaultValue ?? ""} onChange={e => onChange(parseFloat(e.target.value) || 0)} onKeyDown={handleKeyDown} placeholder={field.placeholder} className={baseCls} />;
+      return (
+        <input 
+          type="number" 
+          value={value ?? field.defaultValue ?? ""} 
+          onChange={e => onChange(parseFloat(e.target.value) || 0)} 
+          onKeyDown={handleKeyDown} 
+          onDragOver={e => e.preventDefault()}
+          onDrop={handleDrop}
+          placeholder={field.placeholder} 
+          className={baseCls} 
+        />
+      );
     case "toggle":
       return (
         <button onClick={() => onChange(!value)} className={cn("relative h-6 w-11 rounded-full transition-colors", value ? "bg-blue-500" : "bg-slate-700")}>
@@ -55,7 +98,19 @@ export function ConfigFieldInput({ field, value, onChange }: Props) {
         </button>
       );
     default:
-      return <input type="text" value={value || ""} onChange={e => onChange(e.target.value)} onKeyDown={handleKeyDown} placeholder={field.placeholder} className={baseCls} />;
+      return (
+        <input 
+          type="text" 
+          value={value || ""} 
+          onChange={e => onChange(e.target.value)} 
+          onKeyDown={handleKeyDown} 
+          onDragOver={e => e.preventDefault()}
+          onDrop={handleDrop}
+          placeholder={field.placeholder} 
+          className={baseCls} 
+        />
+      );
   }
 }
+
 

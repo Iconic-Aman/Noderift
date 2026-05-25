@@ -115,6 +115,7 @@ export default function Editor() {
   const [activeExecutionId, setActiveExecutionId] = useState<string | null>(null);
   const [isExecutionPanelOpen, setIsExecutionPanelOpen] = useState(false);
   const [executionStatus, setExecutionStatus] = useState<"idle" | "running" | "success">("idle");
+  const [isSingleRun, setIsSingleRun] = useState(false);
   
   const { logs, setLogs } = useWebSocket(activeExecutionId);
 
@@ -136,15 +137,19 @@ export default function Editor() {
   useEffect(() => {
     const currentNodes = useWorkflowStore.getState().nodes;
     if (logs.length === 0) {
-      const clearedNodes = currentNodes.map((n) => {
-        if (n.data.status || n.data.output || n.data.error) {
-          const { status, output, error, ...restData } = n.data;
-          return { ...n, data: restData as NodeData };
+      // If full run starting, logs is empty, we clear all node status. 
+      // If single run starting, handleRunNode clears the target node directly, so we do nothing here.
+      if (!isSingleRun) {
+        const clearedNodes = currentNodes.map((n) => {
+          if (n.data.status || n.data.output || n.data.error) {
+            const { status, output, error, ...restData } = n.data;
+            return { ...n, data: restData as NodeData };
+          }
+          return n;
+        });
+        if (clearedNodes.some((n, i) => n.data.status !== currentNodes[i].data.status)) {
+          setNodes(clearedNodes);
         }
-        return n;
-      });
-      if (clearedNodes.some((n, i) => n.data.status !== currentNodes[i].data.status)) {
-        setNodes(clearedNodes);
       }
       return;
     }
@@ -171,6 +176,11 @@ export default function Editor() {
       const nextOutput = latestOutputs[n.id];
       const nextError = latestErrors[n.id];
       
+      // If this is a single node run, only update the nodes that are actually part of the logs
+      if (isSingleRun && nextStatus === undefined) {
+        return n;
+      }
+
       let nodeChanged = false;
       const nextData = { ...n.data };
       
@@ -197,7 +207,7 @@ export default function Editor() {
     if (hasChanges) {
       setNodes(updatedNodes);
     }
-  }, [logs, setNodes]);
+  }, [logs, setNodes, isSingleRun]);
 
 
   // Keyboard Undo Shortcut listener
@@ -255,9 +265,21 @@ export default function Editor() {
     // Auto-save graph before running
     await onSave();
     
+    setIsSingleRun(false);
     setLogs([]);
     setExecutionStatus("running");
     setIsExecutionPanelOpen(true);
+
+    // Clear all node execution states immediately for a full run
+    const currentNodes = useWorkflowStore.getState().nodes;
+    const clearedNodes = currentNodes.map((n) => {
+      if (n.data.status || n.data.output || n.data.error) {
+        const { status, output, error, ...restData } = n.data;
+        return { ...n, data: restData as NodeData };
+      }
+      return n;
+    });
+    setNodes(clearedNodes);
 
     try {
       const runData = await triggerExecution(id);
@@ -273,9 +295,21 @@ export default function Editor() {
     // Auto-save graph before running
     await onSave();
     
+    setIsSingleRun(true);
     setLogs([]);
     setExecutionStatus("running");
     setIsExecutionPanelOpen(true);
+
+    // Clear ONLY the target node state immediately for single run
+    const currentNodes = useWorkflowStore.getState().nodes;
+    const clearedNodes = currentNodes.map((n) => {
+      if (n.id === nodeId) {
+        const { status, output, error, ...restData } = n.data;
+        return { ...n, data: restData as NodeData };
+      }
+      return n;
+    });
+    setNodes(clearedNodes);
 
     try {
       const runData = await triggerExecution(id, nodeId);

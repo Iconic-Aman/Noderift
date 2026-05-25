@@ -26,6 +26,21 @@ export function NodeConfigPanel({ node, onClose, onConfigChange, onRunNode }: Pr
   const [isLoadingTrigger, setIsLoadingTrigger] = useState(false);
   const [copied, setCopied] = useState(false);
 
+  const getOutputKeys = (obj: any, prefix = ""): string[] => {
+    if (!obj || typeof obj !== "object") return [];
+    let keys: string[] = [];
+    for (const k of Object.keys(obj)) {
+      const val = obj[k];
+      const path = prefix ? `${prefix}.${k}` : k;
+      if (val && typeof val === "object" && !Array.isArray(val)) {
+        keys = keys.concat(getOutputKeys(val, path));
+      } else {
+        keys.push(path);
+      }
+    }
+    return keys;
+  };
+
   useEffect(() => {
     if (node && id && (node.id.startsWith("webhook") || node.id.startsWith("schedule"))) {
       setIsLoadingTrigger(true);
@@ -359,26 +374,74 @@ export function NodeConfigPanel({ node, onClose, onConfigChange, onRunNode }: Pr
                       )}
                     </div>
                     
-                    <div className="flex flex-wrap gap-1.5">
-                      <button
-                        onClick={() => {
-                          navigator.clipboard.writeText(`{{${p.id}.response}}`);
-                        }}
-                        className="flex items-center gap-1 text-[9px] bg-slate-800 hover:bg-slate-700 text-slate-300 px-2 py-1 rounded border border-slate-700 transition-colors cursor-pointer active:scale-95"
-                      >
-                        <Copy className="h-2.5 w-2.5" />
-                        Response
-                      </button>
-                      <button
-                        onClick={() => {
-                          navigator.clipboard.writeText(`{{${p.id}.status_code}}`);
-                        }}
-                        className="flex items-center gap-1 text-[9px] bg-slate-800 hover:bg-slate-700 text-slate-300 px-2 py-1 rounded border border-slate-700 transition-colors cursor-pointer active:scale-95"
-                      >
-                        <Copy className="h-2.5 w-2.5" />
-                        Status
-                      </button>
-                    </div>
+                    {(() => {
+                      const output = p.data.output;
+                      const keys = getOutputKeys(output);
+                      
+                      if (keys.length > 0) {
+                        return (
+                          <div className="flex flex-wrap gap-1.5 w-full">
+                            {keys.map(key => {
+                              const textToInsert = `{{${p.id}.${key}}}`;
+                              return (
+                                <button
+                                  key={key}
+                                  draggable="true"
+                                  onDragStart={(e) => {
+                                    e.dataTransfer.setData("text/plain", textToInsert);
+                                    e.dataTransfer.effectAllowed = "copy";
+                                  }}
+                                  onClick={() => {
+                                    navigator.clipboard.writeText(textToInsert);
+                                  }}
+                                  className="flex items-center gap-1 text-[9px] bg-slate-800 hover:bg-slate-700 border border-slate-700/80 rounded px-2 py-1 text-slate-300 font-mono transition-all active:scale-95 cursor-grab select-none shadow-sm"
+                                  title="Drag into input field or click to copy"
+                                >
+                                  <Copy className="h-2.5 w-2.5 text-blue-400" />
+                                  <span>{key}</span>
+                                </button>
+                              );
+                            })}
+                          </div>
+                        );
+                      }
+                      
+                      return (
+                        <div className="flex flex-wrap gap-1.5 w-full">
+                          <button
+                            draggable="true"
+                            onDragStart={(e) => {
+                              e.dataTransfer.setData("text/plain", `{{${p.id}.response}}`);
+                              e.dataTransfer.effectAllowed = "copy";
+                            }}
+                            onClick={() => {
+                              navigator.clipboard.writeText(`{{${p.id}.response}}`);
+                            }}
+                            className="flex items-center gap-1 text-[9px] bg-slate-800 hover:bg-slate-700 border border-slate-700/80 rounded px-2 py-1 text-slate-300 font-mono transition-all active:scale-95 cursor-grab select-none shadow-sm"
+                            title="Drag into input field or click to copy"
+                          >
+                            <Copy className="h-2.5 w-2.5 text-blue-400" />
+                            <span>Response</span>
+                          </button>
+                          <button
+                            draggable="true"
+                            onDragStart={(e) => {
+                              e.dataTransfer.setData("text/plain", `{{${p.id}.status_code}}`);
+                              e.dataTransfer.effectAllowed = "copy";
+                            }}
+                            onClick={() => {
+                              navigator.clipboard.writeText(`{{${p.id}.status_code}}`);
+                            }}
+                            className="flex items-center gap-1 text-[9px] bg-slate-800 hover:bg-slate-700 border border-slate-700/80 rounded px-2 py-1 text-slate-300 font-mono transition-all active:scale-95 cursor-grab select-none shadow-sm"
+                            title="Drag into input field or click to copy"
+                          >
+                            <Copy className="h-2.5 w-2.5 text-blue-400" />
+                            <span>Status</span>
+                          </button>
+                        </div>
+                      );
+                    })()}
+
 
                     {/* n8n-style hover JSON variables inspector */}
                     <div className="absolute right-full mr-3 top-0 z-[100] hidden group-hover:block w-[290px] max-h-[320px] overflow-y-auto rounded-lg border border-slate-700 bg-slate-950/98 p-3.5 shadow-2xl backdrop-blur-md text-[10px] font-mono leading-relaxed text-blue-300">

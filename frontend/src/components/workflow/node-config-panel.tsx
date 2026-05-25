@@ -339,17 +339,32 @@ export function NodeConfigPanel({ node, onClose, onConfigChange, onRunNode }: Pr
           {/* Upstream variables helper */}
           {parentNodes.length > 0 && (
             <div className="border-t border-slate-800 p-4 bg-slate-800/10">
-              <p className="text-[10px] font-semibold text-slate-400 uppercase mb-2">Input Variables</p>
+              <p className="text-[10px] font-semibold text-slate-400 uppercase mb-2">Input Variables (Hover to Inspect)</p>
               <div className="flex flex-col gap-2">
                 {parentNodes.map(p => (
-                  <div key={p.id} className="rounded-lg bg-slate-950/40 p-2.5 border border-slate-800/60">
-                    <p className="text-[11px] font-medium text-slate-300 mb-1">{p.data.label} ({p.id})</p>
+                  <div key={p.id} className="relative group rounded-lg bg-slate-950/40 p-2.5 border border-slate-800/60 transition-all hover:bg-slate-950/80">
+                    <div className="flex items-center justify-between mb-1.5">
+                      <p className="text-[11px] font-semibold text-slate-200">{p.data.label}</p>
+                      {p.data.status === "success" && (
+                        <span className="text-[8px] font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 rounded px-1 py-0.5">Executed</span>
+                      )}
+                      {p.data.status === "failed" && (
+                        <span className="text-[8px] font-bold text-red-400 bg-red-500/10 border border-red-500/20 rounded px-1 py-0.5">Failed</span>
+                      )}
+                      {p.data.status === "running" && (
+                        <span className="text-[8px] font-bold text-blue-400 bg-blue-500/10 border border-blue-500/20 rounded px-1 py-0.5">Running</span>
+                      )}
+                      {!p.data.status && (
+                        <span className="text-[8px] font-bold text-slate-500 bg-slate-800/80 border border-slate-700/60 rounded px-1 py-0.5">Yet to execute</span>
+                      )}
+                    </div>
+                    
                     <div className="flex flex-wrap gap-1.5">
                       <button
                         onClick={() => {
                           navigator.clipboard.writeText(`{{${p.id}.response}}`);
                         }}
-                        className="flex items-center gap-1 text-[9px] bg-slate-800 hover:bg-slate-700 text-slate-300 px-2 py-1 rounded border border-slate-700 transition-colors"
+                        className="flex items-center gap-1 text-[9px] bg-slate-800 hover:bg-slate-700 text-slate-300 px-2 py-1 rounded border border-slate-700 transition-colors cursor-pointer active:scale-95"
                       >
                         <Copy className="h-2.5 w-2.5" />
                         Response
@@ -358,17 +373,39 @@ export function NodeConfigPanel({ node, onClose, onConfigChange, onRunNode }: Pr
                         onClick={() => {
                           navigator.clipboard.writeText(`{{${p.id}.status_code}}`);
                         }}
-                        className="flex items-center gap-1 text-[9px] bg-slate-800 hover:bg-slate-700 text-slate-300 px-2 py-1 rounded border border-slate-700 transition-colors"
+                        className="flex items-center gap-1 text-[9px] bg-slate-800 hover:bg-slate-700 text-slate-300 px-2 py-1 rounded border border-slate-700 transition-colors cursor-pointer active:scale-95"
                       >
                         <Copy className="h-2.5 w-2.5" />
                         Status
                       </button>
+                    </div>
+
+                    {/* n8n-style hover JSON variables inspector */}
+                    <div className="absolute right-full mr-3 top-0 z-[100] hidden group-hover:block w-[290px] max-h-[320px] overflow-y-auto rounded-lg border border-slate-700 bg-slate-950/98 p-3.5 shadow-2xl backdrop-blur-md text-[10px] font-mono leading-relaxed text-blue-300">
+                      <div className="flex items-center justify-between border-b border-slate-800 pb-1.5 mb-2">
+                        <span className="text-[9px] font-bold text-slate-400 uppercase">Live Output Data ({p.id})</span>
+                        {p.data.status === "success" ? (
+                          <span className="text-[8px] font-bold text-emerald-400">Success</span>
+                        ) : p.data.status === "failed" ? (
+                          <span className="text-[8px] font-bold text-red-400">Failed</span>
+                        ) : (
+                          <span className="text-[8px] font-bold text-slate-500">Yet to execute</span>
+                        )}
+                      </div>
+                      {p.data.status === "success" && p.data.output ? (
+                        <pre className="whitespace-pre-wrap select-all font-mono leading-normal text-[10px] max-h-[240px] overflow-y-auto">{JSON.stringify(p.data.output, null, 2)}</pre>
+                      ) : p.data.status === "failed" && p.data.error ? (
+                        <pre className="whitespace-pre-wrap select-all font-mono leading-normal text-[10px] max-h-[240px] overflow-y-auto text-red-400">{p.data.error}</pre>
+                      ) : (
+                        <p className="text-slate-500 italic text-[10px]">No output data. Execute node to view live variables.</p>
+                      )}
                     </div>
                   </div>
                 ))}
               </div>
             </div>
           )}
+
 
           <div className="border-t border-slate-800 p-4 bg-slate-800/30">
             <p className="text-[10px] font-medium text-slate-500 uppercase mb-1">Node ID</p>

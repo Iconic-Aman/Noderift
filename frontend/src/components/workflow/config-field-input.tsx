@@ -11,10 +11,17 @@ interface Props {
 export function ConfigFieldInput({ field, value, onChange }: Props) {
   const baseCls = "w-full rounded-lg border border-slate-700 bg-slate-800/80 px-3 py-2 text-sm text-slate-200 outline-none focus:border-slate-600 transition-colors";
 
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    e.stopPropagation();
+  };
+
   switch (field.type) {
     case "code":
       return (
-        <div className="h-[200px] w-full overflow-hidden rounded-lg border border-slate-700">
+        <div 
+          className="h-[200px] w-full overflow-hidden rounded-lg border border-slate-700 nodrag nopan"
+          onKeyDown={handleKeyDown}
+        >
           <Editor
             height="100%"
             defaultLanguage="python"
@@ -31,16 +38,16 @@ export function ConfigFieldInput({ field, value, onChange }: Props) {
         </div>
       );
     case "textarea":
-      return <textarea value={value || ""} onChange={e => onChange(e.target.value)} placeholder={field.placeholder} rows={3} className={cn(baseCls, "resize-none")} />;
+      return <textarea value={value || ""} onChange={e => onChange(e.target.value)} onKeyDown={handleKeyDown} placeholder={field.placeholder} rows={3} className={cn(baseCls, "resize-none")} />;
     case "select":
       return (
-        <select value={value || ""} onChange={e => onChange(e.target.value)} className={baseCls}>
+        <select value={value || ""} onChange={e => onChange(e.target.value)} onKeyDown={handleKeyDown} className={baseCls}>
           <option value="">Select...</option>
           {field.options?.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
         </select>
       );
     case "number":
-      return <input type="number" value={value ?? field.defaultValue ?? ""} onChange={e => onChange(parseFloat(e.target.value) || 0)} placeholder={field.placeholder} className={baseCls} />;
+      return <input type="number" value={value ?? field.defaultValue ?? ""} onChange={e => onChange(parseFloat(e.target.value) || 0)} onKeyDown={handleKeyDown} placeholder={field.placeholder} className={baseCls} />;
     case "toggle":
       return (
         <button onClick={() => onChange(!value)} className={cn("relative h-6 w-11 rounded-full transition-colors", value ? "bg-blue-500" : "bg-slate-700")}>
@@ -48,6 +55,7 @@ export function ConfigFieldInput({ field, value, onChange }: Props) {
         </button>
       );
     default:
-      return <input type="text" value={value || ""} onChange={e => onChange(e.target.value)} placeholder={field.placeholder} className={baseCls} />;
+      return <input type="text" value={value || ""} onChange={e => onChange(e.target.value)} onKeyDown={handleKeyDown} placeholder={field.placeholder} className={baseCls} />;
   }
 }
+

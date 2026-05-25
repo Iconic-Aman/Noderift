@@ -137,8 +137,8 @@ export default function Editor() {
     const currentNodes = useWorkflowStore.getState().nodes;
     if (logs.length === 0) {
       const clearedNodes = currentNodes.map((n) => {
-        if (n.data.status) {
-          const { status, ...restData } = n.data;
+        if (n.data.status || n.data.output || n.data.error) {
+          const { status, output, error, ...restData } = n.data;
           return { ...n, data: restData as NodeData };
         }
         return n;
@@ -150,29 +150,46 @@ export default function Editor() {
     }
 
     const latestStatuses: Record<string, "running" | "success" | "failed"> = {};
+    const latestOutputs: Record<string, any> = {};
+    const latestErrors: Record<string, any> = {};
     for (const log of logs) {
       if (!log.node_id) continue;
       if (log.type === "node_started") {
         latestStatuses[log.node_id] = "running";
       } else if (log.type === "node_success") {
         latestStatuses[log.node_id] = "success";
+        latestOutputs[log.node_id] = log.output;
       } else if (log.type === "node_failed") {
         latestStatuses[log.node_id] = "failed";
+        latestErrors[log.node_id] = log.error;
       }
     }
 
     let hasChanges = false;
     const updatedNodes = currentNodes.map((n) => {
       const nextStatus = latestStatuses[n.id];
+      const nextOutput = latestOutputs[n.id];
+      const nextError = latestErrors[n.id];
+      
+      let nodeChanged = false;
+      const nextData = { ...n.data };
+      
       if (n.data.status !== nextStatus) {
+        nextData.status = nextStatus;
+        nodeChanged = true;
+      }
+      if (nextOutput !== undefined && JSON.stringify(nextOutput) !== JSON.stringify(n.data.output)) {
+        nextData.output = nextOutput;
+        nodeChanged = true;
+      }
+      if (nextError !== undefined && nextError !== n.data.error) {
+        nextData.error = nextError;
+        nodeChanged = true;
+      }
+      
+      if (nodeChanged) {
         hasChanges = true;
-        return {
-          ...n,
-          data: {
-            ...n.data,
-            status: nextStatus,
-          },
-        };
+        return { ...n, data: nextData };
       }
       return n;
     });
@@ -181,6 +198,7 @@ export default function Editor() {
       setNodes(updatedNodes);
     }
   }, [logs, setNodes]);
+
 
   // Keyboard Undo Shortcut listener
   useEffect(() => {

@@ -31,13 +31,26 @@ export const actionTemplates: NodeTemplate[] = [
     label: "WhatsApp",
     icon: "whatsapp",
     category: "actions",
-    color: "#3b82f6",
-    description: "Send WhatsApp message",
+    color: "#25D366",
+    description: "Send WhatsApp message (Original Green)",
     configFields: [
       { name: "phone", label: "Phone Number", type: "text", placeholder: "+1234567890" },
       { name: "message", label: "Message", type: "textarea", placeholder: "Enter message..." },
     ],
   },
+  {
+    id: "whatsapp-blue",
+    label: "WhatsApp (Blue)",
+    icon: "whatsapp",
+    category: "actions",
+    color: "#3b82f6",
+    description: "Send WhatsApp message (Blue)",
+    configFields: [
+      { name: "phone", label: "Phone Number", type: "text", placeholder: "+1234567890" },
+      { name: "message", label: "Message", type: "textarea", placeholder: "Enter message..." },
+    ],
+  },
+
   {
     id: "http",
     label: "HTTP Request",

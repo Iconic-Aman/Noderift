@@ -20,11 +20,19 @@ const OpenAI = ({ className, style }: { className?: string; style?: React.CSSPro
   </svg>
 );
 
+const WhatsAppIcon = ({ className, style }: { className?: string; style?: React.CSSProperties }) => (
+  <svg viewBox="0 0 24 24" fill="currentColor" className={className} style={style}>
+    <path d="M12.004 2C6.48 2 2 6.48 2 12.004c0 1.764.46 3.42 1.26 4.887L2 22l5.244-1.218a9.927 9.927 0 0 0 4.76 1.222c5.524 0 10.004-4.48 10.004-10.004C22.008 6.48 17.528 2 12.004 2zm5.727 13.882c-.24.68-.973 1.258-1.616 1.393-.574.12-1.312.215-2.09-.036-.505-.164-1.127-.404-2.012-.782-3.79-1.617-6.27-5.512-6.46-5.764-.19-.253-1.397-1.874-1.397-3.57 0-1.696.885-2.529 1.202-2.871.317-.342.697-.428.93-.428.232 0 .465 0 .668.01.215.01.503-.082.787.606.29.704.996 2.457 1.082 2.637.086.18.143.39.025.626-.118.236-.18.39-.356.596-.176.206-.372.458-.53.615-.177.177-.363.369-.158.723.206.353.916 1.523 1.962 2.463 1.348 1.205 2.482 1.579 2.83 1.75.348.172.553.143.76-.095.206-.237.887-1.037 1.125-1.393.238-.356.475-.295.802-.172.327.123 2.08.983 2.438 1.162.357.18.596.27.682.418.086.149.086.862-.154 1.542z" />
+  </svg>
+);
+
 export const iconMap: Record<string, LucideIcon | React.ComponentType<any>> = {
   webhook: Webhook, clock: Clock, mail: Mail, slack: SlackIcon, gmail: GmailIcon, globe: Globe,
   database: Database, openai: OpenAI, brain: Brain, "git-branch": GitBranch, layers: Layers,
   repeat: Repeat, timer: Timer, merge: Merge, search: Search, zap: Zap, code: Code,
+  whatsapp: WhatsAppIcon,
 };
+
 
 export function NodeIcon({ icon, className = "", color }: { icon: string; className?: string; color?: string }) {
   const Icon = iconMap[icon] || Zap;

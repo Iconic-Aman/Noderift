@@ -342,16 +342,16 @@ Node registry maps `node_type` strings to classes — DAG runner resolves them a
 ### Phase 3 — Execution Engine (Week 5–7)
 **Goal:** Workflows actually run
 
-- [ ] DAG runner: topological sort with `asyncio`
-- [ ] `executions` + `execution_logs` DB tables
-- [ ] `POST /executions/{workflow_id}` → enqueue task
-- [ ] Celery + Redis worker setup
-- [ ] BaseNode abstract class + node registry
-- [ ] First real node: `HttpRequestNode` (httpx)
-- [ ] Second node: `CodeNode` (exec in Docker sandbox)
-- [ ] WebSocket endpoint: `/ws/executions/{id}/logs`
-- [ ] Frontend execution panel: live log stream
-- [ ] Execution history page
+- [x] DAG runner: topological sort with `asyncio`
+- [x] `executions` + `execution_logs` DB tables
+- [x] `POST /executions/{workflow_id}` → enqueue task
+- [x] Celery + Redis worker setup
+- [x] BaseNode abstract class + node registry
+- [x] First real node: `HttpRequestNode` (httpx)
+- [x] Second node: `CodeNode` (exec in Docker sandbox)
+- [x] WebSocket endpoint: `/ws/executions/{id}/logs`
+- [x] Frontend execution panel: live log stream
+- [x] Execution history page
 
 **Deliverable:** User builds HTTP → Code node chain, runs it, sees live logs.
 
@@ -360,12 +360,12 @@ Node registry maps `node_type` strings to classes — DAG runner resolves them a
 ### Phase 4 — Triggers (Week 8)
 **Goal:** Workflows start automatically
 
-- [ ] Webhook trigger: `POST /webhooks/{slug}` → fires workflow
-- [ ] Webhook registration UI + copy URL
-- [ ] APScheduler cron trigger service
-- [ ] Cron config UI (expression picker)
-- [ ] Manual trigger button on canvas
-- [ ] Ngrok integration for local dev webhook testing
+- [x] Webhook trigger: `POST /webhooks/{slug}` → fires workflow
+- [x] Webhook registration UI + copy URL
+- [x] APScheduler cron trigger service
+- [x] Cron config UI (expression picker)
+- [x] Manual trigger button on canvas
+- [x] Ngrok integration for local dev webhook testing
 
 **Deliverable:** Workflow runs on schedule OR when external service hits webhook URL.
 

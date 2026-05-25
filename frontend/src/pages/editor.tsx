@@ -48,6 +48,7 @@ export default function Editor() {
   } = useWorkflowStore();
   
   const [workflowName, setWorkflowName] = useState("Loading...");
+  const [isActive, setIsActive] = useState(false);
   const [rfInstance, setRfInstance] = useState<ReactFlowInstance<Node<NodeData>, Edge> | null>(null);
 
   // Sidebar toggle states
@@ -234,6 +235,7 @@ export default function Editor() {
       try {
         const wf = await apiFetch(`/workflows/${id}`);
         setWorkflowName(wf.name);
+        setIsActive(wf.is_active);
         if (wf.graph && wf.graph.nodes) {
           setNodes(wf.graph.nodes);
           setEdges(wf.graph.edges || []);
@@ -257,6 +259,17 @@ export default function Editor() {
       });
     } catch (err) {
       console.error("Failed to save workflow", err);
+    }
+  };
+
+  const onToggleActive = async () => {
+    if (!id) return;
+    try {
+      await onSave();
+      const res = await apiFetch(`/workflows/${id}/activate`, { method: "PATCH" });
+      setIsActive(res.is_active);
+    } catch (err) {
+      console.error("Failed to toggle workflow triggers state", err);
     }
   };
 
@@ -374,6 +387,8 @@ export default function Editor() {
         onUndo={undo}
         onRun={handleRun}
         onHistory={() => navigate(`/history/${id}`)}
+        isActive={isActive}
+        onToggleActive={onToggleActive}
       />
       <div className="flex flex-1 overflow-hidden">
         {/* Left Sliding Sidebar */}

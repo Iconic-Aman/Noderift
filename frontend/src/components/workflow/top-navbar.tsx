@@ -1,8 +1,8 @@
 import { useState, useRef, useEffect } from "react";
-import { Save, Play, Check, Loader2, Clock, Undo } from "lucide-react";
+import { Save, Play, Check, Loader2, Clock, Undo, Power } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-export function TopNavbar({ workflowName, onNameChange, status, onSave, onRun, onHistory, onUndo }: any) {
+export function TopNavbar({ workflowName, onNameChange, status, onSave, onRun, onHistory, onUndo, isActive, onToggleActive }: any) {
   const [isEditing, setIsEditing] = useState(false);
   const [editValue, setEditValue] = useState(workflowName);
   const [saveState, setSaveState] = useState<"idle" | "saving" | "saved">("idle");
@@ -68,6 +68,30 @@ export function TopNavbar({ workflowName, onNameChange, status, onSave, onRun, o
         <button onClick={handleSave} disabled={saveState === "saving"} className="flex items-center gap-2 rounded-lg border border-slate-700 bg-slate-800 px-3 py-1.5 text-sm hover:bg-slate-700 disabled:opacity-50">
           {saveState === "saving" ? <Loader2 className="h-4 w-4 animate-spin" /> : saveState === "saved" ? <Check className="h-4 w-4 text-green-400" /> : <Save className="h-4 w-4" />}
           {saveState === "saving" ? "Saving..." : saveState === "saved" ? "Saved!" : "Save"}
+        </button>
+        <button
+          onClick={onToggleActive}
+          className={cn(
+            "flex items-center gap-2 rounded-lg border px-3 py-1.5 text-sm font-medium transition-all shadow-md active:scale-95 cursor-pointer",
+            isActive
+              ? "bg-emerald-500/15 border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/20 shadow-emerald-950/20"
+              : "bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-700/80"
+          )}
+        >
+          {isActive ? (
+            <>
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+              </span>
+              <span>Active</span>
+            </>
+          ) : (
+            <>
+              <Power className="h-4 w-4 text-slate-400" />
+              <span>Deploy</span>
+            </>
+          )}
         </button>
         <button onClick={onRun} disabled={status === "running"} className="flex items-center gap-2 rounded-lg bg-blue-600 px-3 py-1.5 text-sm text-white hover:bg-blue-500 disabled:opacity-50"><Play className="h-4 w-4" />Run</button>
       </div>

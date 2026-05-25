@@ -118,8 +118,8 @@ jobs:
             fi
 
             # Pull and restart containers
-            docker compose -f docker-compose.yml pull
-            docker compose -f docker-compose.yml up -d
+            docker compose -f docker-compose.test.yml pull
+            docker compose -f docker-compose.test.yml up -d
 
   deploy-production:
     needs: build-and-push

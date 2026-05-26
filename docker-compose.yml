@@ -1,64 +1,64 @@
-services:
-  backend:
-    build: ./backend
-    environment:
-      DATABASE_URL: ${DATABASE_URL}
-      ENVIRONMENT: ${ENVIRONMENT:-development}
-      SECRET_KEY: ${SECRET_KEY}
-      REDIS_URL: ${REDIS_URL:-redis://localhost:6379/0}
-      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
-      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
-      GOOGLE_REDIRECT_URI: ${GOOGLE_REDIRECT_URI}
-      FRONTEND_URL: ${FRONTEND_URL}
-      GOOGLE_AUTH_URL: ${GOOGLE_AUTH_URL}
-      GOOGLE_TOKEN_URL: ${GOOGLE_TOKEN_URL}
-      GOOGLE_USERINFO_URL: ${GOOGLE_USERINFO_URL}
-    volumes:
-      - ./backend:/app
-      - ./worker:/app/worker
-    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
-    network_mode: host  
-    ports:
-      - "8000:8000"
+  services:
+    backend:
+      build: ./backend
+      environment:
+        DATABASE_URL: ${DATABASE_URL}
+        ENVIRONMENT: ${ENVIRONMENT:-development}
+        SECRET_KEY: ${SECRET_KEY}
+        REDIS_URL: ${REDIS_URL:-redis://localhost:6379/0}
+        GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
+        GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
+        GOOGLE_REDIRECT_URI: ${GOOGLE_REDIRECT_URI}
+        FRONTEND_URL: ${FRONTEND_URL}
+        GOOGLE_AUTH_URL: ${GOOGLE_AUTH_URL}
+        GOOGLE_TOKEN_URL: ${GOOGLE_TOKEN_URL}
+        GOOGLE_USERINFO_URL: ${GOOGLE_USERINFO_URL}
+      volumes:
+        - ./backend:/app
+        - ./worker:/app/worker
+      command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+      network_mode: host  
+      ports:
+        - "8000:8000"
 
-  frontend:
-    image: node:20-slim
-    working_dir: /app
-    volumes:
-      - ./frontend:/app
-    environment:
-      - VITE_API_URL=${VITE_API_URL:-http://localhost:8000/api}
-      - ALLOWED_HOST=${ALLOWED_HOST:-localhost}
-    command: sh -c "npm install && npm run dev -- --host 0.0.0.0 --port 3000"
-    ports:
-      - "3000:3000"
-    depends_on:
-      - backend
+    frontend:
+      image: node:20-slim
+      working_dir: /app
+      volumes:
+        - ./frontend:/app
+      environment:
+        - VITE_API_URL=${VITE_API_URL:-http://localhost:8000/api}
+        - ALLOWED_HOST=${ALLOWED_HOST:-localhost}
+      command: sh -c "npm install && npm run dev -- --host 0.0.0.0 --port 3000"
+      ports:
+        - "3000:3000"
+      depends_on:
+        - backend
 
-  redis:
-    image: redis:7-alpine
-    ports:
-      - "6379:6379"
+    redis:
+      image: redis:7-alpine
+      ports:
+        - "6379:6379"
 
-  worker:
-    build: ./backend
-    environment:
-      DATABASE_URL: ${DATABASE_URL}
-      ENVIRONMENT: ${ENVIRONMENT:-development}
-      SECRET_KEY: ${SECRET_KEY}
-      REDIS_URL: ${REDIS_URL:-redis://localhost:6379/0}
-      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
-      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
-      GOOGLE_REDIRECT_URI: ${GOOGLE_REDIRECT_URI}
-      FRONTEND_URL: ${FRONTEND_URL}
-      GOOGLE_AUTH_URL: ${GOOGLE_AUTH_URL}
-      GOOGLE_TOKEN_URL: ${GOOGLE_TOKEN_URL}
-      GOOGLE_USERINFO_URL: ${GOOGLE_USERINFO_URL}
-    volumes:
-      - .:/workspace
-    working_dir: /workspace
-    network_mode: host
-    command: celery -A worker.worker.celery_app worker --loglevel=info
-    depends_on:
-      - redis
-      - backend
+    worker:
+      build: ./backend
+      environment:
+        DATABASE_URL: ${DATABASE_URL}
+        ENVIRONMENT: ${ENVIRONMENT:-development}
+        SECRET_KEY: ${SECRET_KEY}
+        REDIS_URL: ${REDIS_URL:-redis://localhost:6379/0}
+        GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
+        GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
+        GOOGLE_REDIRECT_URI: ${GOOGLE_REDIRECT_URI}
+        FRONTEND_URL: ${FRONTEND_URL}
+        GOOGLE_AUTH_URL: ${GOOGLE_AUTH_URL}
+        GOOGLE_TOKEN_URL: ${GOOGLE_TOKEN_URL}
+        GOOGLE_USERINFO_URL: ${GOOGLE_USERINFO_URL}
+      volumes:
+        - .:/workspace
+      working_dir: /workspace
+      network_mode: host
+      command: celery -A worker.worker.celery_app worker --loglevel=info
+      depends_on:
+        - redis
+        - backend

@@ -18,7 +18,7 @@ export function Landing() {
         <div className="max-w-5xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 text-slate-500 text-xs font-medium">
           <p>© 2026 Noderift. All rights reserved.</p>
           <div className="flex gap-6">
-            <a href="https://github.com" target="_blank" rel="noreferrer" className="hover:text-slate-300 transition-colors">
+            <a href="https://github.com/Iconic-Aman/Noderift" target="_blank" rel="noreferrer" className="hover:text-slate-300 transition-colors">
               GitHub
             </a>
             <a href="#" className="hover:text-slate-300 transition-colors">

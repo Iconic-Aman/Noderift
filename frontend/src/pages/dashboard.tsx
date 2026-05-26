@@ -47,7 +47,7 @@ export function Dashboard() {
 
   const logout = () => {
     localStorage.removeItem("noderift_token");
-    navigate("/login");
+    navigate("/");
   };
 
   if (loading) return <div className="flex h-screen items-center justify-center bg-slate-950 text-slate-400">Loading...</div>;

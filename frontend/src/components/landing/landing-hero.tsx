@@ -73,12 +73,29 @@ export function LandingHero() {
       <div className="relative z-10 max-w-3xl mx-auto px-6 md:px-8 text-center">
         {/* Headline */}
         <h1 className="text-balance text-4xl sm:text-5xl md:text-6xl font-extrabold mb-6 leading-[1.15] text-white">
-          <span>Manual workflows,</span>
+          <span
+            className="inline-block opacity-0 translate-y-4"
+            style={{ animation: "fadeInUp 0.8s ease-out forwards" }}
+          >
+            Manual workflows,
+          </span>
           <br />
-          <span className="bg-gradient-to-r from-blue-500 via-indigo-400 to-cyan-400 bg-clip-text text-transparent">
-            when there&apos;s AI for that.
+          <span
+            className="inline-block opacity-0 translate-y-4 bg-gradient-to-r from-blue-500 via-indigo-400 to-cyan-400 bg-clip-text text-transparent"
+            style={{ animation: "fadeInUp 0.8s ease-out 0.3s forwards" }}
+          >
+            when there&apos;s AI for that?
           </span>
         </h1>
+
+        <style>{`
+          @keyframes fadeInUp {
+            to {
+              opacity: 1;
+              transform: translateY(0);
+            }
+          }
+        `}</style>
 
         {/* Subheadline */}
         <p className="text-base sm:text-lg md:text-xl text-slate-400 mb-10 max-w-xl mx-auto leading-relaxed">
@@ -94,7 +111,7 @@ export function LandingHero() {
             {hasToken ? "Go to Dashboard →" : "Start Building →"}
           </button>
           <a
-            href="https://github.com"
+            href="https://github.com/Iconic-Aman/Noderift"
             target="_blank"
             rel="noreferrer"
             className="w-full sm:w-auto text-center px-8 py-4 rounded-xl border border-slate-800 text-slate-300 font-semibold hover:bg-slate-900/60 hover:text-white transition-all duration-200 whitespace-nowrap"

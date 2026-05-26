@@ -1,6 +1,7 @@
 import { LandingNavbar } from "@/components/landing/landing-navbar";
 import { LandingHero } from "@/components/landing/landing-hero";
 import { LandingCanvas } from "@/components/landing/landing-canvas";
+import { LandingTerminal } from "@/components/landing/landing-terminal";
 import { LandingFeatures } from "@/components/landing/landing-features";
 
 export function Landing() {
@@ -10,13 +11,14 @@ export function Landing() {
       <main className="flex-1">
         <LandingHero />
         <LandingCanvas />
+        <LandingTerminal />
         <LandingFeatures />
       </main>
       <footer className="border-t border-slate-900 bg-slate-950 py-10 px-6 md:px-8">
         <div className="max-w-5xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 text-slate-500 text-xs font-medium">
           <p>© 2026 Noderift. All rights reserved.</p>
           <div className="flex gap-6">
-            <a href="https://github.com" target="_blank" rel="noreferrer" className="hover:text-slate-300 transition-colors">
+            <a href="https://github.com/Iconic-Aman/Noderift" target="_blank" rel="noreferrer" className="hover:text-slate-300 transition-colors">
               GitHub
             </a>
             <a href="#" className="hover:text-slate-300 transition-colors">

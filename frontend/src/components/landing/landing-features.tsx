@@ -31,7 +31,10 @@ export function LandingFeatures() {
             return (
               <div
                 key={idx}
-                className="group relative rounded-xl p-8 bg-slate-900/30 border border-slate-900 hover:border-slate-800 transition-all duration-300 hover:-translate-y-1 overflow-hidden"
+                className="group relative rounded-xl p-8 bg-slate-900/30 border border-slate-900 hover:border-slate-800 transition-all duration-300 hover:-translate-y-1 overflow-hidden opacity-0 translate-y-4"
+                style={{
+                  animation: `fadeInUp 0.8s ease-out ${0.6 + idx * 0.15}s forwards`,
+                }}
               >
                 {/* Glow Background */}
                 <div

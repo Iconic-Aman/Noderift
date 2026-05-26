@@ -7,10 +7,17 @@ export function Login() {
   const [searchParams] = useSearchParams();
 
   useEffect(() => {
+    const token = localStorage.getItem("noderift_token");
+    if (token) {
+      navigate("/dashboard");
+    }
+  }, [navigate]);
+
+  useEffect(() => {
     const token = searchParams.get("token");
     if (token) {
       localStorage.setItem("noderift_token", token);
-      navigate("/");
+      navigate("/dashboard");
     }
   }, [searchParams, navigate]);
 

@@ -68,14 +68,6 @@ def shutdown_event():
 # ---------------------------------------------------------------------------
 # Routes
 # ---------------------------------------------------------------------------
-@app.get("/", tags=["root"], summary="Root")
-async def root():
-    return {
-        "service": "noderift-api",
-        "status": "ok",
-        "version": "0.1.0",
-        "docs": "/docs",
-    }
 
 
 @app.get("/health", tags=["root"], summary="Health check")
@@ -108,6 +100,7 @@ async def global_exception_handler(request, exc):
 from fastapi.staticfiles import StaticFiles
 import os
 
+# Mount AFTER all API routes so API takes priority, but root "/" falls through to static
 if os.path.exists("static"):
     app.mount("/", StaticFiles(directory="static", html=True), name="static")
 

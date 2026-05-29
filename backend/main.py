@@ -44,6 +44,12 @@ app.include_router(webhooks.router, prefix="/api", tags=["webhooks"])
 
 @app.on_event("startup")
 def startup_event():
+    # Automatically create missing database tables on first boot
+    from core.database import Base, engine
+    import models
+    logger.info("Initializing database tables...")
+    Base.metadata.create_all(bind=engine)
+
     logger.info("Starting background scheduler...")
     scheduler_manager.start()
     db = SessionLocal()
@@ -62,14 +68,6 @@ def shutdown_event():
 # ---------------------------------------------------------------------------
 # Routes
 # ---------------------------------------------------------------------------
-@app.get("/", tags=["root"], summary="Root")
-async def root():
-    return {
-        "service": "noderift-api",
-        "status": "ok",
-        "version": "0.1.0",
-        "docs": "/docs",
-    }
 
 
 @app.get("/health", tags=["root"], summary="Health check")
@@ -98,6 +96,13 @@ async def global_exception_handler(request, exc):
         },
     )
 
+
+from fastapi.staticfiles import StaticFiles
+import os
+
+# Mount AFTER all API routes so API takes priority, but root "/" falls through to static
+if os.path.exists("static"):
+    app.mount("/", StaticFiles(directory="static", html=True), name="static")
 
 if __name__ == "__main__":
     uvicorn.run(app, host="localhost", port=8000)

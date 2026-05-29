@@ -120,13 +120,32 @@ class DAGRunner:
                 "http": "http_request",
                 "code": "code",
                 "webhook": "webhook",
-                "schedule": "schedule"
+                "schedule": "schedule",
+                "filter": "filter",
+                "merge": "merge",
+                "loop": "loop",
+                "set_variable": "set_variable",
+                "playwright": "playwright",
+                "composio": "composio",
             }
             node_type = type_mapping.get(raw_type, raw_type)
             
             node_data = node_dict.get("data", {})
-            node_config = node_data.get("config", {})
+            node_config = dict(node_data.get("config", {}))
             node_name = node_data.get("label", node_type)
+
+            # Inject decrypted credential if bound
+            credential_id = node_config.pop("credential_id", None)
+            if credential_id:
+                from models.credential import Credential
+                from cryptography.fernet import Fernet
+                from core.config import settings
+                import json as _json
+                cred = db.query(Credential).filter(Credential.id == credential_id).first()
+                if cred:
+                    _f = Fernet(settings.SECRET_KEY.encode())
+                    cred_data = _json.loads(_f.decrypt(cred.encrypted_data.encode()).decode())
+                    node_config.update(cred_data)
 
             # Create node log record
             node_log = NodeLog(

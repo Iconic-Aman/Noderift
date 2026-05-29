@@ -5,10 +5,39 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+from cryptography.fernet import Fernet
+from pathlib import Path
+
+def get_or_create_secret_key() -> str:
+    key_file = Path(".noderift_secret")
+    
+    # Check env var first
+    env_key = os.getenv("SECRET_KEY")
+    if env_key:
+        return env_key
+        
+    # Check persisted file second
+    if key_file.exists():
+        try:
+            val = key_file.read_text().strip()
+            # Verify if it is a valid Fernet key
+            Fernet(val.encode())
+            return val
+        except Exception:
+            pass
+            
+    # Generate and persist new valid Fernet key
+    new_key = Fernet.generate_key().decode()
+    try:
+        key_file.write_text(new_key)
+    except Exception:
+        pass
+    return new_key
+
 class Settings(BaseSettings):
     # App
     ENVIRONMENT: str = "development"
-    SECRET_KEY: str = os.getenv("SECRET_KEY", "")
+    SECRET_KEY: str = get_or_create_secret_key()
 
     # CORS — comma-separated list of allowed origins
     ALLOWED_ORIGINS: List[str] = ["http://localhost:5173", "http://localhost:3000"]

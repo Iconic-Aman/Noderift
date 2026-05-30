@@ -96,6 +96,16 @@ class DAGRunner:
             if tgt in parent_map:
                 parent_map[tgt].append(src)
 
+        # Find all ancestors of target_node_id if set
+        ancestors = set()
+        if target_node_id:
+            to_visit = [target_node_id]
+            while to_visit:
+                curr = to_visit.pop(0)
+                if curr not in ancestors:
+                    ancestors.add(curr)
+                    to_visit.extend(parent_map.get(curr, []))
+
         try:
             sorted_nodes = self.topological_sort(nodes, edges)
         except Exception as e:
@@ -109,8 +119,10 @@ class DAGRunner:
 
         for node_dict in sorted_nodes:
             node_id = node_dict["id"]
-            if target_node_id and node_id != target_node_id:
+            if target_node_id and node_id not in ancestors:
                 continue
+            # Ancestor nodes run silently — no logs/events, just populate node_outputs
+            is_ancestor = target_node_id is not None and node_id != target_node_id
 
             # Extract actual type prefix from ID (e.g. "http-1716..." -> "http")
             raw_type = node_id.split("-")[0] if "-" in node_id else node_dict.get("type", "")
@@ -120,30 +132,58 @@ class DAGRunner:
                 "http": "http_request",
                 "code": "code",
                 "webhook": "webhook",
-                "schedule": "schedule"
+                "schedule": "schedule",
+                "filter": "filter",
+                "merge": "merge",
+                "loop": "loop",
+                "set_variable": "set_variable",
+                "playwright": "playwright",
+                "composio": "composio",
             }
             node_type = type_mapping.get(raw_type, raw_type)
             
             node_data = node_dict.get("data", {})
-            node_config = node_data.get("config", {})
+            node_config = dict(node_data.get("config", {}))
             node_name = node_data.get("label", node_type)
 
-            # Create node log record
-            node_log = NodeLog(
-                execution_id=self.execution_id,
-                node_id=node_id,
-                node_type=node_type,
-                status="running",
-                started_at=datetime.now(timezone.utc)
-            )
-            db.add(node_log)
-            db.commit()
+            # Inject decrypted credential if bound
+            credential_id = node_config.pop("credential_id", None)
+            if credential_id:
+                from models.credential import Credential
+                from cryptography.fernet import Fernet
+                from core.config import settings
+                import json as _json
+                cred = db.query(Credential).filter(Credential.id == credential_id).first()
+                if cred:
+                    _f = Fernet(settings.SECRET_KEY.encode())
+                    cred_data = _json.loads(_f.decrypt(cred.encrypted_data.encode()).decode())
+                    node_config.update(cred_data)
 
-            await self.publish_log("node_started", {
-                "node_id": node_id,
-                "node_name": node_name,
-                "node_type": node_type
-            })
+            # For ancestor nodes: use cached output from graph if available, skip re-execution
+            if is_ancestor:
+                cached_output = node_data.get("output")
+                if cached_output and isinstance(cached_output, dict):
+                    node_outputs[node_id] = cached_output
+                    continue
+                # No cache — fall through to execute silently
+
+            # Create node log record (skip for silent ancestors)
+            node_log = None
+            if not is_ancestor:
+                node_log = NodeLog(
+                    execution_id=self.execution_id,
+                    node_id=node_id,
+                    node_type=node_type,
+                    status="running",
+                    started_at=datetime.now(timezone.utc)
+                )
+                db.add(node_log)
+                db.commit()
+                await self.publish_log("node_started", {
+                    "node_id": node_id,
+                    "node_name": node_name,
+                    "node_type": node_type
+                })
 
             # Gather inputs from parent node outputs
             parents = parent_map.get(node_id, [])
@@ -180,22 +220,21 @@ class DAGRunner:
                 # Calculate duration
                 duration_ms = int((time.time() - start_time) * 1000)
 
-                # Save successful node log
-                node_log.status = "success"
-                node_log.input = input_data
-                node_log.output = node_output.data
-                node_log.duration_ms = duration_ms
-                node_log.finished_at = datetime.now(timezone.utc)
-                db.commit()
+                if not is_ancestor:
+                    node_log.status = "success"
+                    node_log.input = input_data
+                    node_log.output = node_output.data
+                    node_log.duration_ms = duration_ms
+                    node_log.finished_at = datetime.now(timezone.utc)
+                    db.commit()
+                    await self.publish_log("node_success", {
+                        "node_id": node_id,
+                        "node_name": node_name,
+                        "output": node_output.data,
+                        "duration_ms": duration_ms
+                    })
 
-                await self.publish_log("node_success", {
-                    "node_id": node_id,
-                    "node_name": node_name,
-                    "output": node_output.data,
-                    "duration_ms": duration_ms
-                })
-
-                if target_node_id:
+                if target_node_id and node_id == target_node_id:
                     break
 
             except Exception as e:
@@ -203,19 +242,19 @@ class DAGRunner:
                 duration_ms = int((time.time() - start_time) * 1000)
                 error_msg = str(e)
 
-                node_log.status = "failed"
-                node_log.input = input_data
-                node_log.error = error_msg
-                node_log.duration_ms = duration_ms
-                node_log.finished_at = datetime.now(timezone.utc)
-                db.commit()
-
-                await self.publish_log("node_failed", {
-                    "node_id": node_id,
-                    "node_name": node_name,
-                    "error": error_msg,
-                    "duration_ms": duration_ms
-                })
+                if not is_ancestor:
+                    node_log.status = "failed"
+                    node_log.input = input_data
+                    node_log.error = error_msg
+                    node_log.duration_ms = duration_ms
+                    node_log.finished_at = datetime.now(timezone.utc)
+                    db.commit()
+                    await self.publish_log("node_failed", {
+                        "node_id": node_id,
+                        "node_name": node_name,
+                        "error": error_msg,
+                        "duration_ms": duration_ms
+                    })
 
                 # Mark execution as failed and stop
                 execution.status = "failed"

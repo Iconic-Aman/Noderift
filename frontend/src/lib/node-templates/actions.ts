@@ -103,4 +103,30 @@ export const actionTemplates: NodeTemplate[] = [
       },
     ],
   },
+  {
+    id: "playwright",
+    label: "Browser Automation",
+    icon: "globe",
+    category: "actions",
+    color: "#6366f1",
+    description: "Automate web browser with Playwright",
+    configFields: [
+      { name: "url", label: "Target URL", type: "text", placeholder: "https://example.com" },
+      { name: "script", label: "Playwright Script (Python)", type: "code", placeholder: "# page is available\ncontent = await page.content()\noutput_data = {'html': content}" },
+    ],
+  },
+  {
+    id: "composio",
+    label: "Composio",
+    icon: "box",
+    category: "actions",
+    color: "#f59e0b",
+    description: "Run integration actions via Composio",
+    configFields: [
+      { name: "app", label: "App Name", type: "text", placeholder: "gmail, slack, sheets" },
+      { name: "action", label: "Action Name", type: "text", placeholder: "send_email, post_message" },
+      { name: "parameters", label: "Parameters (JSON)", type: "textarea", placeholder: '{"to": "user@example.com"}' },
+      { name: "credential_id", label: "Credential", type: "credential" },
+    ],
+  },
 ];

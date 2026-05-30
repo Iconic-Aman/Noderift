@@ -1,4 +1,4 @@
-import { useRef } from "react";
+import { useRef, useState, useEffect } from "react";
 import { ConfigField } from "@/types/workflow";
 import { cn } from "@/lib/utils";
 import Editor, { OnMount } from "@monaco-editor/react";
@@ -97,6 +97,20 @@ export function ConfigFieldInput({ field, value, onChange }: Props) {
           <span className={cn("absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-white transition-transform", value && "translate-x-5")} />
         </button>
       );
+    case "credential": {
+      const [creds, setCreds] = useState<{id: string; name: string}[]>([]);
+      useEffect(() => {
+        import("@/lib/api").then(({ apiFetch }) =>
+          apiFetch("/credentials").then((data: any[]) => setCreds(data)).catch(() => setCreds([]))
+        );
+      }, []);
+      return (
+        <select value={value || ""} onChange={e => onChange(e.target.value)} onKeyDown={handleKeyDown} className={baseCls}>
+          <option value="">No credential</option>
+          {creds.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+        </select>
+      );
+    }
     default:
       return (
         <input type="text" value={value || ""} onChange={e => onChange(e.target.value)} onKeyDown={handleKeyDown}

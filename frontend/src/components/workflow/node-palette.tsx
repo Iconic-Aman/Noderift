@@ -13,7 +13,8 @@ const categories = [
 ];
 
 function DraggableNode({ node }: { node: NodeTemplate }) {
-  const isLocked = node.id !== "http" && node.id !== "code" && node.id !== "webhook" && node.id !== "schedule";
+  const unlockedIds = ["http", "code", "webhook", "schedule", "playwright", "composio", "filter", "if", "merge", "loop", "set_variable", "delay"];
+  const isLocked = !unlockedIds.includes(node.id);
 
   const onDragStart = (event: DragEvent<HTMLDivElement>) => {
     if (isLocked) {

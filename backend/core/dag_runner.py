@@ -96,6 +96,16 @@ class DAGRunner:
             if tgt in parent_map:
                 parent_map[tgt].append(src)
 
+        # Find all ancestors of target_node_id if set
+        ancestors = set()
+        if target_node_id:
+            to_visit = [target_node_id]
+            while to_visit:
+                curr = to_visit.pop(0)
+                if curr not in ancestors:
+                    ancestors.add(curr)
+                    to_visit.extend(parent_map.get(curr, []))
+
         try:
             sorted_nodes = self.topological_sort(nodes, edges)
         except Exception as e:
@@ -109,7 +119,7 @@ class DAGRunner:
 
         for node_dict in sorted_nodes:
             node_id = node_dict["id"]
-            if target_node_id and node_id != target_node_id:
+            if target_node_id and node_id not in ancestors:
                 continue
 
             # Extract actual type prefix from ID (e.g. "http-1716..." -> "http")
@@ -214,7 +224,7 @@ class DAGRunner:
                     "duration_ms": duration_ms
                 })
 
-                if target_node_id:
+                if target_node_id and node_id == target_node_id:
                     break
 
             except Exception as e:

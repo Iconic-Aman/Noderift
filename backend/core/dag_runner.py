@@ -159,6 +159,14 @@ class DAGRunner:
                     cred_data = _json.loads(_f.decrypt(cred.encrypted_data.encode()).decode())
                     node_config.update(cred_data)
 
+            # For ancestor nodes: use cached output from graph if available, skip re-execution
+            if is_ancestor:
+                cached_output = node_data.get("output")
+                if cached_output and isinstance(cached_output, dict):
+                    node_outputs[node_id] = cached_output
+                    continue
+                # No cache — fall through to execute silently
+
             # Create node log record (skip for silent ancestors)
             node_log = None
             if not is_ancestor:

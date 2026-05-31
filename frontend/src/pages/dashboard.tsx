@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Plus, Play, LogOut, Trash2 } from "lucide-react";
+import { KeyRound, Plus, Play, LogOut, Trash2 } from "lucide-react";
 import { apiFetch } from "@/lib/api";
 
 export function Dashboard() {
@@ -58,6 +58,12 @@ export function Dashboard() {
         <div className="mb-8 flex items-center justify-between">
           <h1 className="text-2xl font-bold text-white">My Workflows</h1>
           <div className="flex items-center gap-4">
+            <button
+              onClick={() => navigate("/credentials")}
+              className="flex items-center gap-2 rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-sm text-slate-300 hover:bg-slate-700"
+            >
+              <KeyRound className="h-4 w-4" /> Credentials
+            </button>
             <button
               onClick={createWorkflow}
               className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-500"

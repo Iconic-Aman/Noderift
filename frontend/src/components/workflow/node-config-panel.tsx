@@ -100,7 +100,7 @@ export function NodeConfigPanel({ node, onClose, onConfigChange, onRunNode }: Pr
           {isSchedule ? (
             <ScheduleConfig cfg={cfg} onChange={handleScheduleChange} />
           ) : (
-            template?.configFields?.map(f => (
+            template?.configFields?.filter(f => !f.showWhen || cfg[f.showWhen.field] === f.showWhen.value).map(f => (
               <div key={f.name} className="mb-4">
                 <label className="mb-1.5 block text-xs font-medium text-slate-400">{f.label}{f.required && <span className="ml-1 text-red-400">*</span>}</label>
                 <ConfigFieldInput field={f} value={cfg[f.name]} onChange={v => handleFieldChange(f.name, v)} />

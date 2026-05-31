@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from cryptography.fernet import Fernet
 import json
+import re
 
 from api.deps import get_current_user
 from core.config import settings
@@ -42,6 +43,21 @@ def _credential_data(db: Session, credential_id: str, user_id: str) -> dict:
     return json.loads(fernet.decrypt(cred.encrypted_data.encode()).decode())
 
 
+def _proposal_from_text(text: str):
+    raw = text.strip()
+    fenced = re.search(r"```(?:json)?\s*(\{.*?\})\s*```", raw, re.DOTALL)
+    if fenced:
+        raw = fenced.group(1)
+    elif "{" in raw and "}" in raw:
+        raw = raw[raw.find("{"):raw.rfind("}") + 1]
+    raw = re.sub(r"//.*", "", raw)
+    try:
+        parsed = json.loads(raw.strip())
+    except Exception:
+        return None, text
+    return parsed.get("proposal"), parsed.get("message", text)
+
+
 @router.get("/messages", response_model=list[AIChatMessageOut])
 def list_messages(workflow_id: str, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     _get_workflow(db, workflow_id, current_user.id)
@@ -58,17 +74,27 @@ async def chat(workflow_id: str, body: AIChatRequest, db: Session = Depends(get_
 
     history = db.query(AIChatMessage).filter(AIChatMessage.session_id == session.id).order_by(AIChatMessage.created_at.asc()).all()
     key = extract_api_key(_credential_data(db, body.credential_id, current_user.id))
+    graph = body.current_graph or workflow.graph
+    catalog = json.dumps(body.node_catalog, default=str)
     messages = [{
         "role": "system",
-        "content": f"You help build Noderift workflows. Propose nodes and edges, but do not execute actions. Current graph: {json.dumps(workflow.graph, default=str)}",
+        "content": (
+            "You build Noderift workflow graphs from user requests. Use only nodes in NODE_CATALOG. "
+            "If a needed node is missing, say it is not available and do not invent it. "
+            "Return strict JSON only: {\"message\":\"...\",\"proposal\":{\"nodes\":[{\"id\":\"schedule-1\",\"type\":\"schedule\",\"config\":{}}],\"edges\":[{\"source\":\"schedule-1\",\"target\":\"gmail-1\"}]}}. "
+            "For Gmail or Slack sends, use the composio node with app/action fields from the catalog, not gmail or slack node types. "
+            "Schedule config supports cron, timezone, frequency, time, days_of_week. Monday-Friday at 5 AM is cron '0 5 * * mon,tue,wed,thu,fri'. "
+            f"NODE_CATALOG: {catalog}. CURRENT_GRAPH: {json.dumps(graph, default=str)}"
+        ),
     }]
     messages += [{"role": m.role, "content": m.content} for m in history[-12:]]
 
     response = await chat_completion(api_key=key, base_url=body.base_url, model=body.model, messages=messages, temperature=body.temperature)
-    assistant = AIChatMessage(session_id=session.id, role="assistant", content=first_message_text(response), meta={"raw": response})
+    proposal, text = _proposal_from_text(first_message_text(response))
+    assistant = AIChatMessage(session_id=session.id, role="assistant", content=text, meta={"raw": response, "proposal": proposal})
     db.add(assistant)
     db.commit()
     db.refresh(assistant)
 
     updated = db.query(AIChatMessage).filter(AIChatMessage.session_id == session.id).order_by(AIChatMessage.created_at.asc()).all()
-    return {"message": assistant, "proposal": None, "history": updated}
+    return {"message": assistant, "proposal": proposal, "history": updated}

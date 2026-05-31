@@ -3,9 +3,13 @@ import { useParams } from "react-router-dom";
 import { Send, Sparkles, X } from "lucide-react";
 import { apiFetch } from "@/lib/api";
 import { AIChatMessage, TypingIndicator } from "./ai-chat-message";
+import { nodeTemplates, getNodeTemplate } from "@/lib/node-templates";
+import { useWorkflowStore } from "@/store/workflowStore";
 
 type Message = { id: string; role: "user" | "assistant"; content: string };
 type Credential = { id: string; name: string };
+type Proposal = { nodes?: { id: string; type: string; config?: Record<string, any> }[]; edges?: { source: string; target: string }[] };
+const builderNodeIds = new Set(["schedule", "webhook", "http", "code", "playwright", "composio", "whatsapp", "filter", "merge", "loop", "set_variable", "ai_agent"]);
 
 export function AIChatPanel() {
   const { id: workflowId } = useParams();
@@ -17,6 +21,9 @@ export function AIChatPanel() {
   const [model, setModel] = useState("");
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
+  const [proposal, setProposal] = useState<Proposal | null>(null);
+  const [proposalNotice, setProposalNotice] = useState("");
+  const { nodes, edges, setNodes, setEdges, takeHistorySnapshot } = useWorkflowStore();
 
   useEffect(() => {
     apiFetch("/credentials/").then(setCredentials).catch(() => setCredentials([]));
@@ -28,7 +35,11 @@ export function AIChatPanel() {
   }, [open, workflowId]);
 
   const sendMessage = async () => {
-    if (!workflowId || !input.trim() || !credentialId || !baseUrl.trim() || !model.trim()) return;
+    if (!workflowId || !input.trim()) return;
+    if (!credentialId || !baseUrl.trim() || !model.trim()) {
+      setMessages((prev) => [...prev, { id: `error-${Date.now()}`, role: "assistant", content: "Select a provider credential, base URL, and model before sending." }]);
+      return;
+    }
     const userMessage: Message = { id: `local-${Date.now()}`, role: "user", content: input.trim() };
     setMessages((prev) => [...prev, userMessage]);
     setInput("");
@@ -42,12 +53,62 @@ export function AIChatPanel() {
           base_url: baseUrl.trim(),
           model: model.trim(),
           temperature: 0.7,
+          current_graph: { nodes, edges },
+          node_catalog: nodeTemplates.filter((node) => builderNodeIds.has(node.id)).map((node) => ({
+            id: node.id,
+            label: node.label,
+            category: node.category,
+            description: node.description,
+            fields: node.configFields.map((field) => ({ name: field.name, label: field.label, options: field.options })),
+          })),
         }),
       });
       setMessages(res.history || [...messages, userMessage, res.message]);
+      setProposal(res.proposal || null);
+      setProposalNotice(res.proposal ? "" : "No workflow proposal was found in the AI response.");
+    } catch (err) {
+      setMessages((prev) => [...prev, {
+        id: `error-${Date.now()}`,
+        role: "assistant",
+        content: err instanceof Error ? err.message : "AI request failed.",
+      }]);
+      setProposalNotice("");
     } finally {
       setLoading(false);
     }
+  };
+
+  const applyProposal = () => {
+    if (!proposal?.nodes?.length) return;
+    takeHistorySnapshot();
+    const idMap: Record<string, string> = {};
+    const nextNodes = proposal.nodes.map((item, index) => {
+      const template = getNodeTemplate(item.type);
+      const id = item.id.includes("-") ? item.id : `${item.type}-${Date.now()}-${index}`;
+      idMap[item.id] = id;
+      return {
+        id,
+        type: "workflowNode",
+        position: { x: 180 + index * 260, y: 160 },
+        data: {
+          label: template?.label || item.type,
+          icon: template?.icon || "zap",
+          category: template?.category || "actions",
+          color: template?.color || "#3b82f6",
+          config: item.config || {},
+        },
+      };
+    });
+    const nextEdges = (proposal.edges || []).map((edge, index) => ({
+      id: `ai-edge-${Date.now()}-${index}`,
+      source: idMap[edge.source] || edge.source,
+      target: idMap[edge.target] || edge.target,
+      type: "buttonEdge",
+    }));
+    setNodes([...nodes, ...nextNodes]);
+    setEdges([...edges, ...nextEdges]);
+    setProposal(null);
+    setProposalNotice("");
   };
 
   return (
@@ -84,6 +145,12 @@ export function AIChatPanel() {
             {messages.length === 0 && <p className="text-center text-xs text-slate-500">Ask me to design or change this workflow.</p>}
             {messages.map((message) => <AIChatMessage key={message.id} message={message} />)}
             {loading && <TypingIndicator />}
+            {proposal?.nodes?.length ? (
+              <button onClick={applyProposal} className="w-full rounded bg-violet-600 px-3 py-2 text-xs font-semibold text-white hover:bg-violet-500">
+                Apply {proposal.nodes.length} proposed node{proposal.nodes.length === 1 ? "" : "s"}
+              </button>
+            ) : null}
+            {proposalNotice && <p className="rounded border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-200">{proposalNotice}</p>}
           </div>
 
           <div className="flex gap-2 border-t border-slate-800 p-3">

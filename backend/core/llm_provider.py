@@ -3,9 +3,12 @@ import httpx
 
 
 def extract_api_key(data: Dict[str, Any]) -> str:
-    for key in ("api_key", "provider_api_key", "nvidia_api_key", "openai_api_key"):
+    for key in ("api_key", "provider_api_key", "nvidia_api_key", "openai_api_key", "key", "token", "access_token", "secret"):
         if data.get(key):
             return str(data[key])
+    string_values = [v for v in data.values() if isinstance(v, str) and v.strip()]
+    if len(string_values) == 1:
+        return string_values[0]
     return ""
 
 

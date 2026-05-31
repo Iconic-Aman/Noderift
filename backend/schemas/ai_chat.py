@@ -20,6 +20,8 @@ class AIChatRequest(BaseModel):
     base_url: str
     model: str
     temperature: float = 0.7
+    current_graph: Optional[Dict[str, Any]] = None
+    node_catalog: List[Dict[str, Any]] = []
 
 
 class AIChatResponse(BaseModel):

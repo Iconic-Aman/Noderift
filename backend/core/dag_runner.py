@@ -141,6 +141,7 @@ class DAGRunner:
                 "composio": "composio",
                 "whatsapp": "whatsapp",
                 "ai_agent": "ai_agent",
+                "resend": "resend",
             }
             node_type = type_mapping.get(raw_type, raw_type)
             

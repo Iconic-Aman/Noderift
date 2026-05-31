@@ -117,6 +117,21 @@ export const actionTemplates: NodeTemplate[] = [
     ],
   },
   {
+    id: "resend",
+    label: "Resend Email",
+    icon: "mail",
+    category: "actions",
+    color: "#3b82f6",
+    description: "Send email using Resend",
+    configFields: [
+      { name: "from", label: "From", type: "text", placeholder: "onboarding@resend.dev" },
+      { name: "to", label: "To", type: "text", placeholder: "recipient@example.com" },
+      { name: "subject", label: "Subject", type: "text", placeholder: "Email subject" },
+      { name: "html", label: "HTML Body", type: "textarea", placeholder: "<p>Hello from Noderift</p>" },
+      { name: "credential_id", label: "Credential", type: "credential" },
+    ],
+  },
+  {
     id: "composio",
     label: "Composio",
     icon: "box",

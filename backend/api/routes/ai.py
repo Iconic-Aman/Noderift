@@ -66,19 +66,28 @@ def _fallback_proposal(message: str):
         return None
     hour_match = re.search(r"(?:at|every)\s+(\d{1,2})\s*(am|pm)", lower)
     hour = int(hour_match.group(1)) if hour_match else 17
-    if hour_match and hour_match.group(2) == "pm" and hour != 12:
-        hour += 12
-    if hour_match and hour_match.group(2) == "am" and hour == 12:
-        hour = 0
+    if hour_match:
+        if hour_match.group(2) == "pm" and hour != 12:
+            hour += 12
+        elif hour_match.group(2) == "am" and hour == 12:
+            hour = 0
+    # Use IST timezone so cron fires at user's local time
+    timezone = "Asia/Kolkata"
+    joke_html = (
+        "<h2>Your Daily Joke 😄</h2>"
+        "<p>{{response.joke}}</p>"
+        "<p><em>{{response.setup}}</em><br><strong>{{response.delivery}}</strong></p>"
+        "<hr><p style='color:#888;font-size:12px'>Powered by Noderift</p>"
+    )
     return {
         "nodes": [
-            {"id": "schedule-1", "type": "schedule", "config": {"cron": f"0 {hour} * * *", "timezone": "UTC", "frequency": "daily", "time": f"{hour:02d}:00"}},
+            {"id": "schedule-1", "type": "schedule", "config": {"cron": f"0 {hour} * * *", "timezone": timezone, "frequency": "daily", "time": f"{hour:02d}:00"}},
             {"id": "http-1", "type": "http", "config": {"url": url_match.group(0), "method": "GET", "headers": {}, "body": {}}},
-            {"id": "composio-1", "type": "composio", "config": {"app": "gmail", "action": "GMAIL_SEND_EMAIL", "to": email_match.group(0), "subject": "Automated update", "body": "{{http-1.response}}", "parameters": "{}"}},
+            {"id": "resend-1", "type": "resend", "config": {"from": "", "to": email_match.group(0), "subject": "Your Daily Joke 😄", "html": joke_html, "credential_id": ""}},
         ],
         "edges": [
             {"source": "schedule-1", "target": "http-1"},
-            {"source": "http-1", "target": "composio-1"},
+            {"source": "http-1", "target": "resend-1"},
         ],
     }
 
@@ -121,7 +130,7 @@ async def chat(workflow_id: str, body: AIChatRequest, db: Session = Depends(get_
             "You build Noderift workflow graphs from user requests. Use only nodes in NODE_CATALOG. "
             "If a needed node is missing, say it is not available and do not invent it. "
             "Return strict JSON only: {\"message\":\"...\",\"proposal\":{\"nodes\":[{\"id\":\"schedule-1\",\"type\":\"schedule\",\"config\":{}}],\"edges\":[{\"source\":\"schedule-1\",\"target\":\"gmail-1\"}]}}. "
-            "For Gmail or Slack sends, use the composio node with app/action fields from the catalog, not gmail or slack node types. "
+            "For generic email sends, prefer the resend node. For Gmail/Slack account-specific sends, use the composio node. "
             "Schedule config supports cron, timezone, frequency, time, days_of_week. Monday-Friday at 5 AM is cron '0 5 * * mon,tue,wed,thu,fri'. "
             f"NODE_CATALOG: {catalog}. CURRENT_GRAPH: {json.dumps(graph, default=str)}"
         ),

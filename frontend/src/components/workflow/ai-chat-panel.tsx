@@ -11,7 +11,7 @@ import { NodeData } from "@/types/workflow";
 type Message = { id: string; role: "user" | "assistant"; content: string };
 type Credential = { id: string; name: string };
 type Proposal = { nodes?: { id: string; type: string; config?: Record<string, any> }[]; edges?: { source: string; target: string }[] };
-const builderNodeIds = new Set(["schedule", "webhook", "http", "code", "playwright", "composio", "whatsapp", "filter", "merge", "loop", "set_variable", "ai_agent"]);
+const builderNodeIds = new Set(["schedule", "webhook", "http", "code", "playwright", "composio", "whatsapp", "resend", "filter", "merge", "loop", "set_variable", "ai_agent"]);
 
 export function AIChatPanel({ rfInstance }: { rfInstance: ReactFlowInstance<Node<NodeData>, Edge> | null }) {
   const { id: workflowId } = useParams();

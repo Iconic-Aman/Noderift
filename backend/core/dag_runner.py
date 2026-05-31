@@ -139,6 +139,7 @@ class DAGRunner:
                 "set_variable": "set_variable",
                 "playwright": "playwright",
                 "composio": "composio",
+                "whatsapp": "whatsapp",
             }
             node_type = type_mapping.get(raw_type, raw_type)
             

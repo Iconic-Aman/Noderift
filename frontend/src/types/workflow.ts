@@ -24,4 +24,5 @@ export interface ConfigField {
   options?: { label: string; value: string }[];
   required?: boolean;
   defaultValue?: any;
+  showWhen?: { field: string; value: unknown };
 }

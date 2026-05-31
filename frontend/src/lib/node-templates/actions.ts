@@ -34,8 +34,9 @@ export const actionTemplates: NodeTemplate[] = [
     color: "#25D366",
     description: "Send WhatsApp message (Original Green)",
     configFields: [
-      { name: "phone", label: "Phone Number", type: "text", placeholder: "+1234567890" },
+      { name: "phone", label: "Phone Number", type: "text", placeholder: "919876543210" },
       { name: "message", label: "Message", type: "textarea", placeholder: "Enter message..." },
+      { name: "credential_id", label: "Credential", type: "credential" },
     ],
   },
   {
@@ -123,9 +124,20 @@ export const actionTemplates: NodeTemplate[] = [
     color: "#f59e0b",
     description: "Run integration actions via Composio",
     configFields: [
-      { name: "app", label: "App Name", type: "text", placeholder: "gmail, slack, sheets" },
-      { name: "action", label: "Action Name", type: "text", placeholder: "send_email, post_message" },
-      { name: "parameters", label: "Parameters (JSON)", type: "textarea", placeholder: '{"to": "user@example.com"}' },
+      { name: "app", label: "App", type: "select", options: [
+        { label: "Gmail", value: "gmail" },
+        { label: "Slack", value: "slack" },
+      ]},
+      { name: "action", label: "Action", type: "select", options: [
+        { label: "Gmail - Send Email", value: "GMAIL_SEND_EMAIL" },
+        { label: "Slack - Send Message", value: "SLACKBOT_CHAT_POST_MESSAGE" },
+      ]},
+      { name: "to", label: "To Email", type: "text", placeholder: "recipient@example.com", showWhen: { field: "action", value: "GMAIL_SEND_EMAIL" } },
+      { name: "subject", label: "Subject", type: "text", placeholder: "Email subject", showWhen: { field: "action", value: "GMAIL_SEND_EMAIL" } },
+      { name: "body", label: "Email Body", type: "textarea", placeholder: "Write the email...", showWhen: { field: "action", value: "GMAIL_SEND_EMAIL" } },
+      { name: "channel", label: "Slack Channel", type: "text", placeholder: "#general or channel ID", showWhen: { field: "action", value: "SLACKBOT_CHAT_POST_MESSAGE" } },
+      { name: "message", label: "Slack Message", type: "textarea", placeholder: "Write the message...", showWhen: { field: "action", value: "SLACKBOT_CHAT_POST_MESSAGE" } },
+      { name: "parameters", label: "Advanced Params JSON", type: "textarea", placeholder: "{}" },
       { name: "credential_id", label: "Credential", type: "credential" },
     ],
   },

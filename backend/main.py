@@ -6,7 +6,7 @@ import uvicorn
 
 from core.config import settings
 from core.security import AuthMiddleware, bearer_scheme
-from api.routes import auth, workflows, credentials, executions, websocket, webhooks
+from api.routes import auth, workflows, credentials, executions, websocket, webhooks, node_testing, ai
 from core.scheduler import scheduler_manager
 from core.database import SessionLocal
 import logging
@@ -40,6 +40,8 @@ app.include_router(credentials.router, prefix="/api", tags=["credentials"])
 app.include_router(executions.router, prefix="/api", tags=["executions"])
 app.include_router(websocket.router, tags=["websockets"])
 app.include_router(webhooks.router, prefix="/api", tags=["webhooks"])
+app.include_router(node_testing.router, prefix="/api", tags=["nodes"])
+app.include_router(ai.router, prefix="/api", tags=["ai"])
 
 
 @app.on_event("startup")

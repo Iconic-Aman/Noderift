@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Node } from "@xyflow/react";
-import { ChevronDown, ChevronRight, GripHorizontal } from "lucide-react";
+import { ChevronDown, ChevronRight, GripHorizontal, Copy, Check } from "lucide-react";
 import { NodeData } from "@/types/workflow";
 import { cn } from "@/lib/utils";
 import { InteractiveJSONNode } from "./interactive-json-node";
@@ -17,6 +17,13 @@ export function InputVariablesPanel({ parentNodes, containerHeight }: Props) {
   // height = how tall the sheet is (from bottom up). Default ~200px.
   const [sheetHeight, setSheetHeight] = useState(200);
   const [isResizing, setIsResizing] = useState(false);
+  const [copiedNodeId, setCopiedNodeId] = useState<string | null>(null);
+
+  const handleCopy = (nodeId: string, data: any) => {
+    navigator.clipboard.writeText(JSON.stringify(data, null, 2));
+    setCopiedNodeId(nodeId);
+    setTimeout(() => setCopiedNodeId(null), 2000);
+  };
 
   const handleResizeStart = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -77,10 +84,19 @@ export function InputVariablesPanel({ parentNodes, containerHeight }: Props) {
             <div key={p.id} className="relative group rounded-lg bg-slate-950/60 p-2.5 border border-slate-800/60 hover:bg-slate-950/90 transition-all">
               <div className="flex items-center justify-between pb-1.5 mb-2 border-b border-slate-800/60">
                 <p className="text-[10px] font-semibold text-slate-300">{p.data.label} <span className="text-[9px] text-slate-500 font-mono font-normal">({p.id})</span></p>
-                {p.data.status === "success" && <span className="text-[8px] font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 rounded px-1 py-0.5">Executed</span>}
-                {p.data.status === "failed" && <span className="text-[8px] font-bold text-red-400 bg-red-500/10 border border-red-500/20 rounded px-1 py-0.5">Failed</span>}
-                {p.data.status === "running" && <span className="text-[8px] font-bold text-blue-400 bg-blue-500/10 border border-blue-500/20 rounded px-1 py-0.5">Running</span>}
-                {!p.data.status && <span className="text-[8px] font-bold text-slate-500 bg-slate-800/80 border border-slate-700/60 rounded px-1 py-0.5">Yet to execute</span>}
+                <div className="flex items-center gap-1.5">
+                  <button
+                    onClick={() => handleCopy(p.id, p.data.output ?? { response: "...", status_code: 200 })}
+                    className="p-1 text-slate-400 hover:text-white rounded hover:bg-slate-800 transition-colors"
+                    title="Copy whole response"
+                  >
+                    {copiedNodeId === p.id ? <Check className="h-3 w-3 text-emerald-400" /> : <Copy className="h-3 w-3" />}
+                  </button>
+                  {p.data.status === "success" && <span className="text-[8px] font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 rounded px-1 py-0.5">Executed</span>}
+                  {p.data.status === "failed" && <span className="text-[8px] font-bold text-red-400 bg-red-500/10 border border-red-500/20 rounded px-1 py-0.5">Failed</span>}
+                  {p.data.status === "running" && <span className="text-[8px] font-bold text-blue-400 bg-blue-500/10 border border-blue-500/20 rounded px-1 py-0.5">Running</span>}
+                  {!p.data.status && <span className="text-[8px] font-bold text-slate-500 bg-slate-800/80 border border-slate-700/60 rounded px-1 py-0.5">Yet to execute</span>}
+                </div>
               </div>
               <div className="bg-slate-950/90 rounded border border-slate-800 p-2 max-h-[90px] overflow-y-auto">
                 <InteractiveJSONNode val={p.data.output ?? { response: "...", status_code: 200 }} nodeId={p.id} path="" />

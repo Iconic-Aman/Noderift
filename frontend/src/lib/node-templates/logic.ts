@@ -61,4 +61,16 @@ export const logicTemplates: NodeTemplate[] = [
       ]},
     ],
   },
+  {
+    id: "set_variable",
+    label: "Set Variable",
+    icon: "hash",
+    category: "logic",
+    color: "#22c55e",
+    description: "Store a value in execution state",
+    configFields: [
+      { name: "name", label: "Variable Name", type: "text", placeholder: "myVar" },
+      { name: "value", label: "Value", type: "text", placeholder: "{{upstream.field}}" },
+    ],
+  },
 ];

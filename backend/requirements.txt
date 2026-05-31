@@ -26,3 +26,7 @@ celery==5.4.0
 redis==5.0.4
 apscheduler==3.10.4
 
+# Phase 5 — Integrations
+playwright==1.44.0
+composio-core==0.5.6
+resend==2.4.0

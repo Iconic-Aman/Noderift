@@ -34,8 +34,9 @@ export const actionTemplates: NodeTemplate[] = [
     color: "#25D366",
     description: "Send WhatsApp message (Original Green)",
     configFields: [
-      { name: "phone", label: "Phone Number", type: "text", placeholder: "+1234567890" },
+      { name: "phone", label: "Phone Number", type: "text", placeholder: "919876543210" },
       { name: "message", label: "Message", type: "textarea", placeholder: "Enter message..." },
+      { name: "credential_id", label: "Credential", type: "credential" },
     ],
   },
   {
@@ -101,6 +102,58 @@ export const actionTemplates: NodeTemplate[] = [
         type: "code",
         placeholder: "# input_data has outputs from previous nodes\n# set output_data dict to pass data forward"
       },
+    ],
+  },
+  {
+    id: "playwright",
+    label: "Browser Automation",
+    icon: "globe",
+    category: "actions",
+    color: "#6366f1",
+    description: "Automate web browser with Playwright",
+    configFields: [
+      { name: "url", label: "Target URL", type: "text", placeholder: "https://example.com" },
+      { name: "script", label: "Playwright Script (Python)", type: "code", placeholder: "# page is available\ncontent = await page.content()\noutput_data = {'html': content}" },
+    ],
+  },
+  {
+    id: "resend",
+    label: "Resend Email",
+    icon: "mail",
+    category: "actions",
+    color: "#3b82f6",
+    description: "Send email using Resend",
+    configFields: [
+      { name: "from", label: "From", type: "text", placeholder: "onboarding@resend.dev" },
+      { name: "to", label: "To", type: "text", placeholder: "recipient@example.com" },
+      { name: "subject", label: "Subject", type: "text", placeholder: "Email subject" },
+      { name: "html", label: "HTML Body", type: "textarea", placeholder: "<p>Hello from Noderift</p>" },
+      { name: "credential_id", label: "Credential", type: "credential" },
+    ],
+  },
+  {
+    id: "composio",
+    label: "Composio",
+    icon: "box",
+    category: "actions",
+    color: "#f59e0b",
+    description: "Run integration actions via Composio",
+    configFields: [
+      { name: "app", label: "App", type: "select", options: [
+        { label: "Gmail", value: "gmail" },
+        { label: "Slack", value: "slack" },
+      ]},
+      { name: "action", label: "Action", type: "select", options: [
+        { label: "Gmail - Send Email", value: "GMAIL_SEND_EMAIL" },
+        { label: "Slack - Send Message", value: "SLACKBOT_CHAT_POST_MESSAGE" },
+      ]},
+      { name: "to", label: "To Email", type: "text", placeholder: "recipient@example.com", showWhen: { field: "action", value: "GMAIL_SEND_EMAIL" } },
+      { name: "subject", label: "Subject", type: "text", placeholder: "Email subject", showWhen: { field: "action", value: "GMAIL_SEND_EMAIL" } },
+      { name: "body", label: "Email Body", type: "textarea", placeholder: "Write the email...", showWhen: { field: "action", value: "GMAIL_SEND_EMAIL" } },
+      { name: "channel", label: "Slack Channel", type: "text", placeholder: "#general or channel ID", showWhen: { field: "action", value: "SLACKBOT_CHAT_POST_MESSAGE" } },
+      { name: "message", label: "Slack Message", type: "textarea", placeholder: "Write the message...", showWhen: { field: "action", value: "SLACKBOT_CHAT_POST_MESSAGE" } },
+      { name: "parameters", label: "Advanced Params JSON", type: "textarea", placeholder: "{}" },
+      { name: "credential_id", label: "Credential", type: "credential" },
     ],
   },
 ];

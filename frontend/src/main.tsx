@@ -4,6 +4,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import Editor from './pages/editor'
 import { Login } from './pages/login'
 import { Dashboard } from './pages/dashboard'
+import { Credentials } from './pages/credentials'
 import { Landing } from './pages/landing'
 import History from './pages/history'
 import './index.css'
@@ -20,6 +21,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
         <Route path="/login" element={<Login />} />
         <Route path="/" element={<Landing />} />
         <Route path="/dashboard" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
+        <Route path="/credentials" element={<PrivateRoute><Credentials /></PrivateRoute>} />
         <Route path="/editor/:id" element={<PrivateRoute><Editor /></PrivateRoute>} />
         <Route path="/history/:id" element={<PrivateRoute><History /></PrivateRoute>} />
       </Routes>

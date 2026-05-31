@@ -58,6 +58,45 @@ def _proposal_from_text(text: str):
     return parsed.get("proposal"), parsed.get("message", text)
 
 
+def _fallback_proposal(message: str):
+    lower = message.lower()
+    url_match = re.search(r"https?://\S+", message)
+    email_match = re.search(r"[\w.+-]+@[\w.-]+\.\w+", message)
+    if not (url_match and email_match and ("mail" in lower or "email" in lower)):
+        return None
+    hour_match = re.search(r"(?:at|every)\s+(\d{1,2})\s*(am|pm)", lower)
+    hour = int(hour_match.group(1)) if hour_match else 17
+    if hour_match and hour_match.group(2) == "pm" and hour != 12:
+        hour += 12
+    if hour_match and hour_match.group(2) == "am" and hour == 12:
+        hour = 0
+    return {
+        "nodes": [
+            {"id": "schedule-1", "type": "schedule", "config": {"cron": f"0 {hour} * * *", "timezone": "UTC", "frequency": "daily", "time": f"{hour:02d}:00"}},
+            {"id": "http-1", "type": "http", "config": {"url": url_match.group(0), "method": "GET", "headers": {}, "body": {}}},
+            {"id": "composio-1", "type": "composio", "config": {"app": "gmail", "action": "GMAIL_SEND_EMAIL", "to": email_match.group(0), "subject": "Automated update", "body": "{{http-1.response}}", "parameters": "{}"}},
+        ],
+        "edges": [
+            {"source": "schedule-1", "target": "http-1"},
+            {"source": "http-1", "target": "composio-1"},
+        ],
+    }
+
+
+def _sanitize_proposal(proposal, message: str):
+    fallback = _fallback_proposal(message)
+    if fallback and (not proposal or len(proposal.get("nodes", [])) < 3):
+        return fallback
+    if not proposal:
+        return None
+    node_ids = {node.get("id") for node in proposal.get("nodes", [])}
+    proposal["edges"] = [
+        edge for edge in proposal.get("edges", [])
+        if edge.get("source") in node_ids and edge.get("target") in node_ids and edge.get("source") != edge.get("target")
+    ]
+    return proposal
+
+
 @router.get("/messages", response_model=list[AIChatMessageOut])
 def list_messages(workflow_id: str, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     _get_workflow(db, workflow_id, current_user.id)
@@ -91,6 +130,7 @@ async def chat(workflow_id: str, body: AIChatRequest, db: Session = Depends(get_
 
     response = await chat_completion(api_key=key, base_url=body.base_url, model=body.model, messages=messages, temperature=body.temperature)
     proposal, text = _proposal_from_text(first_message_text(response))
+    proposal = _sanitize_proposal(proposal, body.message)
     assistant = AIChatMessage(session_id=session.id, role="assistant", content=text, meta={"raw": response, "proposal": proposal})
     db.add(assistant)
     db.commit()

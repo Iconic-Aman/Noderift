@@ -1,17 +1,19 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
-import { Send, Sparkles, X } from "lucide-react";
+import { Loader2, Send, Sparkles, X } from "lucide-react";
 import { apiFetch } from "@/lib/api";
 import { AIChatMessage, TypingIndicator } from "./ai-chat-message";
 import { nodeTemplates, getNodeTemplate } from "@/lib/node-templates";
 import { useWorkflowStore } from "@/store/workflowStore";
+import { ReactFlowInstance, Node, Edge } from "@xyflow/react";
+import { NodeData } from "@/types/workflow";
 
 type Message = { id: string; role: "user" | "assistant"; content: string };
 type Credential = { id: string; name: string };
 type Proposal = { nodes?: { id: string; type: string; config?: Record<string, any> }[]; edges?: { source: string; target: string }[] };
 const builderNodeIds = new Set(["schedule", "webhook", "http", "code", "playwright", "composio", "whatsapp", "filter", "merge", "loop", "set_variable", "ai_agent"]);
 
-export function AIChatPanel() {
+export function AIChatPanel({ rfInstance }: { rfInstance: ReactFlowInstance<Node<NodeData>, Edge> | null }) {
   const { id: workflowId } = useParams();
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -23,6 +25,7 @@ export function AIChatPanel() {
   const [loading, setLoading] = useState(false);
   const [proposal, setProposal] = useState<Proposal | null>(null);
   const [proposalNotice, setProposalNotice] = useState("");
+  const [building, setBuilding] = useState(false);
   const { nodes, edges, setNodes, setEdges, takeHistorySnapshot } = useWorkflowStore();
 
   useEffect(() => {
@@ -80,8 +83,11 @@ export function AIChatPanel() {
 
   const applyProposal = () => {
     if (!proposal?.nodes?.length) return;
+    setBuilding(true);
     takeHistorySnapshot();
     const idMap: Record<string, string> = {};
+    const center = rfInstance?.screenToFlowPosition({ x: window.innerWidth / 2, y: window.innerHeight / 2 }) || { x: 260, y: 180 };
+    const startX = center.x - ((proposal.nodes.length - 1) * 280) / 2;
     const nextNodes = proposal.nodes.map((item, index) => {
       const template = getNodeTemplate(item.type);
       const id = item.id.includes("-") ? item.id : `${item.type}-${Date.now()}-${index}`;
@@ -89,7 +95,7 @@ export function AIChatPanel() {
       return {
         id,
         type: "workflowNode",
-        position: { x: 180 + index * 260, y: 160 },
+        position: { x: startX + index * 280, y: center.y },
         data: {
           label: template?.label || item.type,
           icon: template?.icon || "zap",
@@ -109,6 +115,10 @@ export function AIChatPanel() {
     setEdges([...edges, ...nextEdges]);
     setProposal(null);
     setProposalNotice("");
+    setTimeout(() => {
+      rfInstance?.fitView({ nodes: nextNodes.map((node) => ({ id: node.id })), padding: 0.45, duration: 700 });
+      setBuilding(false);
+    }, 350);
   };
 
   return (
@@ -169,6 +179,14 @@ export function AIChatPanel() {
             <button onClick={sendMessage} disabled={loading} className="flex h-16 w-11 items-center justify-center rounded bg-violet-600 text-white hover:bg-violet-500 disabled:opacity-50">
               <Send className="h-4 w-4" />
             </button>
+          </div>
+        </div>
+      )}
+      {building && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/45 backdrop-blur-sm">
+          <div className="flex items-center gap-3 rounded-xl border border-violet-500/30 bg-slate-900 px-5 py-4 text-sm font-semibold text-slate-100 shadow-2xl">
+            <Loader2 className="h-5 w-5 animate-spin text-violet-400" />
+            Building workflow...
           </div>
         </div>
       )}

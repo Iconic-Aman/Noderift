@@ -34,12 +34,15 @@ async def chat_completion(
         "temperature": temperature,
     }
 
-    async with httpx.AsyncClient(timeout=60) as client:
-        response = await client.post(
-            endpoint,
-            headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
-            json=payload,
-        )
+    try:
+        async with httpx.AsyncClient(timeout=120) as client:
+            response = await client.post(
+                endpoint,
+                headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
+                json=payload,
+            )
+    except httpx.TimeoutException:
+        raise RuntimeError("LLM provider timed out after 120 seconds. Check the base URL and model name.")
 
     try:
         data = response.json()

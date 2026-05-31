@@ -126,7 +126,7 @@ class DAGRunner:
 
             # Extract actual type prefix from ID (e.g. "http-1716..." -> "http")
             raw_type = node_id.split("-")[0] if "-" in node_id else node_dict.get("type", "")
-            
+
             # Map frontend types to backend registered types
             type_mapping = {
                 "http": "http_request",
@@ -141,9 +141,10 @@ class DAGRunner:
                 "composio": "composio",
                 "whatsapp": "whatsapp",
                 "ai_agent": "ai_agent",
+                "resend": "resend",
             }
             node_type = type_mapping.get(raw_type, raw_type)
-            
+
             node_data = node_dict.get("data", {})
             node_config = dict(node_data.get("config", {}))
             node_name = node_data.get("label", node_type)
@@ -159,7 +160,10 @@ class DAGRunner:
                 if cred:
                     _f = Fernet(settings.SECRET_KEY.encode())
                     cred_data = _json.loads(_f.decrypt(cred.encrypted_data.encode()).decode())
+                    # Merge all credential fields into config
                     node_config.update(cred_data)
+                    # Also store raw credential so nodes pick exactly what the user saved
+                    node_config["_credential"] = cred_data
 
             # For ancestor nodes: use cached output from graph if available, skip re-execution
             if is_ancestor:

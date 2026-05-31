@@ -6,6 +6,7 @@ from models.node_log import NodeLog
 from models.webhook import Webhook
 from models.cron_trigger import CronTrigger
 from models.credential import Credential
+from models.ai_chat import AIChatSession, AIChatMessage
 
 __all__ = [
     "User",
@@ -15,4 +16,6 @@ __all__ = [
     "Webhook",
     "CronTrigger",
     "Credential",
+    "AIChatSession",
+    "AIChatMessage",
 ]

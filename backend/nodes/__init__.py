@@ -26,4 +26,5 @@ from nodes.schedule_node import ScheduleNode
 from nodes.playwright_node import PlaywrightNode
 from nodes.composio_node import ComposioNode
 from nodes.whatsapp_node import WhatsAppNode
+from nodes.ai_agent_node import AiAgentNode
 from nodes.logic_nodes import FilterNode, MergeNode, LoopNode, SetVariableNode

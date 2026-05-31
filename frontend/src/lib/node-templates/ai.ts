@@ -2,6 +2,22 @@ import { NodeTemplate } from "@/types/workflow";
 
 export const aiTemplates: NodeTemplate[] = [
   {
+    id: "ai_agent",
+    label: "AI Agent",
+    icon: "brain",
+    category: "ai",
+    color: "#a855f7",
+    description: "Run an OpenAI-compatible agent step",
+    configFields: [
+      { name: "credential_id", label: "Provider Credential", type: "credential" },
+      { name: "base_url", label: "Provider Base URL", type: "text", placeholder: "Provider chat completions base URL" },
+      { name: "model", label: "Model Name", type: "text", placeholder: "Enter model name" },
+      { name: "system_prompt", label: "System Prompt", type: "textarea", placeholder: "You are a workflow automation agent." },
+      { name: "prompt", label: "Task Prompt", type: "textarea", placeholder: "Describe what this agent should do..." },
+      { name: "temperature", label: "Temperature", type: "number", defaultValue: 0.7 },
+    ],
+  },
+  {
     id: "openai",
     label: "OpenAI",
     icon: "openai",

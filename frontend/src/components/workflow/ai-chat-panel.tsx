@@ -152,7 +152,26 @@ export function AIChatPanel({ rfInstance }: { rfInstance: ReactFlowInstance<Node
           </div>
 
           <div className="flex-1 space-y-3 overflow-y-auto p-4">
-            {messages.length === 0 && <p className="text-center text-xs text-slate-500">Ask me to design or change this workflow.</p>}
+            {messages.length === 0 && (
+              <div className="space-y-3">
+                <p className="text-center text-xs text-slate-500">Ask me to design or change this workflow, or use a quick template below.</p>
+                <div className="space-y-2">
+                  <p className="text-xs font-medium text-slate-400">⚡ Quick templates</p>
+                  <button
+                    onClick={() => setInput("get a joke from https://v2.jokeapi.dev/joke/Any and send it to ice.age.2442@gmail.com at 5 pm")}
+                    className="w-full rounded border border-slate-700 bg-slate-800/60 px-3 py-2 text-left text-xs text-slate-300 hover:border-violet-500/50 hover:bg-slate-700 transition-colors"
+                  >
+                    🎭 Daily joke → email at 5 PM
+                  </button>
+                  <button
+                    onClick={() => setInput("fetch data from https://api.example.com/data and send it to you@gmail.com every day at 9 am")}
+                    className="w-full rounded border border-slate-700 bg-slate-800/60 px-3 py-2 text-left text-xs text-slate-300 hover:border-violet-500/50 hover:bg-slate-700 transition-colors"
+                  >
+                    📡 Fetch API → email at 9 AM
+                  </button>
+                </div>
+              </div>
+            )}
             {messages.map((message) => <AIChatMessage key={message.id} message={message} />)}
             {loading && <TypingIndicator />}
             {proposal?.nodes?.length ? (

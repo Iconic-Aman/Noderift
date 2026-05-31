@@ -83,7 +83,7 @@ def _fallback_proposal(message: str):
         "nodes": [
             {"id": "schedule-1", "type": "schedule", "config": {"cron": f"0 {hour} * * *", "timezone": timezone, "frequency": "daily", "time": f"{hour:02d}:00"}},
             {"id": "http-1", "type": "http", "config": {"url": url_match.group(0), "method": "GET", "headers": {}, "body": {}}},
-            {"id": "resend-1", "type": "resend", "config": {"from": "", "to": email_match.group(0), "subject": "Your Daily Joke 😄", "html": joke_html, "credential_id": ""}},
+            {"id": "resend-1", "type": "resend", "config": {"from": "onboarding@resend.dev", "to": email_match.group(0), "subject": "Your Daily Joke 😄", "html": joke_html, "credential_id": ""}},
         ],
         "edges": [
             {"source": "schedule-1", "target": "http-1"},

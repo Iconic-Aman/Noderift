@@ -101,7 +101,7 @@ export function ConfigFieldInput({ field, value, onChange }: Props) {
       const [creds, setCreds] = useState<{id: string; name: string}[]>([]);
       useEffect(() => {
         import("@/lib/api").then(({ apiFetch }) =>
-          apiFetch("/credentials").then((data: any[]) => setCreds(data)).catch(() => setCreds([]))
+          apiFetch("/credentials/").then((data: any[]) => setCreds(data)).catch(() => setCreds([]))
         );
       }, []);
       return (

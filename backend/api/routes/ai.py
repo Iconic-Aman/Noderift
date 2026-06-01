@@ -64,13 +64,19 @@ def _fallback_proposal(message: str):
     email_match = re.search(r"[\w.+-]+@[\w.-]+\.\w+", message)
     if not (url_match and email_match and ("mail" in lower or "email" in lower)):
         return None
-    hour_match = re.search(r"(?:at|every)\s+(\d{1,2})\s*(am|pm)", lower)
-    hour = int(hour_match.group(1)) if hour_match else 17
-    if hour_match:
-        if hour_match.group(2) == "pm" and hour != 12:
+    
+    time_match = re.search(r"(?:at|every)\s+(\d{1,2})(?::(\d{2}))?\s*(am|pm)?", lower)
+    hour = 17
+    minute = 0
+    if time_match:
+        hour = int(time_match.group(1))
+        minute = int(time_match.group(2)) if time_match.group(2) else 0
+        ampm = time_match.group(3)
+        if ampm == "pm" and hour != 12:
             hour += 12
-        elif hour_match.group(2) == "am" and hour == 12:
+        elif ampm == "am" and hour == 12:
             hour = 0
+            
     # Use IST timezone so cron fires at user's local time
     timezone = "Asia/Kolkata"
     joke_html = (
@@ -81,7 +87,7 @@ def _fallback_proposal(message: str):
     )
     return {
         "nodes": [
-            {"id": "schedule-1", "type": "schedule", "config": {"cron": f"0 {hour} * * *", "timezone": timezone, "frequency": "daily", "time": f"{hour:02d}:00"}},
+            {"id": "schedule-1", "type": "schedule", "config": {"cron": f"{minute} {hour} * * *", "timezone": timezone, "frequency": "daily", "time": f"{hour:02d}:{minute:02d}"}},
             {"id": "http-1", "type": "http", "config": {"url": url_match.group(0), "method": "GET", "headers": {}, "body": {}}},
             {"id": "resend-1", "type": "resend", "config": {"from": "onboarding@resend.dev", "to": email_match.group(0), "subject": "Your Daily Joke 😄", "html": joke_html, "credential_id": ""}},
         ],

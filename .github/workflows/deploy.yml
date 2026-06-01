@@ -100,6 +100,9 @@ jobs:
             sed -i '/^DOCKER_IMAGE_BACKEND=/d' .env
             sed -i '/^DOCKER_IMAGE_FRONTEND=/d' .env
             sed -i '/^DOCKER_IMAGE_WORKER=/d' .env
+            sed -i '/^NVIDIA_API_KEY=/d' .env
+            sed -i '/^NVIDIA_API_URL=/d' .env
+            sed -i '/^LLM_MODEL=/d' .env
 
             # Write new values to .env
             echo "ALLOWED_HOST=${{ vars.ALLOWED_HOST }}" >> .env
@@ -118,6 +121,9 @@ jobs:
             echo "DOCKER_IMAGE_BACKEND=${{ secrets.DOCKERHUB_USERNAME }}/noderift-backend:test" >> .env
             echo "DOCKER_IMAGE_FRONTEND=${{ secrets.DOCKERHUB_USERNAME }}/noderift-frontend:test" >> .env
             echo "DOCKER_IMAGE_WORKER=${{ secrets.DOCKERHUB_USERNAME }}/noderift-worker:test" >> .env
+            echo "NVIDIA_API_KEY=${{ secrets.NVIDIA_API_KEY }}" >> .env
+            echo "NVIDIA_API_URL=${{ vars.NVIDIA_API_URL }}" >> .env
+            echo "LLM_MODEL=${{ vars.LLM_MODEL }}" >> .env
 
             # Log in to Docker Hub on the host
             if [ ! -z "${{ secrets.DOCKERHUB_USERNAME }}" ]; then
@@ -162,6 +168,9 @@ jobs:
             sed -i '/^DOCKER_IMAGE_BACKEND=/d' .env
             sed -i '/^DOCKER_IMAGE_FRONTEND=/d' .env
             sed -i '/^DOCKER_IMAGE_WORKER=/d' .env
+            sed -i '/^NVIDIA_API_KEY=/d' .env
+            sed -i '/^NVIDIA_API_URL=/d' .env
+            sed -i '/^LLM_MODEL=/d' .env
 
             # Write new values to .env
             echo "ALLOWED_HOST=${{ vars.ALLOWED_HOST }}" >> .env
@@ -180,6 +189,9 @@ jobs:
             echo "DOCKER_IMAGE_BACKEND=${{ secrets.DOCKERHUB_USERNAME }}/noderift-backend:latest" >> .env
             echo "DOCKER_IMAGE_FRONTEND=${{ secrets.DOCKERHUB_USERNAME }}/noderift-frontend:latest" >> .env
             echo "DOCKER_IMAGE_WORKER=${{ secrets.DOCKERHUB_USERNAME }}/noderift-worker:latest" >> .env
+            echo "NVIDIA_API_KEY=${{ secrets.NVIDIA_API_KEY }}" >> .env
+            echo "NVIDIA_API_URL=${{ vars.NVIDIA_API_URL }}" >> .env
+            echo "LLM_MODEL=${{ vars.LLM_MODEL }}" >> .env
 
             # Log in to Docker Hub on the host
             if [ ! -z "${{ secrets.DOCKERHUB_USERNAME }}" ]; then

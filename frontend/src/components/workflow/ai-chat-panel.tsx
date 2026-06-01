@@ -9,7 +9,6 @@ import { ReactFlowInstance, Node, Edge } from "@xyflow/react";
 import { NodeData } from "@/types/workflow";
 
 type Message = { id: string; role: "user" | "assistant"; content: string };
-type Credential = { id: string; name: string };
 type Proposal = { nodes?: { id: string; type: string; config?: Record<string, any> }[]; edges?: { source: string; target: string }[] };
 const builderNodeIds = new Set(["schedule", "webhook", "http", "code", "playwright", "composio", "whatsapp", "resend", "filter", "merge", "loop", "set_variable", "ai_agent"]);
 
@@ -17,10 +16,6 @@ export function AIChatPanel({ rfInstance }: { rfInstance: ReactFlowInstance<Node
   const { id: workflowId } = useParams();
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
-  const [credentials, setCredentials] = useState<Credential[]>([]);
-  const [credentialId, setCredentialId] = useState("");
-  const [baseUrl, setBaseUrl] = useState("");
-  const [model, setModel] = useState("");
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [proposal, setProposal] = useState<Proposal | null>(null);
@@ -29,20 +24,12 @@ export function AIChatPanel({ rfInstance }: { rfInstance: ReactFlowInstance<Node
   const { nodes, edges, setNodes, setEdges, takeHistorySnapshot } = useWorkflowStore();
 
   useEffect(() => {
-    apiFetch("/credentials/").then(setCredentials).catch(() => setCredentials([]));
-  }, []);
-
-  useEffect(() => {
     if (!open || !workflowId) return;
     apiFetch(`/workflows/${workflowId}/ai/messages`).then(setMessages).catch(() => setMessages([]));
   }, [open, workflowId]);
 
   const sendMessage = async () => {
     if (!workflowId || !input.trim()) return;
-    if (!credentialId || !baseUrl.trim() || !model.trim()) {
-      setMessages((prev) => [...prev, { id: `error-${Date.now()}`, role: "assistant", content: "Select a provider credential, base URL, and model before sending." }]);
-      return;
-    }
     const userMessage: Message = { id: `local-${Date.now()}`, role: "user", content: input.trim() };
     setMessages((prev) => [...prev, userMessage]);
     setInput("");
@@ -52,9 +39,6 @@ export function AIChatPanel({ rfInstance }: { rfInstance: ReactFlowInstance<Node
         method: "POST",
         body: JSON.stringify({
           message: userMessage.content,
-          credential_id: credentialId,
-          base_url: baseUrl.trim(),
-          model: model.trim(),
           temperature: 0.7,
           current_graph: { nodes, edges },
           node_catalog: nodeTemplates.filter((node) => builderNodeIds.has(node.id)).map((node) => ({
@@ -140,15 +124,6 @@ export function AIChatPanel({ rfInstance }: { rfInstance: ReactFlowInstance<Node
             <button onClick={() => setOpen(false)} className="rounded p-1 text-slate-400 hover:bg-slate-800 hover:text-white">
               <X className="h-4 w-4" />
             </button>
-          </div>
-
-          <div className="space-y-2 border-b border-slate-800 p-3">
-            <select value={credentialId} onChange={(e) => setCredentialId(e.target.value)} className="w-full rounded border border-slate-700 bg-slate-950 px-2 py-1.5 text-xs text-slate-200">
-              <option value="">Provider credential</option>
-              {credentials.map((credential) => <option key={credential.id} value={credential.id}>{credential.name}</option>)}
-            </select>
-            <input value={baseUrl} onChange={(e) => setBaseUrl(e.target.value)} placeholder="Provider base URL" className="w-full rounded border border-slate-700 bg-slate-950 px-2 py-1.5 text-xs text-slate-200 outline-none" />
-            <input value={model} onChange={(e) => setModel(e.target.value)} placeholder="Model name" className="w-full rounded border border-slate-700 bg-slate-950 px-2 py-1.5 text-xs text-slate-200 outline-none" />
           </div>
 
           <div className="flex-1 space-y-3 overflow-y-auto p-4">

@@ -13,6 +13,9 @@ services:
       GOOGLE_AUTH_URL: ${GOOGLE_AUTH_URL}
       GOOGLE_TOKEN_URL: ${GOOGLE_TOKEN_URL}
       GOOGLE_USERINFO_URL: ${GOOGLE_USERINFO_URL}
+      NVIDIA_API_KEY: ${NVIDIA_API_KEY}
+      NVIDIA_API_URL: ${NVIDIA_API_URL}
+      LLM_MODEL: ${LLM_MODEL}
     ports:
       - "8000:8000"
     depends_on:
@@ -44,6 +47,9 @@ services:
       GOOGLE_AUTH_URL: ${GOOGLE_AUTH_URL}
       GOOGLE_TOKEN_URL: ${GOOGLE_TOKEN_URL}
       GOOGLE_USERINFO_URL: ${GOOGLE_USERINFO_URL}
+      NVIDIA_API_KEY: ${NVIDIA_API_KEY}
+      NVIDIA_API_URL: ${NVIDIA_API_URL}
+      LLM_MODEL: ${LLM_MODEL}
     depends_on:
       - redis
       - backend

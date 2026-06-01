@@ -16,9 +16,9 @@ class AIChatMessageOut(BaseModel):
 
 class AIChatRequest(BaseModel):
     message: str
-    credential_id: str
-    base_url: str
-    model: str
+    credential_id: Optional[str] = None
+    base_url: Optional[str] = None
+    model: Optional[str] = None
     temperature: float = 0.7
     current_graph: Optional[Dict[str, Any]] = None
     node_catalog: List[Dict[str, Any]] = []

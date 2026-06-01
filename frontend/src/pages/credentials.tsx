@@ -111,9 +111,6 @@ export function Credentials() {
               </div>
               <div>
                 <h2 className="text-base font-semibold text-white">Add Credential</h2>
-                <p className="text-xs text-slate-500">
-                  Resend: <code className="text-amber-400">{`{"resend_api_key":"re_xxx","from_email":"you@yourdomain.com"}`}</code>
-                </p>
               </div>
             </div>
 

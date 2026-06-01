@@ -108,6 +108,7 @@ def _sanitize_proposal(proposal, message: str):
 
 @router.get("/messages", response_model=list[AIChatMessageOut])
 def list_messages(workflow_id: str, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    
     _get_workflow(db, workflow_id, current_user.id)
     session = _session(db, workflow_id, current_user.id)
     return db.query(AIChatMessage).filter(AIChatMessage.session_id == session.id).order_by(AIChatMessage.created_at.asc()).all()
@@ -121,7 +122,35 @@ async def chat(workflow_id: str, body: AIChatRequest, db: Session = Depends(get_
     db.commit()
 
     history = db.query(AIChatMessage).filter(AIChatMessage.session_id == session.id).order_by(AIChatMessage.created_at.asc()).all()
-    key = extract_api_key(_credential_data(db, body.credential_id, current_user.id))
+    
+    key = settings.NVIDIA_API_KEY
+    base_url = settings.NVIDIA_API_URL
+    model = settings.LLM_MODEL
+
+    # Fallback to request body if env/settings are not defined
+    if not key and body.credential_id:
+        key = extract_api_key(_credential_data(db, body.credential_id, current_user.id))
+    if not base_url and body.base_url:
+        base_url = body.base_url
+    if not model and body.model:
+        model = body.model
+
+    if not key:
+        raise HTTPException(
+            status_code=400,
+            detail="NVIDIA_API_KEY is not configured on the server. Please set it in the environment or .env file."
+        )
+    if not base_url:
+        raise HTTPException(
+            status_code=400,
+            detail="NVIDIA_API_URL is not configured on the server. Please set it in the environment or .env file."
+        )
+    if not model:
+        raise HTTPException(
+            status_code=400,
+            detail="LLM_MODEL is not configured on the server. Please set it in the environment or .env file."
+        )
+
     graph = body.current_graph or workflow.graph
     catalog = json.dumps(body.node_catalog, default=str)
     messages = [{
@@ -137,7 +166,7 @@ async def chat(workflow_id: str, body: AIChatRequest, db: Session = Depends(get_
     }]
     messages += [{"role": m.role, "content": m.content} for m in history[-12:]]
 
-    response = await chat_completion(api_key=key, base_url=body.base_url, model=body.model, messages=messages, temperature=body.temperature)
+    response = await chat_completion(api_key=key, base_url=base_url, model=model, messages=messages, temperature=body.temperature)
     proposal, text = _proposal_from_text(first_message_text(response))
     proposal = _sanitize_proposal(proposal, body.message)
     assistant = AIChatMessage(session_id=session.id, role="assistant", content=text, meta={"raw": response, "proposal": proposal})

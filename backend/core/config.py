@@ -1,9 +1,9 @@
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from typing import List, Optional
 import os
-from dotenv import load_dotenv
+from dotenv import load_dotenv, find_dotenv
 
-load_dotenv()
+load_dotenv(find_dotenv())
 
 from cryptography.fernet import Fernet
 from pathlib import Path
@@ -45,6 +45,11 @@ class Settings(BaseSettings):
     # Database
     DATABASE_URL: str = ""
 
+    # NVIDIA LLM Config
+    NVIDIA_API_KEY: str = ""
+    NVIDIA_API_URL: str = ""
+    LLM_MODEL: str = ""
+
     # Redis
     REDIS_URL: str = ""
 
@@ -62,7 +67,7 @@ class Settings(BaseSettings):
     GOOGLE_USERINFO_URL: str = ""
 
     model_config = SettingsConfigDict(
-        env_file=".env",
+        env_file=find_dotenv() or ".env",
         env_file_encoding="utf-8",
         extra="ignore",
     )

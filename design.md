@@ -265,6 +265,23 @@ webhook_triggers (id, workflow_id, path_slug, secret, created_at)
 
 -- Cron triggers
 cron_triggers (id, workflow_id, cron_expression, next_run_at, is_active)
+
+-- RAG: Node schemas for vector similarity search
+node_embeddings (
+  id, node_type UNIQUE, label,
+  description TEXT,
+  schema_json JSON,          -- configFields, category etc.
+  embedding vector(1024),    -- NVIDIA NV-Embed-QA-4
+  created_at
+)
+
+-- RAG: Workflow template examples
+workflow_example_embeddings (
+  id, name, description TEXT,
+  workflow_json JSON,        -- { nodes: [], edges: [] }
+  embedding vector(1024),
+  created_at
+)
 ```
 
 ---
@@ -483,6 +500,8 @@ erDiagram
     WORKFLOWS ||--o| WEBHOOKS : "triggered by"
     WORKFLOWS ||--o| CRON_TRIGGERS : "scheduled by"
     EXECUTIONS ||--o{ NODE_LOGS : "contains steps"
+    NODE_EMBEDDINGS }|..|| WORKFLOWS : "RAG retrieval"
+    WORKFLOW_EXAMPLE_EMBEDDINGS }|..|| WORKFLOWS : "RAG templates"
 
     USERS {
         uuid id PK
@@ -548,6 +567,25 @@ erDiagram
         string name
         string type "api_key|oauth2|basic_auth"
         string encrypted_data "AES encrypted"
+        datetime created_at
+    }
+
+    NODE_EMBEDDINGS {
+        uuid id PK
+        string node_type UK
+        string label
+        text description
+        json schema_json
+        vector embedding "1024-dim cosine search"
+        datetime created_at
+    }
+
+    WORKFLOW_EXAMPLE_EMBEDDINGS {
+        uuid id PK
+        string name
+        text description
+        json workflow_json
+        vector embedding "1024-dim cosine search"
         datetime created_at
     }
 ```

@@ -271,7 +271,7 @@ node_embeddings (
   id, node_type UNIQUE, label,
   description TEXT,
   schema_json JSON,          -- configFields, category etc.
-  embedding vector(1024),    -- NVIDIA NV-Embed-QA-4
+  embedding vector(2048),    -- nvidia/llama-nemotron-embed-1b-v2
   created_at
 )
 
@@ -279,9 +279,10 @@ node_embeddings (
 workflow_example_embeddings (
   id, name, description TEXT,
   workflow_json JSON,        -- { nodes: [], edges: [] }
-  embedding vector(1024),
+  embedding vector(2048),
   created_at
 )
+
 ```
 
 ---
@@ -576,7 +577,7 @@ erDiagram
         string label
         text description
         json schema_json
-        vector embedding "1024-dim cosine search"
+        vector embedding "2048-dim cosine search"
         datetime created_at
     }
 
@@ -585,7 +586,8 @@ erDiagram
         string name
         text description
         json workflow_json
-        vector embedding "1024-dim cosine search"
+        vector embedding "2048-dim cosine search"
         datetime created_at
     }
+
 ```

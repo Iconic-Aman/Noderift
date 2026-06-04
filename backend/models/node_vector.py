@@ -15,7 +15,7 @@ class NodeEmbedding(Base):
     label = Column(String, nullable=False)
     description = Column(Text, nullable=True)
     schema_json = Column(JSON, nullable=False)  # Store the template schema
-    embedding = Column(Vector(1024), nullable=False)  # 1024-dim vector for search
+    embedding = Column(Vector(2048), nullable=False)  # 2048-dim vector for search
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
 
 
@@ -26,5 +26,6 @@ class WorkflowExampleEmbedding(Base):
     name = Column(String, nullable=False)
     description = Column(Text, nullable=False)
     workflow_json = Column(JSON, nullable=False)  # The React Flow nodes and edges dict
-    embedding = Column(Vector(1024), nullable=False)  # 1024-dim vector for search
+    embedding = Column(Vector(2048), nullable=False)  # 2048-dim vector for search
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+

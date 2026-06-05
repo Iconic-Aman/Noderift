@@ -49,6 +49,9 @@ class Settings(BaseSettings):
     NVIDIA_API_KEY: str = ""
     NVIDIA_API_URL: str = ""
     LLM_MODEL: str = ""
+    EMBEDDING_MODEL: str = ""
+
+
 
     # Redis
     REDIS_URL: str = ""

@@ -7,6 +7,7 @@ from models.webhook import Webhook
 from models.cron_trigger import CronTrigger
 from models.credential import Credential
 from models.ai_chat import AIChatSession, AIChatMessage
+from models.node_vector import NodeEmbedding, WorkflowExampleEmbedding
 
 __all__ = [
     "User",
@@ -18,4 +19,6 @@ __all__ = [
     "Credential",
     "AIChatSession",
     "AIChatMessage",
+    "NodeEmbedding",
+    "WorkflowExampleEmbedding",
 ]

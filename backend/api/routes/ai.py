@@ -44,18 +44,54 @@ def _credential_data(db: Session, credential_id: str, user_id: str) -> dict:
 
 
 def _proposal_from_text(text: str):
+    # 1. Try to find all markdown JSON blocks
+    fenced_blocks = re.findall(r"```(?:json)?\s*(\{.*?\})\s*```", text, re.DOTALL)
+    if fenced_blocks:
+        for block in reversed(fenced_blocks):
+            try:
+                parsed = json.loads(re.sub(r"(?<!:)\/\/.*", "", block).strip())
+                if "proposal" in parsed or "nodes" in parsed:
+                    proposal = parsed.get("proposal") if "proposal" in parsed else parsed
+                    return proposal, parsed.get("message", text)
+            except Exception:
+                continue
+
+    # 2. Try parsing raw JSON objects from the text
+    candidates = []
+    for match in re.finditer(r"\{", text):
+        start = match.start()
+        for end in range(len(text), start, -1):
+            substring = text[start:end]
+            if substring.count("{") == substring.count("}"):
+                candidates.append(substring)
+                break
+
+    # Parse candidates from last (newest/most specific) to first
+    for cand in reversed(candidates):
+        try:
+            cleaned = re.sub(r"(?<!:)\/\/.*", "", cand).strip()
+            parsed = json.loads(cleaned)
+            if "proposal" in parsed or "nodes" in parsed:
+                proposal = parsed.get("proposal") if "proposal" in parsed else parsed
+                return proposal, parsed.get("message", text)
+        except Exception:
+            continue
+
+    # Fallback to original parsing method
     raw = text.strip()
     fenced = re.search(r"```(?:json)?\s*(\{.*?\})\s*```", raw, re.DOTALL)
     if fenced:
         raw = fenced.group(1)
     elif "{" in raw and "}" in raw:
         raw = raw[raw.find("{"):raw.rfind("}") + 1]
-    raw = re.sub(r"//.*", "", raw)
+    raw = re.sub(r"(?<!:)\/\/.*", "", raw)
     try:
         parsed = json.loads(raw.strip())
+        return parsed.get("proposal"), parsed.get("message", text)
     except Exception:
         return None, text
-    return parsed.get("proposal"), parsed.get("message", text)
+
+
 
 
 def _fallback_proposal(message: str):
@@ -120,6 +156,12 @@ def list_messages(workflow_id: str, db: Session = Depends(get_db), current_user:
     return db.query(AIChatMessage).filter(AIChatMessage.session_id == session.id).order_by(AIChatMessage.created_at.asc()).all()
 
 
+from core.embeddings import get_embedding
+from models.node_vector import NodeEmbedding, WorkflowExampleEmbedding
+import logging
+
+logger = logging.getLogger("uvicorn")
+
 @router.post("/chat", response_model=AIChatResponse)
 async def chat(workflow_id: str, body: AIChatRequest, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     workflow = _get_workflow(db, workflow_id, current_user.id)
@@ -133,7 +175,6 @@ async def chat(workflow_id: str, body: AIChatRequest, db: Session = Depends(get_
     base_url = settings.NVIDIA_API_URL
     model = settings.LLM_MODEL
 
-    # Fallback to request body if env/settings are not defined
     if not key and body.credential_id:
         key = extract_api_key(_credential_data(db, body.credential_id, current_user.id))
     if not base_url and body.base_url:
@@ -141,35 +182,61 @@ async def chat(workflow_id: str, body: AIChatRequest, db: Session = Depends(get_
     if not model and body.model:
         model = body.model
 
-    if not key:
-        raise HTTPException(
-            status_code=400,
-            detail="NVIDIA_API_KEY is not configured on the server. Please set it in the environment or .env file."
-        )
-    if not base_url:
-        raise HTTPException(
-            status_code=400,
-            detail="NVIDIA_API_URL is not configured on the server. Please set it in the environment or .env file."
-        )
-    if not model:
-        raise HTTPException(
-            status_code=400,
-            detail="LLM_MODEL is not configured on the server. Please set it in the environment or .env file."
-        )
+    if not key or not base_url or not model:
+        raise HTTPException(status_code=400, detail="Missing required NVIDIA LLM configurations.")
 
     graph = body.current_graph or workflow.graph
-    catalog = json.dumps(body.node_catalog, default=str)
+    
+    # RAG: Search relevant nodes and workflow examples
+    catalog_list = []
+    examples_list = []
+    try:
+        query_vector = await get_embedding(body.message, input_type="query")
+        
+        # 1. Match node schemas
+        matched_nodes = db.query(NodeEmbedding).order_by(
+            NodeEmbedding.embedding.cosine_distance(query_vector)
+        ).limit(3).all()
+        catalog_list = [node.schema_json for node in matched_nodes]
+        logger.info(f"RAG Matched Nodes: {[n.node_type for n in matched_nodes]}")
+        
+        # 2. Match workflow examples
+        matched_examples = db.query(WorkflowExampleEmbedding).order_by(
+            WorkflowExampleEmbedding.embedding.cosine_distance(query_vector)
+        ).limit(2).all()
+        examples_list = [
+            {
+                "name": ex.name,
+                "description": ex.description,
+                "workflow_json": ex.workflow_json
+            }
+            for ex in matched_examples
+        ]
+        logger.info(f"RAG Matched Examples: {[e.name for e in matched_examples]}")
+
+    except Exception as e:
+        logger.error(f"RAG similarity search failed: {e}")
+
+    if not catalog_list:
+        catalog_list = body.node_catalog
+
+    catalog = json.dumps(catalog_list, default=str)
+    examples = json.dumps(examples_list, default=str) if examples_list else "[]"
     messages = [{
         "role": "system",
         "content": (
-            "You build Noderift workflow graphs from user requests. Use only nodes in NODE_CATALOG. "
-            "If a needed node is missing, say it is not available and do not invent it. "
-            "Return strict JSON only: {\"message\":\"...\",\"proposal\":{\"nodes\":[{\"id\":\"schedule-1\",\"type\":\"schedule\",\"config\":{}}],\"edges\":[{\"source\":\"schedule-1\",\"target\":\"gmail-1\"}]}}. "
-            "For generic email sends, prefer the resend node. For Gmail/Slack account-specific sends, use the composio node. "
-            "Schedule config supports cron, timezone, frequency, time, days_of_week. Monday-Friday at 5 AM is cron '0 5 * * mon,tue,wed,thu,fri'. "
-            f"NODE_CATALOG: {catalog}. CURRENT_GRAPH: {json.dumps(graph, default=str)}"
+            "You are an AI assistant that designs and modifies Noderift workflow graphs. "
+            "You must output only a precise JSON patch containing the nodes and edges to be added or modified. "
+            "Only use nodes listed in NODE_CATALOG. "
+            "CRITICAL: When configuring the 'schedule' node, you MUST write a valid 5-field cron expression in standard format: (minute hour day_of_month month day_of_week). "
+            "Example: 'every monday 10:44 AM' must be '44 10 * * 1' or '44 10 * * MON'. "
+            "Return strict JSON: {\"message\":\"...\",\"proposal\":{\"nodes\":[{\"id\":\"node-id\",\"type\":\"type\",\"config\":{}}],\"edges\":[{\"source\":\"source-id\",\"target\":\"target-id\"}]}}. "
+            f"NODE_CATALOG: {catalog}. "
+            f"WORKFLOW_EXAMPLES: {examples}. "
+            f"CURRENT_GRAPH: {json.dumps(graph, default=str)}"
         ),
     }]
+
     messages += [{"role": m.role, "content": m.content} for m in history[-12:]]
 
     response = await chat_completion(api_key=key, base_url=base_url, model=model, messages=messages, temperature=body.temperature)
@@ -182,3 +249,4 @@ async def chat(workflow_id: str, body: AIChatRequest, db: Session = Depends(get_
 
     updated = db.query(AIChatMessage).filter(AIChatMessage.session_id == session.id).order_by(AIChatMessage.created_at.asc()).all()
     return {"message": assistant, "proposal": proposal, "history": updated}
+

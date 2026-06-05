@@ -13,6 +13,9 @@ from models.credential import Credential
 from models.user import User
 from models.workflow import Workflow
 from schemas.ai_chat import AIChatRequest, AIChatResponse, AIChatMessageOut
+from core.ai_graph import graph
+from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
+
 
 router = APIRouter(prefix="/workflows/{workflow_id}/ai", tags=["ai"])
 
@@ -44,18 +47,54 @@ def _credential_data(db: Session, credential_id: str, user_id: str) -> dict:
 
 
 def _proposal_from_text(text: str):
+    # 1. Try to find all markdown JSON blocks
+    fenced_blocks = re.findall(r"```(?:json)?\s*(\{.*?\})\s*```", text, re.DOTALL)
+    if fenced_blocks:
+        for block in reversed(fenced_blocks):
+            try:
+                parsed = json.loads(re.sub(r"(?<!:)\/\/.*", "", block).strip())
+                if "proposal" in parsed or "nodes" in parsed:
+                    proposal = parsed.get("proposal") if "proposal" in parsed else parsed
+                    return proposal, parsed.get("message", text)
+            except Exception:
+                continue
+
+    # 2. Try parsing raw JSON objects from the text
+    candidates = []
+    for match in re.finditer(r"\{", text):
+        start = match.start()
+        for end in range(len(text), start, -1):
+            substring = text[start:end]
+            if substring.count("{") == substring.count("}"):
+                candidates.append(substring)
+                break
+
+    # Parse candidates from last (newest/most specific) to first
+    for cand in reversed(candidates):
+        try:
+            cleaned = re.sub(r"(?<!:)\/\/.*", "", cand).strip()
+            parsed = json.loads(cleaned)
+            if "proposal" in parsed or "nodes" in parsed:
+                proposal = parsed.get("proposal") if "proposal" in parsed else parsed
+                return proposal, parsed.get("message", text)
+        except Exception:
+            continue
+
+    # Fallback to original parsing method
     raw = text.strip()
     fenced = re.search(r"```(?:json)?\s*(\{.*?\})\s*```", raw, re.DOTALL)
     if fenced:
         raw = fenced.group(1)
     elif "{" in raw and "}" in raw:
         raw = raw[raw.find("{"):raw.rfind("}") + 1]
-    raw = re.sub(r"//.*", "", raw)
+    raw = re.sub(r"(?<!:)\/\/.*", "", raw)
     try:
         parsed = json.loads(raw.strip())
+        return parsed.get("proposal"), parsed.get("message", text)
     except Exception:
         return None, text
-    return parsed.get("proposal"), parsed.get("message", text)
+
+
 
 
 def _fallback_proposal(message: str):
@@ -120,6 +159,12 @@ def list_messages(workflow_id: str, db: Session = Depends(get_db), current_user:
     return db.query(AIChatMessage).filter(AIChatMessage.session_id == session.id).order_by(AIChatMessage.created_at.asc()).all()
 
 
+from core.embeddings import get_embedding
+from models.node_vector import NodeEmbedding, WorkflowExampleEmbedding
+import logging
+
+logger = logging.getLogger("uvicorn")
+
 @router.post("/chat", response_model=AIChatResponse)
 async def chat(workflow_id: str, body: AIChatRequest, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     workflow = _get_workflow(db, workflow_id, current_user.id)
@@ -133,7 +178,6 @@ async def chat(workflow_id: str, body: AIChatRequest, db: Session = Depends(get_
     base_url = settings.NVIDIA_API_URL
     model = settings.LLM_MODEL
 
-    # Fallback to request body if env/settings are not defined
     if not key and body.credential_id:
         key = extract_api_key(_credential_data(db, body.credential_id, current_user.id))
     if not base_url and body.base_url:
@@ -141,44 +185,56 @@ async def chat(workflow_id: str, body: AIChatRequest, db: Session = Depends(get_
     if not model and body.model:
         model = body.model
 
-    if not key:
-        raise HTTPException(
-            status_code=400,
-            detail="NVIDIA_API_KEY is not configured on the server. Please set it in the environment or .env file."
-        )
-    if not base_url:
-        raise HTTPException(
-            status_code=400,
-            detail="NVIDIA_API_URL is not configured on the server. Please set it in the environment or .env file."
-        )
-    if not model:
-        raise HTTPException(
-            status_code=400,
-            detail="LLM_MODEL is not configured on the server. Please set it in the environment or .env file."
-        )
+    if not key or not base_url or not model:
+        raise HTTPException(status_code=400, detail="Missing required NVIDIA LLM configurations.")
 
-    graph = body.current_graph or workflow.graph
-    catalog = json.dumps(body.node_catalog, default=str)
-    messages = [{
-        "role": "system",
-        "content": (
-            "You build Noderift workflow graphs from user requests. Use only nodes in NODE_CATALOG. "
-            "If a needed node is missing, say it is not available and do not invent it. "
-            "Return strict JSON only: {\"message\":\"...\",\"proposal\":{\"nodes\":[{\"id\":\"schedule-1\",\"type\":\"schedule\",\"config\":{}}],\"edges\":[{\"source\":\"schedule-1\",\"target\":\"gmail-1\"}]}}. "
-            "For generic email sends, prefer the resend node. For Gmail/Slack account-specific sends, use the composio node. "
-            "Schedule config supports cron, timezone, frequency, time, days_of_week. Monday-Friday at 5 AM is cron '0 5 * * mon,tue,wed,thu,fri'. "
-            f"NODE_CATALOG: {catalog}. CURRENT_GRAPH: {json.dumps(graph, default=str)}"
-        ),
-    }]
-    messages += [{"role": m.role, "content": m.content} for m in history[-12:]]
+    graph_data = body.current_graph or workflow.graph
 
-    response = await chat_completion(api_key=key, base_url=base_url, model=model, messages=messages, temperature=body.temperature)
-    proposal, text = _proposal_from_text(first_message_text(response))
-    proposal = _sanitize_proposal(proposal, body.message)
-    assistant = AIChatMessage(session_id=session.id, role="assistant", content=text, meta={"raw": response, "proposal": proposal})
+    # Map previous session history to LangChain messages
+    lc_messages = []
+    for msg in history:
+        if msg.role == "user":
+            lc_messages.append(HumanMessage(content=msg.content))
+        elif msg.role == "assistant":
+            lc_messages.append(AIMessage(content=msg.content))
+        else:
+            lc_messages.append(SystemMessage(content=msg.content))
+
+    inputs = {
+        "messages": lc_messages,
+        "current_graph": graph_data,
+        "proposal": None,
+        "validation_error": None,
+        "retry_count": 0
+    }
+
+    config = {
+        "configurable": {
+            "thread_id": f"workflow_{workflow_id}_session_{session.id}",
+            "api_key": key,
+            "base_url": base_url,
+            "model": model,
+            "db": db,
+            "temperature": body.temperature or 0.7
+        }
+    }
+
+    try:
+        result = await graph.ainvoke(inputs, config=config)
+        final_msg = result["messages"][-1]
+        raw_text = final_msg.content
+        proposal, text = _proposal_from_text(raw_text)
+        proposal = _sanitize_proposal(proposal, body.message)
+    except Exception as e:
+        logger.error(f"LangGraph execution failed: {e}")
+        text = "I encountered an error while updating the workflow graph."
+        proposal = None
+
+    assistant = AIChatMessage(session_id=session.id, role="assistant", content=text, meta={"raw": {"choices": [{"message": {"content": raw_text if 'raw_text' in locals() else text}}]}, "proposal": proposal})
     db.add(assistant)
     db.commit()
     db.refresh(assistant)
 
     updated = db.query(AIChatMessage).filter(AIChatMessage.session_id == session.id).order_by(AIChatMessage.created_at.asc()).all()
     return {"message": assistant, "proposal": proposal, "history": updated}
+

@@ -13,10 +13,14 @@ sys.path.insert(0, os.path.dirname(__file__))
 from sqlalchemy import create_engine, text
 from core.config import settings
 
-# Use SUPABASE_URL (sync psycopg2 driver — no +asyncpg here)
-db_url = settings.SUPABASE_URL
+# Use DATABASE_URL (sync psycopg2 driver — no +asyncpg here)
+db_url = os.getenv("DATABASE_URL") or settings.DATABASE_URL
 if not db_url:
-    raise RuntimeError("SUPABASE_URL is not set in .env")
+    raise RuntimeError("DATABASE_URL is not set in .env")
+
+if db_url.startswith("postgresql+asyncpg://"):
+    db_url = db_url.replace("postgresql+asyncpg://", "postgresql://")
+
 
 print(f"Connecting to: {db_url.split('@')[-1]}")  # hide credentials in log
 
@@ -28,7 +32,12 @@ import models  # noqa: E402  — registers all models via __init__.py
 
 def main():
     print("\n=== Creating all tables ===\n")
+    # Ensure pgvector extension is enabled
+    with engine.begin() as conn:
+        conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector;"))
+    
     Base.metadata.create_all(bind=engine)
+
 
     # Verify by listing tables
     with engine.connect() as conn:

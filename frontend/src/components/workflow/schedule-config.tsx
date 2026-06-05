@@ -8,7 +8,7 @@ interface Props {
 const baseCls = "w-full rounded-lg border border-slate-700 bg-slate-800/80 px-3 py-2 text-sm text-slate-200 outline-none focus:border-slate-600 transition-colors";
 
 export function ScheduleConfig({ cfg, onChange }: Props) {
-  const frequency = cfg.frequency || "interval";
+  const frequency = cfg.frequency || (cfg.cron ? "cron" : "interval");
   const intervalValue = cfg.interval_value ?? 1;
   const intervalUnit = cfg.interval_unit || "hours";
   const timeValue = cfg.time || "12:00";
@@ -18,12 +18,13 @@ export function ScheduleConfig({ cfg, onChange }: Props) {
 
   const update = (updates: Record<string, any>) => {
     const next = { ...cfg, ...updates };
-    const f = next.frequency || "interval";
+    const f = next.frequency || (next.cron ? "cron" : "interval");
     const val = next.interval_value ?? 1;
     const unit = next.interval_unit || "hours";
     const timeStr = next.time || "12:00";
     const days = next.days_of_week || [];
     const custom = next.cron || "0 * * * *";
+
 
     let cron = "0 * * * *";
     if (f === "interval") {

@@ -13,6 +13,9 @@ from models.credential import Credential
 from models.user import User
 from models.workflow import Workflow
 from schemas.ai_chat import AIChatRequest, AIChatResponse, AIChatMessageOut
+from core.ai_graph import graph
+from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
+
 
 router = APIRouter(prefix="/workflows/{workflow_id}/ai", tags=["ai"])
 
@@ -185,64 +188,49 @@ async def chat(workflow_id: str, body: AIChatRequest, db: Session = Depends(get_
     if not key or not base_url or not model:
         raise HTTPException(status_code=400, detail="Missing required NVIDIA LLM configurations.")
 
-    graph = body.current_graph or workflow.graph
-    
-    # RAG: Search relevant nodes and workflow examples
-    catalog_list = []
-    examples_list = []
+    graph_data = body.current_graph or workflow.graph
+
+    # Map previous session history to LangChain messages
+    lc_messages = []
+    for msg in history:
+        if msg.role == "user":
+            lc_messages.append(HumanMessage(content=msg.content))
+        elif msg.role == "assistant":
+            lc_messages.append(AIMessage(content=msg.content))
+        else:
+            lc_messages.append(SystemMessage(content=msg.content))
+
+    inputs = {
+        "messages": lc_messages,
+        "current_graph": graph_data,
+        "proposal": None,
+        "validation_error": None,
+        "retry_count": 0
+    }
+
+    config = {
+        "configurable": {
+            "thread_id": f"workflow_{workflow_id}_session_{session.id}",
+            "api_key": key,
+            "base_url": base_url,
+            "model": model,
+            "db": db,
+            "temperature": body.temperature or 0.7
+        }
+    }
+
     try:
-        query_vector = await get_embedding(body.message, input_type="query")
-        
-        # 1. Match node schemas
-        matched_nodes = db.query(NodeEmbedding).order_by(
-            NodeEmbedding.embedding.cosine_distance(query_vector)
-        ).limit(3).all()
-        catalog_list = [node.schema_json for node in matched_nodes]
-        logger.info(f"RAG Matched Nodes: {[n.node_type for n in matched_nodes]}")
-        
-        # 2. Match workflow examples
-        matched_examples = db.query(WorkflowExampleEmbedding).order_by(
-            WorkflowExampleEmbedding.embedding.cosine_distance(query_vector)
-        ).limit(2).all()
-        examples_list = [
-            {
-                "name": ex.name,
-                "description": ex.description,
-                "workflow_json": ex.workflow_json
-            }
-            for ex in matched_examples
-        ]
-        logger.info(f"RAG Matched Examples: {[e.name for e in matched_examples]}")
-
+        result = await graph.ainvoke(inputs, config=config)
+        final_msg = result["messages"][-1]
+        raw_text = final_msg.content
+        proposal, text = _proposal_from_text(raw_text)
+        proposal = _sanitize_proposal(proposal, body.message)
     except Exception as e:
-        logger.error(f"RAG similarity search failed: {e}")
+        logger.error(f"LangGraph execution failed: {e}")
+        text = "I encountered an error while updating the workflow graph."
+        proposal = None
 
-    if not catalog_list:
-        catalog_list = body.node_catalog
-
-    catalog = json.dumps(catalog_list, default=str)
-    examples = json.dumps(examples_list, default=str) if examples_list else "[]"
-    messages = [{
-        "role": "system",
-        "content": (
-            "You are an AI assistant that designs and modifies Noderift workflow graphs. "
-            "You must output only a precise JSON patch containing the nodes and edges to be added or modified. "
-            "Only use nodes listed in NODE_CATALOG. "
-            "CRITICAL: When configuring the 'schedule' node, you MUST write a valid 5-field cron expression in standard format: (minute hour day_of_month month day_of_week). "
-            "Example: 'every monday 10:44 AM' must be '44 10 * * 1' or '44 10 * * MON'. "
-            "Return strict JSON: {\"message\":\"...\",\"proposal\":{\"nodes\":[{\"id\":\"node-id\",\"type\":\"type\",\"config\":{}}],\"edges\":[{\"source\":\"source-id\",\"target\":\"target-id\"}]}}. "
-            f"NODE_CATALOG: {catalog}. "
-            f"WORKFLOW_EXAMPLES: {examples}. "
-            f"CURRENT_GRAPH: {json.dumps(graph, default=str)}"
-        ),
-    }]
-
-    messages += [{"role": m.role, "content": m.content} for m in history[-12:]]
-
-    response = await chat_completion(api_key=key, base_url=base_url, model=model, messages=messages, temperature=body.temperature)
-    proposal, text = _proposal_from_text(first_message_text(response))
-    proposal = _sanitize_proposal(proposal, body.message)
-    assistant = AIChatMessage(session_id=session.id, role="assistant", content=text, meta={"raw": response, "proposal": proposal})
+    assistant = AIChatMessage(session_id=session.id, role="assistant", content=text, meta={"raw": {"choices": [{"message": {"content": raw_text if 'raw_text' in locals() else text}}]}, "proposal": proposal})
     db.add(assistant)
     db.commit()
     db.refresh(assistant)

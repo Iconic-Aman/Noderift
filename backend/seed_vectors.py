@@ -51,6 +51,161 @@ NODE_TEMPLATES = [
                 {"name": "message", "label": "Message", "type": "textarea"}
             ]
         }
+    },
+    {
+        "node_type": "http",
+        "label": "HTTP Request",
+        "description": "Make HTTP request to any external endpoint, API, GET, POST, PUT, DELETE",
+        "schema_json": {
+            "id": "http",
+            "label": "HTTP Request",
+            "category": "actions",
+            "configFields": [
+                {"name": "url", "label": "URL", "type": "text"},
+                {"name": "method", "label": "Method", "type": "select"},
+                {"name": "headers", "label": "Headers (JSON)", "type": "textarea"},
+                {"name": "body", "label": "Body (JSON)", "type": "textarea"}
+            ]
+        }
+    },
+    {
+        "node_type": "code",
+        "label": "Code",
+        "description": "Run custom Python code to extract, transform, parse, format, or process data",
+        "schema_json": {
+            "id": "code",
+            "label": "Code",
+            "category": "actions",
+            "configFields": [
+                {"name": "code", "label": "Python Code", "type": "textarea"}
+            ]
+        }
+    },
+    {
+        "node_type": "resend",
+        "label": "Resend",
+        "description": "Send an email via Resend API",
+        "schema_json": {
+            "id": "resend",
+            "label": "Resend",
+            "category": "actions",
+            "configFields": [
+                {"name": "from", "label": "From", "type": "text"},
+                {"name": "to", "label": "To", "type": "text"},
+                {"name": "subject", "label": "Subject", "type": "text"},
+                {"name": "body", "label": "Body", "type": "textarea"}
+            ]
+        }
+    },
+    {
+        "node_type": "whatsapp",
+        "label": "WhatsApp",
+        "description": "Send WhatsApp message to phone number",
+        "schema_json": {
+            "id": "whatsapp",
+            "label": "WhatsApp",
+            "category": "actions",
+            "configFields": [
+                {"name": "phone", "label": "Phone Number", "type": "text"},
+                {"name": "message", "label": "Message", "type": "textarea"},
+                {"name": "credential_id", "label": "Credential", "type": "credential"}
+            ]
+        }
+    },
+    {
+        "node_type": "ai_agent",
+        "label": "AI Agent",
+        "description": "Run AI agent with system prompt and task prompt",
+        "schema_json": {
+            "id": "ai_agent",
+            "label": "AI Agent",
+            "category": "ai",
+            "configFields": [
+                {"name": "model", "label": "Model Name", "type": "text"},
+                {"name": "system_prompt", "label": "System Prompt", "type": "textarea"},
+                {"name": "prompt", "label": "Task Prompt", "type": "textarea"}
+            ]
+        }
+    },
+    {
+        "node_type": "filter",
+        "label": "Filter",
+        "description": "Filter data or branch based on conditions",
+        "schema_json": {
+            "id": "filter",
+            "label": "Filter",
+            "category": "logic",
+            "configFields": [
+                {"name": "condition", "label": "Condition", "type": "text"}
+            ]
+        }
+    },
+    {
+        "node_type": "merge",
+        "label": "Merge",
+        "description": "Merge multiple branches or inputs",
+        "schema_json": {
+            "id": "merge",
+            "label": "Merge",
+            "category": "logic",
+            "configFields": [
+                {"name": "mode", "label": "Mode", "type": "select"}
+            ]
+        }
+    },
+    {
+        "node_type": "loop",
+        "label": "Loop",
+        "description": "Iterate over an array of items",
+        "schema_json": {
+            "id": "loop",
+            "label": "Loop",
+            "category": "logic",
+            "configFields": [
+                {"name": "items", "label": "Items", "type": "text"}
+            ]
+        }
+    },
+    {
+        "node_type": "set_variable",
+        "label": "Set Variable",
+        "description": "Store a variable in execution state for downstream use",
+        "schema_json": {
+            "id": "set_variable",
+            "label": "Set Variable",
+            "category": "logic",
+            "configFields": [
+                {"name": "name", "label": "Variable Name", "type": "text"},
+                {"name": "value", "label": "Value", "type": "text"}
+            ]
+        }
+    },
+    {
+        "node_type": "playwright",
+        "label": "Playwright",
+        "description": "Run Playwright web scraper / browser automation script",
+        "schema_json": {
+            "id": "playwright",
+            "label": "Playwright",
+            "category": "actions",
+            "configFields": [
+                {"name": "script", "label": "Automation Script", "type": "textarea"}
+            ]
+        }
+    },
+    {
+        "node_type": "composio",
+        "label": "Composio",
+        "description": "Execute Composio action or integration",
+        "schema_json": {
+            "id": "composio",
+            "label": "Composio",
+            "category": "actions",
+            "configFields": [
+                {"name": "action", "label": "Action", "type": "text"},
+                {"name": "params", "label": "Parameters (JSON)", "type": "textarea"}
+            ]
+        }
     }
 ]
 

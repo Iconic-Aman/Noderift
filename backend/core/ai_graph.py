@@ -122,17 +122,43 @@ async def generate_proposal_node(state: ChatbotState, config: RunnableConfig):
     examples = json.dumps(examples_list, default=str) if examples_list else "[]"
     
     system_instruction = (
-        "You are an AI assistant that designs and modifies Noderift workflow graphs. "
-        "You must output a precise JSON patch containing the changes to be applied to the CURRENT_GRAPH. "
-        "Only use nodes listed in NODE_CATALOG. "
-        "CRITICAL instructions for modifying workflows:\n"
+        "You are an AI assistant that designs and modifies Noderift workflow graphs.\n"
+        "You must output a precise JSON patch containing the changes to be applied to the CURRENT_GRAPH.\n\n"
+
+        "CRITICAL: You may ONLY use node types from this exact list. DO NOT invent or use any other types:\n"
+        "  - schedule    : Trigger workflow on a cron schedule. Config: {cron, timezone}\n"
+        "  - webhook     : Trigger workflow via HTTP webhook. Config: {method}\n"
+        "  - http        : Make an HTTP request. Config: {url, method, headers, body}\n"
+        "  - code        : Execute custom Python code for any transformation, extraction, or logic.\n"
+        "                  Input data from previous nodes is available as `input_data` dict.\n"
+        "                  You MUST set `output_data` dict with your results.\n"
+        "                  Config: {code: \"<python code string>\"}\n"
+        "                  Example to extract a field: output_data = {'image': input_data.get('message', '')}\n"
+        "  - resend      : Send an email via Resend. Config: {from, to, subject, body}\n"
+        "  - whatsapp    : Send a WhatsApp message. Config: {to, message}\n"
+        "  - ai_agent    : Run an AI agent with a prompt. Config: {prompt, model}\n"
+        "  - filter      : Filter data based on a condition. Config: {condition}\n"
+        "  - merge       : Merge outputs from multiple nodes. Config: {}\n"
+        "  - loop        : Loop over an array. Config: {array_key}\n"
+        "  - set_variable: Set a variable for downstream use. Config: {key, value}\n"
+        "  - playwright  : Run browser automation. Config: {script}\n"
+        "  - composio    : Use a Composio action. Config: {action, params}\n\n"
+
+        "IMPORTANT RULES:\n"
+        "  - There is NO 'extract' node, NO 'transform' node, NO 'parse' node. Use 'code' for all data extraction and transformation.\n"
+        "  - When you need to extract a field from a previous node's output, use a 'code' node.\n"
+        "  - The NODE_CATALOG below gives you config schemas — only use it as a config reference, not as the allowed types list.\n\n"
+
+        "Instructions for modifying workflows:\n"
         "1. To ADD a node: include it in the 'nodes' array with a new unique ID.\n"
         "2. To MODIFY a node: include it in the 'nodes' array with its EXACT existing ID from CURRENT_GRAPH and specify the updated 'config'.\n"
         "3. To DELETE a node: include its exact ID in the 'delete_nodes' array.\n"
         "4. To ADD an edge: include it in the 'edges' array.\n"
         "5. To DELETE an edge: include its source and target IDs in the 'delete_edges' array.\n\n"
-        "CRITICAL: When configuring the 'schedule' node, you MUST write a valid 5-field cron expression in standard format: (minute hour day_of_month month day_of_week). "
-        "Example: 'every monday 10:44 AM' must be '44 10 * * 1' or '44 10 * * MON'. "
+
+        "When configuring the 'schedule' node, write a valid 5-field cron expression: (minute hour day_of_month month day_of_week).\n"
+        "Example: 'every monday 10:44 AM' => '44 10 * * 1'.\n\n"
+
         "Return strict JSON format:\n"
         "{\n"
         "  \"message\": \"Explanation of changes...\",\n"
@@ -143,8 +169,8 @@ async def generate_proposal_node(state: ChatbotState, config: RunnableConfig):
         "    \"delete_edges\": [{\"source\": \"source-id\", \"target\": \"target-id\"}]\n"
         "  }\n"
         "}\n\n"
-        f"NODE_CATALOG: {catalog}. \n"
-        f"WORKFLOW_EXAMPLES: {examples}. \n"
+        f"NODE_CATALOG (config schemas only): {catalog}\n"
+        f"WORKFLOW_EXAMPLES: {examples}\n"
         f"CURRENT_GRAPH: {json.dumps(state['current_graph'], default=str)}"
     )
 
@@ -210,10 +236,24 @@ def validate_proposal_node(state: ChatbotState):
     
     node_ids = {n.get("id") for n in current_nodes if n.get("id") not in delete_nodes}
     
-    # Add newly proposed or modified node IDs
+    VALID_NODE_TYPES = {
+        "schedule", "webhook", "http", "code", "resend", "whatsapp",
+        "ai_agent", "filter", "merge", "loop", "set_variable", "playwright", "composio"
+    }
+
+    # Add newly proposed or modified node IDs & validate types
+    invalid_types = []
     for node in nodes:
-        if isinstance(node, dict) and node.get("id"):
-            node_ids.add(node.get("id"))
+        if isinstance(node, dict):
+            n_id = node.get("id")
+            n_type = node.get("type")
+            if n_id:
+                node_ids.add(n_id)
+            if n_type and n_type not in VALID_NODE_TYPES:
+                invalid_types.append(f"Node '{n_id or 'unknown'}' has invalid type '{n_type}'")
+
+    if invalid_types:
+        return {"validation_error": f"Node validation failed: {', '.join(invalid_types)}. Allowed types: {', '.join(sorted(VALID_NODE_TYPES))}"}
 
     invalid_edges = []
     for edge in edges:

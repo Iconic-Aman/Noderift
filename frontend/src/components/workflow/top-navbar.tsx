@@ -1,8 +1,9 @@
 import { useState, useRef, useEffect } from "react";
-import { Save, Play, Check, Loader2, Clock, Undo, Power } from "lucide-react";
+import { Save, Play, Check, Loader2, Clock, Undo, Power, ArrowLeft, Download } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Link } from "react-router-dom";
 
-export function TopNavbar({ workflowName, onNameChange, status, onSave, onRun, onHistory, onUndo, isActive, onToggleActive }: any) {
+export function TopNavbar({ workflowName, onNameChange, status, onSave, onRun, onHistory, onUndo, isActive, onToggleActive, onDownload }: any) {
   const [isEditing, setIsEditing] = useState(false);
   const [editValue, setEditValue] = useState(workflowName);
   const [saveState, setSaveState] = useState<"idle" | "saving" | "saved">("idle");
@@ -33,7 +34,14 @@ export function TopNavbar({ workflowName, onNameChange, status, onSave, onRun, o
 
   return (
     <div className="flex h-14 items-center justify-between border-b border-slate-800 bg-slate-900/80 px-4 backdrop-blur-sm">
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-3">
+        <Link
+          to="/dashboard"
+          className="flex h-8 items-center gap-1.5 rounded-lg border border-slate-800 bg-slate-950 px-2.5 py-1.5 text-xs text-slate-400 hover:bg-slate-800 hover:text-white transition-all shadow-sm active:scale-95 cursor-pointer"
+        >
+          <ArrowLeft className="h-3.5 w-3.5" />
+          <span>Back</span>
+        </Link>
         <div className="flex items-center gap-2">
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-600"><Zap className="h-4 w-4 text-white" /></div>
           <span className="text-sm font-semibold text-slate-200">Noderift</span>
@@ -64,6 +72,14 @@ export function TopNavbar({ workflowName, onNameChange, status, onSave, onRun, o
         >
           <Undo className="h-4 w-4" />
           <span>Undo</span>
+        </button>
+        <button
+          onClick={onDownload}
+          title="Download workflow as JSON"
+          className="flex items-center gap-2 rounded-lg border border-slate-700 bg-slate-800 px-3 py-1.5 text-sm hover:bg-slate-700 text-slate-300 cursor-pointer shadow-md active:scale-95 transition-all"
+        >
+          <Download className="h-4 w-4" />
+          <span>Export</span>
         </button>
         <button onClick={handleSave} disabled={saveState === "saving"} className="flex items-center gap-2 rounded-lg border border-slate-700 bg-slate-800 px-3 py-1.5 text-sm hover:bg-slate-700 disabled:opacity-50">
           {saveState === "saving" ? <Loader2 className="h-4 w-4 animate-spin" /> : saveState === "saved" ? <Check className="h-4 w-4 text-green-400" /> : <Save className="h-4 w-4" />}

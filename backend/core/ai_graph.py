@@ -123,13 +123,28 @@ async def generate_proposal_node(state: ChatbotState, config: RunnableConfig):
     
     system_instruction = (
         "You are an AI assistant that designs and modifies Noderift workflow graphs. "
-        "You must output only a precise JSON patch containing the nodes and edges to be added or modified. "
+        "You must output a precise JSON patch containing the changes to be applied to the CURRENT_GRAPH. "
         "Only use nodes listed in NODE_CATALOG. "
+        "CRITICAL instructions for modifying workflows:\n"
+        "1. To ADD a node: include it in the 'nodes' array with a new unique ID.\n"
+        "2. To MODIFY a node: include it in the 'nodes' array with its EXACT existing ID from CURRENT_GRAPH and specify the updated 'config'.\n"
+        "3. To DELETE a node: include its exact ID in the 'delete_nodes' array.\n"
+        "4. To ADD an edge: include it in the 'edges' array.\n"
+        "5. To DELETE an edge: include its source and target IDs in the 'delete_edges' array.\n\n"
         "CRITICAL: When configuring the 'schedule' node, you MUST write a valid 5-field cron expression in standard format: (minute hour day_of_month month day_of_week). "
         "Example: 'every monday 10:44 AM' must be '44 10 * * 1' or '44 10 * * MON'. "
-        "Return strict JSON: {\"message\":\"...\",\"proposal\":{\"nodes\":[{\"id\":\"node-id\",\"type\":\"type\",\"config\":{}}],\"edges\":[{\"source\":\"source-id\",\"target\":\"target-id\"}]}}. "
-        f"NODE_CATALOG: {catalog}. "
-        f"WORKFLOW_EXAMPLES: {examples}. "
+        "Return strict JSON format:\n"
+        "{\n"
+        "  \"message\": \"Explanation of changes...\",\n"
+        "  \"proposal\": {\n"
+        "    \"nodes\": [{\"id\": \"node-id\", \"type\": \"type\", \"config\": {}}],\n"
+        "    \"edges\": [{\"source\": \"source-id\", \"target\": \"target-id\"}],\n"
+        "    \"delete_nodes\": [\"node-id-to-delete\"],\n"
+        "    \"delete_edges\": [{\"source\": \"source-id\", \"target\": \"target-id\"}]\n"
+        "  }\n"
+        "}\n\n"
+        f"NODE_CATALOG: {catalog}. \n"
+        f"WORKFLOW_EXAMPLES: {examples}. \n"
         f"CURRENT_GRAPH: {json.dumps(state['current_graph'], default=str)}"
     )
 
@@ -189,7 +204,17 @@ def validate_proposal_node(state: ChatbotState):
     if not isinstance(nodes, list) or not isinstance(edges, list):
         return {"validation_error": "proposal JSON must contain 'nodes' and 'edges' lists"}
 
-    node_ids = {node.get("id") for node in nodes if isinstance(node, dict) and node.get("id")}
+    # Get existing node IDs from current graph, excluding any nodes requested to be deleted
+    current_nodes = state.get("current_graph", {}).get("nodes", [])
+    delete_nodes = set(proposal.get("delete_nodes", []))
+    
+    node_ids = {n.get("id") for n in current_nodes if n.get("id") not in delete_nodes}
+    
+    # Add newly proposed or modified node IDs
+    for node in nodes:
+        if isinstance(node, dict) and node.get("id"):
+            node_ids.add(node.get("id"))
+
     invalid_edges = []
     for edge in edges:
         if not isinstance(edge, dict):

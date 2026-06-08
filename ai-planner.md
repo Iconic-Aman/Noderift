@@ -10,12 +10,12 @@ The AI Planner is a **LangGraph ReAct agent** that acts as the "Cursor for your 
 
 It is **not** the same as `AiAgentNode` (Phase 6). That's a node that executes at runtime. The Planner is a layer above — it **designs** the workflow before execution ever starts.
 
-| | AI Planner | AiAgentNode |
-|---|---|---|
-| **Job** | Design the workflow | Execute as a node at runtime |
-| **When** | Before execution | During execution |
-| **Tools** | Canvas manipulation tools | Noderift nodes as tools |
-| **Analogy** | Cursor writing code | The code running |
+|                   | AI Planner                | AiAgentNode                  |
+| ----------------- | ------------------------- | ---------------------------- |
+| **Job**     | Design the workflow       | Execute as a node at runtime |
+| **When**    | Before execution          | During execution             |
+| **Tools**   | Canvas manipulation tools | Noderift nodes as tools      |
+| **Analogy** | Cursor writing code       | The code running             |
 
 ---
 
@@ -309,10 +309,10 @@ Agent: [knows node_1 is the HTTP node, calls update_node_config("node_1", {metho
 
 Stored in pgvector (existing setup). Two collections:
 
-| Collection | What's stored | Used for |
-|------------|--------------|----------|
-| `workflow_patterns` | Serialized graphs from past sessions | "You built something similar last week" suggestions |
-| `user_preferences` | Extracted preferences per user | Auto-fill defaults (preferred LLM, default Slack channel etc.) |
+| Collection            | What's stored                        | Used for                                                       |
+| --------------------- | ------------------------------------ | -------------------------------------------------------------- |
+| `workflow_patterns` | Serialized graphs from past sessions | "You built something similar last week" suggestions            |
+| `user_preferences`  | Extracted preferences per user       | Auto-fill defaults (preferred LLM, default Slack channel etc.) |
 
 ```python
 # backend/ai/planner/memory.py
@@ -464,36 +464,37 @@ frontend/
 
 ## 10. Tech Stack Reference
 
-| Layer | Tech | Role |
-|-------|------|------|
-| Agent framework | **LangGraph** `create_react_agent` | ReAct loop, tool calling, message state |
-| LLM | **GPT-4o** via LangChain | Reasoning + tool selection |
-| Tool definitions | **LangChain** `@tool` | Canvas manipulation functions |
-| Short-term memory | **LangGraph** message state | In-session conversation + edit history |
-| Long-term memory | **pgvector** + `langchain_postgres` | Cross-session workflow patterns (v2) |
-| Real-time updates | **Redis pub/sub** + **FastAPI WebSocket** | Stream canvas patches to browser |
-| Canvas state | **Zustand** | Apply patches → re-render React Flow |
-| Session storage | **Redis** | Store message history per session_id |
+| Layer             | Tech                                                  | Role                                    |
+| ----------------- | ----------------------------------------------------- | --------------------------------------- |
+| Agent framework   | **LangGraph** `create_react_agent`            | ReAct loop, tool calling, message state |
+| LLM               | **GPT-4o** via LangChain                        | Reasoning + tool selection              |
+| Tool definitions  | **LangChain** `@tool`                         | Canvas manipulation functions           |
+| Short-term memory | **LangGraph** message state                     | In-session conversation + edit history  |
+| Long-term memory  | **pgvector** + `langchain_postgres`           | Cross-session workflow patterns (v2)    |
+| Real-time updates | **Redis pub/sub** + **FastAPI WebSocket** | Stream canvas patches to browser        |
+| Canvas state      | **Zustand**                                     | Apply patches → re-render React Flow   |
+| Session storage   | **Redis**                                       | Store message history per session_id    |
 
 ---
 
 ## 11. Key Design Decisions
 
-| Decision | Choice | Why |
-|----------|--------|-----|
-| Agent pattern | ReAct (reason + act loop) | Agent decides tool order autonomously — handles any prompt complexity |
-| Edge wiring | Explicit `connect_nodes` tool call | LLM reliably calls it after `add_node` when instructed in system prompt |
-| Real-time updates | WebSocket patch per tool call | User watches canvas build live — better UX than waiting for final result |
-| Memory v1 | Short-term only (LangGraph state) | Sufficient for all edit use cases; long-term adds complexity with no v1 users |
-| No MCP | Plain `@tool` functions | Tools are internal canvas ops — MCP is for external service connections |
-| RAG for node discovery | `get_available_nodes()` uses node registry | Prevents hallucinated node types; agent only picks from real nodes |
-| Session storage | Redis | Fast, ephemeral — message history doesn't need to be in Postgres |
+| Decision               | Choice                                       | Why                                                                           |
+| ---------------------- | -------------------------------------------- | ----------------------------------------------------------------------------- |
+| Agent pattern          | ReAct (reason + act loop)                    | Agent decides tool order autonomously — handles any prompt complexity        |
+| Edge wiring            | Explicit `connect_nodes` tool call         | LLM reliably calls it after `add_node` when instructed in system prompt     |
+| Real-time updates      | WebSocket patch per tool call                | User watches canvas build live — better UX than waiting for final result     |
+| Memory v1              | Short-term only (LangGraph state)            | Sufficient for all edit use cases; long-term adds complexity with no v1 users |
+| No MCP                 | Plain `@tool` functions                    | Tools are internal canvas ops — MCP is for external service connections      |
+| RAG for node discovery | `get_available_nodes()` uses node registry | Prevents hallucinated node types; agent only picks from real nodes            |
+| Session storage        | Redis                                        | Fast, ephemeral — message history doesn't need to be in Postgres             |
 
 ---
 
 ## 12. Implementation Phases
 
 ### Phase A — Core Agent (Week 1)
+
 **Goal:** Agent builds a workflow from a single prompt
 
 - [ ] Define all 7 canvas tools in `tools.py`
@@ -508,6 +509,7 @@ frontend/
 ---
 
 ### Phase B — Real-time Canvas Updates (Week 2)
+
 **Goal:** Canvas updates live as agent thinks
 
 - [ ] Redis pub/sub emit inside each tool
@@ -521,6 +523,7 @@ frontend/
 ---
 
 ### Phase C — Conversational Edits (Week 3)
+
 **Goal:** Follow-up messages modify existing workflow
 
 - [ ] Session message history persisted in Redis
@@ -534,6 +537,7 @@ frontend/
 ---
 
 ### Phase D — Long-term Memory (v2)
+
 **Goal:** Agent learns from past sessions
 
 - [ ] Save completed workflows to `workflow_patterns` pgvector collection

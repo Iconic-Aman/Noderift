@@ -17,6 +17,8 @@
         NVIDIA_API_URL: ${NVIDIA_API_URL}
         LLM_MODEL: ${LLM_MODEL}
         EMBEDDING_MODEL: ${EMBEDDING_MODEL}
+        GROQ_API_KEY: ${GROQ_API_KEY}
+        GROQ_MODEL: ${GROQ_MODEL}
       volumes:
         - ./backend:/app
         - ./worker:/app/worker
@@ -62,6 +64,8 @@
         NVIDIA_API_URL: ${NVIDIA_API_URL}
         LLM_MODEL: ${LLM_MODEL}
         EMBEDDING_MODEL: ${EMBEDDING_MODEL}
+        GROQ_API_KEY: ${GROQ_API_KEY}
+        GROQ_MODEL: ${GROQ_MODEL}
       volumes:
         - .:/workspace
       working_dir: /workspace

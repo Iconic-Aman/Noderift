@@ -67,6 +67,8 @@ async def patch_graph(db: Session, session_id: str, action: str, payload: dict):
     # Update database
     workflow.graph = graph
     db.add(workflow)
+    from sqlalchemy.orm.attributes import flag_modified
+    flag_modified(workflow, "graph")
     db.commit()
 
     # Emit to WebSocket clients

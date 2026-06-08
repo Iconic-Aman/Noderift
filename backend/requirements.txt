@@ -35,5 +35,7 @@ openai
 langgraph
 langchain
 langchain-openai
+langchain-groq
+
 
 

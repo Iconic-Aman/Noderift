@@ -27,6 +27,9 @@ export type WorkflowState = {
   setSelectedNode: (node: Node<NodeData> | null) => void;
   updateNodeConfig: (id: string, config: any) => void;
   addNode: (node: Node<NodeData>) => void;
+  addEdgeWebSocket: (edge: Edge) => void;
+  removeNodeWebSocket: (id: string) => void;
+  clearCanvasWebSocket: () => void;
   takeHistorySnapshot: () => void;
   undo: () => void;
 };
@@ -93,6 +96,30 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
       nodes: [...get().nodes, node],
     });
   },
+
+  addEdgeWebSocket: (edge: Edge) => {
+    get().takeHistorySnapshot();
+    set({
+      edges: [...get().edges, edge],
+    });
+  },
+
+  removeNodeWebSocket: (id: string) => {
+    get().takeHistorySnapshot();
+    set({
+      nodes: get().nodes.filter((n) => n.id !== id),
+      edges: get().edges.filter((e) => e.source !== id && e.target !== id),
+    });
+  },
+
+  clearCanvasWebSocket: () => {
+    get().takeHistorySnapshot();
+    set({
+      nodes: [],
+      edges: [],
+    });
+  },
+
 
   takeHistorySnapshot: () => {
     const current = {

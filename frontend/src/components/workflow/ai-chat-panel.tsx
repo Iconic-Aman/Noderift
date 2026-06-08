@@ -1,36 +1,27 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
-import { Loader2, Send, Sparkles, X } from "lucide-react";
+import { Send, Sparkles, X } from "lucide-react";
 import { apiFetch } from "@/lib/api";
 import { AIChatMessage, TypingIndicator } from "./ai-chat-message";
-import { nodeTemplates, getNodeTemplate } from "@/lib/node-templates";
-import { useWorkflowStore } from "@/store/workflowStore";
-import { ReactFlowInstance, Node, Edge } from "@xyflow/react";
-import { NodeData } from "@/types/workflow";
+import { useAIPlannerSocket } from "@/hooks/useAIPlannerSocket";
 
 type Message = { id: string; role: "user" | "assistant"; content: string };
-type Proposal = { 
-  nodes?: { id: string; type: string; config?: Record<string, any> }[]; 
-  edges?: { source: string; target: string }[];
-  delete_nodes?: string[];
-  delete_edges?: { source: string; target: string }[];
-};
-const builderNodeIds = new Set(["schedule", "webhook", "http", "code", "playwright", "composio", "whatsapp", "resend", "filter", "merge", "loop", "set_variable", "ai_agent"]);
 
-export function AIChatPanel({ rfInstance }: { rfInstance: ReactFlowInstance<Node<NodeData>, Edge> | null }) {
+export function AIChatPanel() {
   const { id: workflowId } = useParams();
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
-  const [proposal, setProposal] = useState<Proposal | null>(null);
-  const [proposalNotice, setProposalNotice] = useState("");
-  const [building, setBuilding] = useState(false);
-  const { nodes, edges, setNodes, setEdges, takeHistorySnapshot } = useWorkflowStore();
+
+  // Enable live websocket canvas updates while the chat panel is open
+  useAIPlannerSocket(open ? workflowId : undefined);
 
   useEffect(() => {
     if (!open || !workflowId) return;
-    apiFetch(`/workflows/${workflowId}/ai/messages`).then(setMessages).catch(() => setMessages([]));
+    apiFetch(`/ai/plan/${workflowId}/messages`)
+      .then(setMessages)
+      .catch(() => setMessages([]));
   }, [open, workflowId]);
 
   const sendMessage = async () => {
@@ -40,131 +31,29 @@ export function AIChatPanel({ rfInstance }: { rfInstance: ReactFlowInstance<Node
     setInput("");
     setLoading(true);
     try {
-      const res = await apiFetch(`/workflows/${workflowId}/ai/chat`, {
+      const res = await apiFetch("/ai/plan", {
         method: "POST",
         body: JSON.stringify({
           message: userMessage.content,
-          temperature: 0.7,
-          current_graph: { nodes, edges },
-          node_catalog: nodeTemplates.filter((node) => builderNodeIds.has(node.id)).map((node) => ({
-            id: node.id,
-            label: node.label,
-            category: node.category,
-            description: node.description,
-            fields: node.configFields.map((field) => ({ name: field.name, label: field.label, options: field.options })),
-          })),
+          session_id: workflowId,
         }),
       });
-      setMessages(res.history || [...messages, userMessage, res.message]);
-      setProposal(res.proposal || null);
-      setProposalNotice(res.proposal ? "" : "No workflow proposal was found in the AI response.");
+      setMessages((prev) => [
+        ...prev,
+        { id: `res-${Date.now()}`, role: "assistant", content: res.reply },
+      ]);
     } catch (err) {
-      setMessages((prev) => [...prev, {
-        id: `error-${Date.now()}`,
-        role: "assistant",
-        content: err instanceof Error ? err.message : "AI request failed.",
-      }]);
-      setProposalNotice("");
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: `error-${Date.now()}`,
+          role: "assistant",
+          content: err instanceof Error ? err.message : "Planner execution failed.",
+        },
+      ]);
     } finally {
       setLoading(false);
     }
-  };
-
-  const applyProposal = () => {
-    if (!proposal) return;
-    if (!proposal.nodes?.length && !proposal.delete_nodes?.length && !proposal.delete_edges?.length) return;
-    setBuilding(true);
-    takeHistorySnapshot();
-
-    // 1. Delete nodes and edges specified in proposal
-    let updatedNodes = [...nodes];
-    let updatedEdges = [...edges];
-
-    if (proposal.delete_nodes?.length) {
-      const deleteIds = new Set(proposal.delete_nodes);
-      updatedNodes = updatedNodes.filter((n) => !deleteIds.has(n.id));
-      // Remove connected edges
-      updatedEdges = updatedEdges.filter((e) => !deleteIds.has(e.source) && !deleteIds.has(e.target));
-    }
-
-    if (proposal.delete_edges?.length) {
-      updatedEdges = updatedEdges.filter((e) => {
-        return !proposal.delete_edges?.some(
-          (del) => del.source === e.source && del.target === e.target
-        );
-      });
-    }
-
-    // 2. Separate new nodes from node updates
-    const idMap: Record<string, string> = {};
-    const center = rfInstance?.screenToFlowPosition({ x: window.innerWidth / 2, y: window.innerHeight / 2 }) || { x: 260, y: 180 };
-    const proposalNodes = proposal.nodes || [];
-    const newNodesToCreate: any[] = [];
-
-    proposalNodes.forEach((item) => {
-      const existingIndex = updatedNodes.findIndex((n) => n.id === item.id);
-      if (existingIndex > -1) {
-        // Update existing node data config
-        updatedNodes[existingIndex] = {
-          ...updatedNodes[existingIndex],
-          data: {
-            ...updatedNodes[existingIndex].data,
-            config: {
-              ...updatedNodes[existingIndex].data.config,
-              ...item.config,
-            },
-          },
-        };
-        idMap[item.id] = item.id;
-      } else {
-        newNodesToCreate.push(item);
-      }
-    });
-
-    // Create new nodes
-    const startX = center.x - ((newNodesToCreate.length - 1) * 280) / 2;
-    const nextNodes = newNodesToCreate.map((item, index) => {
-      const template = getNodeTemplate(item.type);
-      const id = item.id.includes("-") ? item.id : `${item.type}-${Date.now()}-${index}`;
-      idMap[item.id] = id;
-      return {
-        id,
-        type: "workflowNode",
-        position: { x: startX + index * 280, y: center.y },
-        data: {
-          label: template?.label || item.type,
-          icon: template?.icon || "zap",
-          category: template?.category || "actions",
-          color: template?.color || "#3b82f6",
-          config: item.config || {},
-        },
-      };
-    });
-
-    // Create new edges
-    const nextEdges = (proposal.edges || []).map((edge, index) => ({
-      id: `ai-edge-${Date.now()}-${index}`,
-      source: idMap[edge.source] || edge.source,
-      target: idMap[edge.target] || edge.target,
-      type: "buttonEdge",
-    }));
-
-    setNodes([...updatedNodes, ...nextNodes]);
-    setEdges([...updatedEdges, ...nextEdges]);
-
-    setProposal(null);
-    setProposalNotice("");
-
-    setTimeout(() => {
-      const focusNodes = [
-        ...updatedNodes.filter((n) => proposalNodes.some((pn) => pn.id === n.id)),
-        ...nextNodes,
-      ];
-      if (focusNodes.length) {
-        rfInstance?.fitView({ nodes: focusNodes.map((node) => ({ id: node.id })), padding: 0.45, duration: 700 });
-      }
-      setBuilding(false);
-    }, 350);
   };
 
   return (
@@ -181,7 +70,7 @@ export function AIChatPanel({ rfInstance }: { rfInstance: ReactFlowInstance<Node
           <div className="flex items-center justify-between border-b border-slate-800 px-4 py-3">
             <div className="flex items-center gap-2 text-sm font-semibold text-slate-100">
               <Sparkles className="h-4 w-4 text-violet-400" />
-              AI Workflow Builder
+              AI Planner (Real-time)
             </div>
             <button onClick={() => setOpen(false)} className="rounded p-1 text-slate-400 hover:bg-slate-800 hover:text-white">
               <X className="h-4 w-4" />
@@ -191,32 +80,24 @@ export function AIChatPanel({ rfInstance }: { rfInstance: ReactFlowInstance<Node
           <div className="flex-1 space-y-3 overflow-y-auto p-4">
             {messages.length === 0 && (
               <div className="space-y-3">
-                <p className="text-center text-xs text-slate-500">Ask me to design or change this workflow, or use a quick template below.</p>
+                <p className="text-center text-xs text-slate-500">
+                  Ask me to design or modify this workflow live. Watch changes appear on canvas!
+                </p>
                 <div className="space-y-2">
-                  <p className="text-xs font-medium text-slate-400">⚡ Quick templates</p>
+                  <p className="text-xs font-medium text-slate-400">⚡ Examples</p>
                   <button
-                    onClick={() => setInput("get a joke from https://v2.jokeapi.dev/joke/Any and send it to ice.age.2442@gmail.com at 5 pm")}
+                    onClick={() => setInput("add a webhook node, then add a code node and connect them")}
                     className="w-full rounded border border-slate-700 bg-slate-800/60 px-3 py-2 text-left text-xs text-slate-300 hover:border-violet-500/50 hover:bg-slate-700 transition-colors"
                   >
-                    🎭 Daily joke → email at 5 PM
-                  </button>
-                  <button
-                    onClick={() => setInput("fetch data from https://api.example.com/data and send it to you@gmail.com every day at 9 am")}
-                    className="w-full rounded border border-slate-700 bg-slate-800/60 px-3 py-2 text-left text-xs text-slate-300 hover:border-violet-500/50 hover:bg-slate-700 transition-colors"
-                  >
-                    📡 Fetch API → email at 9 AM
+                    📡 Webhook → Code flow
                   </button>
                 </div>
               </div>
             )}
-            {messages.map((message) => <AIChatMessage key={message.id} message={message} />)}
+            {messages.map((message) => (
+              <AIChatMessage key={message.id} message={message} />
+            ))}
             {loading && <TypingIndicator />}
-            {proposal?.nodes?.length ? (
-              <button onClick={applyProposal} className="w-full rounded bg-violet-600 px-3 py-2 text-xs font-semibold text-white hover:bg-violet-500">
-                Apply {proposal.nodes.length} proposed node{proposal.nodes.length === 1 ? "" : "s"}
-              </button>
-            ) : null}
-            {proposalNotice && <p className="rounded border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-200">{proposalNotice}</p>}
           </div>
 
           <div className="flex gap-2 border-t border-slate-800 p-3">
@@ -229,20 +110,12 @@ export function AIChatPanel({ rfInstance }: { rfInstance: ReactFlowInstance<Node
                   sendMessage();
                 }
               }}
-              placeholder="Describe the workflow you want..."
+              placeholder="Describe what to build..."
               className="h-16 flex-1 resize-none rounded border border-slate-700 bg-slate-950 px-3 py-2 text-xs text-slate-100 outline-none"
             />
             <button onClick={sendMessage} disabled={loading} className="flex h-16 w-11 items-center justify-center rounded bg-violet-600 text-white hover:bg-violet-500 disabled:opacity-50">
               <Send className="h-4 w-4" />
             </button>
-          </div>
-        </div>
-      )}
-      {building && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/45 backdrop-blur-sm">
-          <div className="flex items-center gap-3 rounded-xl border border-violet-500/30 bg-slate-900 px-5 py-4 text-sm font-semibold text-slate-100 shadow-2xl">
-            <Loader2 className="h-5 w-5 animate-spin text-violet-400" />
-            Building workflow...
           </div>
         </div>
       )}

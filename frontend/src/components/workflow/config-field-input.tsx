@@ -2,33 +2,21 @@ import { useRef, useState, useEffect } from "react";
 import { ConfigField } from "@/types/workflow";
 import { cn } from "@/lib/utils";
 import Editor, { OnMount } from "@monaco-editor/react";
+import { VariableInput } from "./variable-input";
 
 interface Props {
   field: ConfigField;
   value: any;
   onChange: (value: any) => void;
+  parentNodes?: any[];
 }
 
-export function ConfigFieldInput({ field, value, onChange }: Props) {
+export function ConfigFieldInput({ field, value, onChange, parentNodes = [] }: Props) {
   const baseCls = "w-full rounded-lg border border-slate-700 bg-slate-800/80 px-3 py-2 text-sm text-slate-200 outline-none focus:border-slate-600 transition-colors";
   const monacoRef = useRef<any>(null);
   const editorRef = useRef<any>(null);
 
   const handleKeyDown = (e: React.KeyboardEvent) => e.stopPropagation();
-
-  // For text/textarea: insert at cursor; uses template {{}} format
-  const handleDrop = (e: React.DragEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    e.preventDefault();
-    const varData = e.dataTransfer.getData("application/x-noderift-var");
-    const text = varData ? JSON.parse(varData).template : e.dataTransfer.getData("text/plain");
-    if (!text) return;
-    const target = e.currentTarget;
-    const start = target.selectionStart || 0;
-    const end = target.selectionEnd || 0;
-    const nextVal = target.value.substring(0, start) + text + target.value.substring(end);
-    onChange(nextVal);
-    setTimeout(() => { target.focus(); target.setSelectionRange(start + text.length, start + text.length); }, 0);
-  };
 
   // Monaco: insert Python input_data[...] at cursor
   const handleMonacoDrop = (e: React.DragEvent) => {
@@ -74,9 +62,13 @@ export function ConfigFieldInput({ field, value, onChange }: Props) {
       );
     case "textarea":
       return (
-        <textarea value={value || ""} onChange={e => onChange(e.target.value)} onKeyDown={handleKeyDown}
-          onDragOver={e => e.preventDefault()} onDrop={handleDrop}
-          placeholder={field.placeholder} rows={3} className={cn(baseCls, "resize-none")} />
+        <VariableInput
+          isTextArea={true}
+          value={value || ""}
+          onChange={onChange}
+          placeholder={field.placeholder}
+          parentNodes={parentNodes}
+        />
       );
     case "select":
       return (
@@ -88,8 +80,7 @@ export function ConfigFieldInput({ field, value, onChange }: Props) {
     case "number":
       return (
         <input type="number" value={value ?? field.defaultValue ?? ""} onChange={e => onChange(parseFloat(e.target.value) || 0)}
-          onKeyDown={handleKeyDown} onDragOver={e => e.preventDefault()} onDrop={handleDrop}
-          placeholder={field.placeholder} className={baseCls} />
+          onKeyDown={handleKeyDown} className={baseCls} />
       );
     case "toggle":
       return (
@@ -113,9 +104,13 @@ export function ConfigFieldInput({ field, value, onChange }: Props) {
     }
     default:
       return (
-        <input type="text" value={value || ""} onChange={e => onChange(e.target.value)} onKeyDown={handleKeyDown}
-          onDragOver={e => e.preventDefault()} onDrop={handleDrop}
-          placeholder={field.placeholder} className={baseCls} />
+        <VariableInput
+          isTextArea={false}
+          value={value || ""}
+          onChange={onChange}
+          placeholder={field.placeholder}
+          parentNodes={parentNodes}
+        />
       );
   }
 }

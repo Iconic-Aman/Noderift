@@ -9,7 +9,12 @@ import { ReactFlowInstance, Node, Edge } from "@xyflow/react";
 import { NodeData } from "@/types/workflow";
 
 type Message = { id: string; role: "user" | "assistant"; content: string };
-type Proposal = { nodes?: { id: string; type: string; config?: Record<string, any> }[]; edges?: { source: string; target: string }[] };
+type Proposal = { 
+  nodes?: { id: string; type: string; config?: Record<string, any> }[]; 
+  edges?: { source: string; target: string }[];
+  delete_nodes?: string[];
+  delete_edges?: { source: string; target: string }[];
+};
 const builderNodeIds = new Set(["schedule", "webhook", "http", "code", "playwright", "composio", "whatsapp", "resend", "filter", "merge", "loop", "set_variable", "ai_agent"]);
 
 export function AIChatPanel({ rfInstance }: { rfInstance: ReactFlowInstance<Node<NodeData>, Edge> | null }) {
@@ -66,13 +71,59 @@ export function AIChatPanel({ rfInstance }: { rfInstance: ReactFlowInstance<Node
   };
 
   const applyProposal = () => {
-    if (!proposal?.nodes?.length) return;
+    if (!proposal) return;
+    if (!proposal.nodes?.length && !proposal.delete_nodes?.length && !proposal.delete_edges?.length) return;
     setBuilding(true);
     takeHistorySnapshot();
+
+    // 1. Delete nodes and edges specified in proposal
+    let updatedNodes = [...nodes];
+    let updatedEdges = [...edges];
+
+    if (proposal.delete_nodes?.length) {
+      const deleteIds = new Set(proposal.delete_nodes);
+      updatedNodes = updatedNodes.filter((n) => !deleteIds.has(n.id));
+      // Remove connected edges
+      updatedEdges = updatedEdges.filter((e) => !deleteIds.has(e.source) && !deleteIds.has(e.target));
+    }
+
+    if (proposal.delete_edges?.length) {
+      updatedEdges = updatedEdges.filter((e) => {
+        return !proposal.delete_edges?.some(
+          (del) => del.source === e.source && del.target === e.target
+        );
+      });
+    }
+
+    // 2. Separate new nodes from node updates
     const idMap: Record<string, string> = {};
     const center = rfInstance?.screenToFlowPosition({ x: window.innerWidth / 2, y: window.innerHeight / 2 }) || { x: 260, y: 180 };
-    const startX = center.x - ((proposal.nodes.length - 1) * 280) / 2;
-    const nextNodes = proposal.nodes.map((item, index) => {
+    const proposalNodes = proposal.nodes || [];
+    const newNodesToCreate: any[] = [];
+
+    proposalNodes.forEach((item) => {
+      const existingIndex = updatedNodes.findIndex((n) => n.id === item.id);
+      if (existingIndex > -1) {
+        // Update existing node data config
+        updatedNodes[existingIndex] = {
+          ...updatedNodes[existingIndex],
+          data: {
+            ...updatedNodes[existingIndex].data,
+            config: {
+              ...updatedNodes[existingIndex].data.config,
+              ...item.config,
+            },
+          },
+        };
+        idMap[item.id] = item.id;
+      } else {
+        newNodesToCreate.push(item);
+      }
+    });
+
+    // Create new nodes
+    const startX = center.x - ((newNodesToCreate.length - 1) * 280) / 2;
+    const nextNodes = newNodesToCreate.map((item, index) => {
       const template = getNodeTemplate(item.type);
       const id = item.id.includes("-") ? item.id : `${item.type}-${Date.now()}-${index}`;
       idMap[item.id] = id;
@@ -89,18 +140,29 @@ export function AIChatPanel({ rfInstance }: { rfInstance: ReactFlowInstance<Node
         },
       };
     });
+
+    // Create new edges
     const nextEdges = (proposal.edges || []).map((edge, index) => ({
       id: `ai-edge-${Date.now()}-${index}`,
       source: idMap[edge.source] || edge.source,
       target: idMap[edge.target] || edge.target,
       type: "buttonEdge",
     }));
-    setNodes([...nodes, ...nextNodes]);
-    setEdges([...edges, ...nextEdges]);
+
+    setNodes([...updatedNodes, ...nextNodes]);
+    setEdges([...updatedEdges, ...nextEdges]);
+
     setProposal(null);
     setProposalNotice("");
+
     setTimeout(() => {
-      rfInstance?.fitView({ nodes: nextNodes.map((node) => ({ id: node.id })), padding: 0.45, duration: 700 });
+      const focusNodes = [
+        ...updatedNodes.filter((n) => proposalNodes.some((pn) => pn.id === n.id)),
+        ...nextNodes,
+      ];
+      if (focusNodes.length) {
+        rfInstance?.fitView({ nodes: focusNodes.map((node) => ({ id: node.id })), padding: 0.45, duration: 700 });
+      }
       setBuilding(false);
     }, 350);
   };

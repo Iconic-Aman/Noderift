@@ -28,7 +28,7 @@ export function useEditorLogic() {
 
   // Resizable sidebar and logs panel states
   const [leftWidth, setLeftWidth] = useState(260);
-  const [rightWidth, setRightWidth] = useState(300);
+  const [rightWidth, setRightWidth] = useState(450);
   const [panelHeight, setPanelHeight] = useState(320);
   const [isResizingLeft, setIsResizingLeft] = useState(false);
   const [isResizingRight, setIsResizingRight] = useState(false);
@@ -41,7 +41,7 @@ export function useEditorLogic() {
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
       if (isResizingLeft) setLeftWidth(Math.max(40, Math.min(500, e.clientX)));
-      if (isResizingRight) setRightWidth(Math.max(250, Math.min(600, window.innerWidth - e.clientX)));
+      if (isResizingRight) setRightWidth(Math.max(300, Math.min(800, window.innerWidth - e.clientX)));
       if (isResizingPanel) setPanelHeight(Math.max(150, Math.min(600, window.innerHeight - e.clientY)));
     };
     const handleMouseUp = () => {

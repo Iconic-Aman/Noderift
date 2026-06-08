@@ -103,7 +103,7 @@ export function NodeConfigPanel({ node, onClose, onConfigChange, onRunNode }: Pr
             template?.configFields?.filter(f => !f.showWhen || cfg[f.showWhen.field] === f.showWhen.value).map(f => (
               <div key={f.name} className="mb-4">
                 <label className="mb-1.5 block text-xs font-medium text-slate-400">{f.label}{f.required && <span className="ml-1 text-red-400">*</span>}</label>
-                <ConfigFieldInput field={f} value={cfg[f.name]} onChange={v => handleFieldChange(f.name, v)} />
+                <ConfigFieldInput field={f} value={cfg[f.name]} onChange={v => handleFieldChange(f.name, v)} parentNodes={parentNodes} />
               </div>
             )) || <p className="text-sm text-slate-500 text-center py-4 italic">No settings available.</p>
           )}

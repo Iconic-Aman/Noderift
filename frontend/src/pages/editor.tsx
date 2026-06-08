@@ -1,15 +1,5 @@
-import { useState, useCallback, useRef, DragEvent, useEffect } from "react";
-import { useParams, useNavigate } from "react-router-dom";
-import {
-  ReactFlow,
-  Controls,
-  MiniMap,
-  Background,
-  BackgroundVariant,
-  ReactFlowInstance,
-  Node,
-  Edge,
-} from "@xyflow/react";
+import { Node, Edge } from "@xyflow/react";
+import { ReactFlow, Controls, MiniMap, Background, BackgroundVariant } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 
 import { NodePalette } from "@/components/workflow/node-palette";
@@ -18,15 +8,11 @@ import { TopNavbar } from "@/components/workflow/top-navbar";
 import { WorkflowNode } from "@/components/workflow/workflow-node";
 import { AIChatPanel } from "@/components/workflow/ai-chat-panel";
 import { NodeData } from "@/types/workflow";
-import { apiFetch } from "@/lib/api";
-import { useWorkflowStore } from "@/store/workflowStore";
-import { useExecution } from "@/hooks/useExecution";
-import { useWebSocket } from "@/hooks/useWebSocket";
 import { ExecutionPanel } from "@/components/workflow/execution-panel";
 import { ChevronLeft, ChevronRight, Terminal } from "lucide-react";
 import { cn } from "@/lib/utils";
-
 import { ButtonEdge } from "@/components/workflow/custom-edge";
+import { useEditorLogic } from "@/hooks/useEditorLogic";
 
 const nodeTypes = {
   workflowNode: WorkflowNode,
@@ -37,341 +23,53 @@ const edgeTypes = {
 };
 
 export default function Editor() {
-  const { id } = useParams();
-  const navigate = useNavigate();
-  const reactFlowWrapper = useRef<HTMLDivElement>(null);
-  const { 
-    nodes, edges, selectedNode, 
-    onNodesChange, onEdgesChange, onConnect, 
-    setNodes, setEdges, setSelectedNode, addNode, updateNodeConfig,
-    undo, takeHistorySnapshot
-  } = useWorkflowStore();
-  
-  const [workflowName, setWorkflowName] = useState("Loading...");
-  const [isActive, setIsActive] = useState(false);
-  const [rfInstance, setRfInstance] = useState<ReactFlowInstance<Node<NodeData>, Edge> | null>(null);
-
-  // Sidebar toggle states
-  const [isLeftOpen, setIsLeftOpen] = useState(true);
-  const [isRightOpen, setIsRightOpen] = useState(true);
-
-  // Resizable sidebar and logs panel states
-  const [leftWidth, setLeftWidth] = useState(260);
-  const [rightWidth, setRightWidth] = useState(300);
-  const [panelHeight, setPanelHeight] = useState(320);
-  const [isResizingLeft, setIsResizingLeft] = useState(false);
-  const [isResizingRight, setIsResizingRight] = useState(false);
-  const [isResizingPanel, setIsResizingPanel] = useState(false);
-
-  const startLeftResize = useCallback((e: React.MouseEvent) => {
-    e.preventDefault();
-    setIsResizingLeft(true);
-  }, []);
-
-  const startRightResize = useCallback((e: React.MouseEvent) => {
-    e.preventDefault();
-    setIsResizingRight(true);
-  }, []);
-
-  const startPanelResize = useCallback((e: React.MouseEvent) => {
-    e.preventDefault();
-    setIsResizingPanel(true);
-  }, []);
-
-  useEffect(() => {
-    const handleMouseMove = (e: MouseEvent) => {
-      if (isResizingLeft) {
-        const newWidth = Math.max(40, Math.min(500, e.clientX));
-        setLeftWidth(newWidth);
-      }
-      if (isResizingRight) {
-        const newWidth = Math.max(250, Math.min(600, window.innerWidth - e.clientX));
-        setRightWidth(newWidth);
-      }
-      if (isResizingPanel) {
-        const newHeight = Math.max(150, Math.min(600, window.innerHeight - e.clientY));
-        setPanelHeight(newHeight);
-      }
-    };
-
-    const handleMouseUp = () => {
-      setIsResizingLeft(false);
-      setIsResizingRight(false);
-      setIsResizingPanel(false);
-    };
-
-    if (isResizingLeft || isResizingRight || isResizingPanel) {
-      window.addEventListener("mousemove", handleMouseMove);
-      window.addEventListener("mouseup", handleMouseUp);
-    }
-
-    return () => {
-      window.removeEventListener("mousemove", handleMouseMove);
-      window.removeEventListener("mouseup", handleMouseUp);
-    };
-  }, [isResizingLeft, isResizingRight, isResizingPanel]);
-
-  // Execution integration
-  const { triggerExecution, loading } = useExecution();
-  const [activeExecutionId, setActiveExecutionId] = useState<string | null>(null);
-  const [isExecutionPanelOpen, setIsExecutionPanelOpen] = useState(false);
-  const [executionStatus, setExecutionStatus] = useState<"idle" | "running" | "success">("idle");
-  const [isSingleRun, setIsSingleRun] = useState(false);
-  
-  const { logs, setLogs } = useWebSocket(activeExecutionId);
-
-  // Sync execution status from live websocket event logs
-  useEffect(() => {
-    if (logs.length > 0) {
-      const lastLog = logs[logs.length - 1];
-      if (lastLog.type === "workflow_started") {
-        setExecutionStatus("running");
-      } else if (lastLog.type === "workflow_success") {
-        setExecutionStatus("success");
-      } else if (lastLog.type === "workflow_failed") {
-        setExecutionStatus("idle");
-      }
-    }
-  }, [logs]);
-
-  // Sync individual node execution states from live websocket logs
-  useEffect(() => {
-    const currentNodes = useWorkflowStore.getState().nodes;
-    if (logs.length === 0) {
-      // If full run starting, logs is empty, we clear all node status. 
-      // If single run starting, handleRunNode clears the target node directly, so we do nothing here.
-      if (!isSingleRun) {
-        const clearedNodes = currentNodes.map((n) => {
-          if (n.data.status || n.data.output || n.data.error) {
-            const { status, output, error, ...restData } = n.data;
-            return { ...n, data: restData as NodeData };
-          }
-          return n;
-        });
-        if (clearedNodes.some((n, i) => n.data.status !== currentNodes[i].data.status)) {
-          setNodes(clearedNodes);
-        }
-      }
-      return;
-    }
-
-    const latestStatuses: Record<string, "running" | "success" | "failed"> = {};
-    const latestOutputs: Record<string, any> = {};
-    const latestErrors: Record<string, any> = {};
-    for (const log of logs) {
-      if (!log.node_id) continue;
-      if (log.type === "node_started") {
-        latestStatuses[log.node_id] = "running";
-      } else if (log.type === "node_success") {
-        latestStatuses[log.node_id] = "success";
-        latestOutputs[log.node_id] = log.output;
-      } else if (log.type === "node_failed") {
-        latestStatuses[log.node_id] = "failed";
-        latestErrors[log.node_id] = log.error;
-      }
-    }
-
-    let hasChanges = false;
-    const updatedNodes = currentNodes.map((n) => {
-      const nextStatus = latestStatuses[n.id];
-      const nextOutput = latestOutputs[n.id];
-      const nextError = latestErrors[n.id];
-      
-      // If this is a single node run, only update the nodes that are actually part of the logs
-      if (isSingleRun && nextStatus === undefined) {
-        return n;
-      }
-
-      let nodeChanged = false;
-      const nextData = { ...n.data };
-      
-      if (n.data.status !== nextStatus) {
-        nextData.status = nextStatus;
-        nodeChanged = true;
-      }
-      if (nextOutput !== undefined && JSON.stringify(nextOutput) !== JSON.stringify(n.data.output)) {
-        nextData.output = nextOutput;
-        nodeChanged = true;
-      }
-      if (nextError !== undefined && nextError !== n.data.error) {
-        nextData.error = nextError;
-        nodeChanged = true;
-      }
-      
-      if (nodeChanged) {
-        hasChanges = true;
-        return { ...n, data: nextData };
-      }
-      return n;
-    });
-
-    if (hasChanges) {
-      setNodes(updatedNodes);
-    }
-  }, [logs, setNodes, isSingleRun]);
-
-
-  // Keyboard Undo Shortcut listener
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.key === "z") {
-        e.preventDefault();
-        undo();
-      }
-    };
-    window.addEventListener("keydown", handleKeyDown);
-    return () => {
-      window.removeEventListener("keydown", handleKeyDown);
-    };
-  }, [undo]);
-
-  const onNodeDragStop = useCallback(() => {
-    takeHistorySnapshot();
-  }, [takeHistorySnapshot]);
-
-  useEffect(() => {
-    if (!id) return;
-    const fetchWorkflow = async () => {
-      try {
-        const wf = await apiFetch(`/workflows/${id}`);
-        setWorkflowName(wf.name);
-        setIsActive(wf.is_active);
-        if (wf.graph && wf.graph.nodes) {
-          setNodes(wf.graph.nodes);
-          setEdges(wf.graph.edges || []);
-        }
-      } catch (err) {
-        console.error("Failed to load workflow", err);
-      }
-    };
-    fetchWorkflow();
-  }, [id, setNodes, setEdges]);
-
-  const onSave = async () => {
-    if (!id || !rfInstance) return;
-    try {
-      await apiFetch(`/workflows/${id}`, {
-        method: "PATCH",
-        body: JSON.stringify({
-          name: workflowName,
-          graph: { nodes, edges },
-        }),
-      });
-    } catch (err) {
-      console.error("Failed to save workflow", err);
-    }
-  };
-
-  const onToggleActive = async () => {
-    if (!id) return;
-    try {
-      await onSave();
-      const res = await apiFetch(`/workflows/${id}/activate`, { method: "PATCH" });
-      setIsActive(res.is_active);
-    } catch (err) {
-      console.error("Failed to toggle workflow triggers state", err);
-    }
-  };
-
-  const handleRun = async () => {
-    if (!id) return;
-    // Auto-save graph before running
-    await onSave();
-    
-    setIsSingleRun(false);
-    setLogs([]);
-    setExecutionStatus("running");
-    setIsExecutionPanelOpen(true);
-
-    // Clear all node execution states immediately for a full run
-    const currentNodes = useWorkflowStore.getState().nodes;
-    const clearedNodes = currentNodes.map((n) => {
-      if (n.data.status || n.data.output || n.data.error) {
-        const { status, output, error, ...restData } = n.data;
-        return { ...n, data: restData as NodeData };
-      }
-      return n;
-    });
-    setNodes(clearedNodes);
-
-    try {
-      const runData = await triggerExecution(id);
-      setActiveExecutionId(runData.id);
-    } catch (err) {
-      console.error("Failed to execute workflow", err);
-      setExecutionStatus("idle");
-    }
-  };
-
-  const handleRunNode = async (nodeId: string) => {
-    if (!id) return;
-    // Auto-save graph before running
-    await onSave();
-    
-    setIsSingleRun(true);
-    setLogs([]);
-    setExecutionStatus("running");
-    setIsExecutionPanelOpen(true);
-
-    // Clear ONLY the target node state immediately for single run
-    const currentNodes = useWorkflowStore.getState().nodes;
-    const clearedNodes = currentNodes.map((n) => {
-      if (n.id === nodeId) {
-        const { status, output, error, ...restData } = n.data;
-        return { ...n, data: restData as NodeData };
-      }
-      return n;
-    });
-    setNodes(clearedNodes);
-
-    try {
-      const runData = await triggerExecution(id, nodeId);
-      setActiveExecutionId(runData.id);
-    } catch (err) {
-      console.error("Failed to execute node", err);
-      setExecutionStatus("idle");
-    }
-  };
-
-  const onNodeClick = useCallback((_: React.MouseEvent, node: Node<NodeData>) => {
-    setSelectedNode(node);
-    setIsRightOpen(true);
-  }, [setSelectedNode]);
-
-  const onPaneClick = useCallback(() => setSelectedNode(null), [setSelectedNode]);
-
-  const onDragOver = useCallback((event: DragEvent) => {
-    event.preventDefault();
-    event.dataTransfer.dropEffect = "move";
-  }, []);
-
-  const onDrop = useCallback(
-    (event: DragEvent) => {
-      event.preventDefault();
-      const type = event.dataTransfer.getData("application/reactflow/type");
-      if (!type || !rfInstance || !reactFlowWrapper.current) return;
-
-      const position = rfInstance.screenToFlowPosition({
-        x: event.clientX,
-        y: event.clientY,
-      });
-
-      const newNode: Node<NodeData> = {
-        id: `${type}-${Date.now()}`,
-        type: "workflowNode",
-        position,
-        data: {
-          label: event.dataTransfer.getData("application/reactflow/label"),
-          icon: event.dataTransfer.getData("application/reactflow/icon"),
-          category: event.dataTransfer.getData("application/reactflow/category"),
-          color: event.dataTransfer.getData("application/reactflow/color"),
-          config: {},
-        },
-      };
-      addNode(newNode);
-    },
-    [rfInstance, addNode]
-  );
+  const {
+    id,
+    navigate,
+    reactFlowWrapper,
+    rfInstance,
+    setRfInstance,
+    nodes,
+    edges,
+    selectedNode,
+    setSelectedNode,
+    onNodesChange,
+    onEdgesChange,
+    onConnect,
+    onNodeClick,
+    onPaneClick,
+    onDragOver,
+    onDrop,
+    onNodeDragStop,
+    updateNodeConfig,
+    workflowName,
+    setWorkflowName,
+    isActive,
+    isLeftOpen,
+    setIsLeftOpen,
+    isRightOpen,
+    setIsRightOpen,
+    leftWidth,
+    rightWidth,
+    panelHeight,
+    isResizingLeft,
+    isResizingRight,
+    isResizingPanel,
+    startLeftResize,
+    startRightResize,
+    startPanelResize,
+    executionStatus,
+    isExecutionPanelOpen,
+    setIsExecutionPanelOpen,
+    logs,
+    loading,
+    undo,
+    onSave,
+    onToggleActive,
+    handleRun,
+    handleRunNode,
+    handleDownload,
+  } = useEditorLogic();
 
   return (
     <div className={cn(
@@ -389,6 +87,7 @@ export default function Editor() {
         onHistory={() => navigate(`/history/${id}`)}
         isActive={isActive}
         onToggleActive={onToggleActive}
+        onDownload={handleDownload}
       />
       <div className="flex flex-1 overflow-hidden">
         {/* Left Sliding Sidebar */}

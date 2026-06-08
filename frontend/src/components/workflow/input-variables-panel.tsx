@@ -14,8 +14,8 @@ const HEADER_H = 36; // header bar height in px
 
 export function InputVariablesPanel({ parentNodes, containerHeight }: Props) {
   const [isExpanded, setIsExpanded] = useState(true);
-  // height = how tall the sheet is (from bottom up). Default ~200px.
-  const [sheetHeight, setSheetHeight] = useState(200);
+  // height = how tall the sheet is (from bottom up). Default ~350px.
+  const [sheetHeight, setSheetHeight] = useState(350);
   const [isResizing, setIsResizing] = useState(false);
   const [copiedNodeId, setCopiedNodeId] = useState<string | null>(null);
 
@@ -98,7 +98,7 @@ export function InputVariablesPanel({ parentNodes, containerHeight }: Props) {
                   {!p.data.status && <span className="text-[8px] font-bold text-slate-500 bg-slate-800/80 border border-slate-700/60 rounded px-1 py-0.5">Yet to execute</span>}
                 </div>
               </div>
-              <div className="bg-slate-950/90 rounded border border-slate-800 p-2 max-h-[90px] overflow-y-auto">
+              <div className="bg-slate-950/90 rounded border border-slate-800 p-2 max-h-[220px] overflow-y-auto">
                 <InteractiveJSONNode val={p.data.output ?? { response: "...", status_code: 200 }} nodeId={p.id} path="" />
               </div>
               {/* n8n hover inspector */}

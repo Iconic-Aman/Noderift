@@ -5,7 +5,23 @@ interface Props {
   onChange: (updates: Record<string, any>) => void;
 }
 
-const baseCls = "w-full rounded-lg border border-slate-700 bg-slate-800/80 px-3 py-2 text-sm text-slate-200 outline-none focus:border-slate-600 transition-colors";
+const baseCls = "rounded-lg border border-slate-700 bg-slate-800/80 px-3 py-2 text-sm text-slate-200 outline-none focus:border-slate-600 transition-colors";
+
+function parseTimeStr(timeStr: string) {
+  const [h, m] = (timeStr || "12:00").split(":");
+  const h24 = parseInt(h, 10) || 0;
+  const minute = parseInt(m, 10) || 0;
+  const ampm = h24 >= 12 ? "PM" : "AM";
+  let hour12 = h24 % 12;
+  if (hour12 === 0) hour12 = 12;
+  return { hour12, minute, ampm };
+}
+
+function formatTimeStr(hour12: number, minute: number, ampm: string): string {
+  let h24 = hour12 % 12;
+  if (ampm === "PM") h24 += 12;
+  return `${String(h24).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
+}
 
 export function ScheduleConfig({ cfg, onChange }: Props) {
   const frequency = cfg.frequency || (cfg.cron ? "cron" : "interval");
@@ -16,6 +32,8 @@ export function ScheduleConfig({ cfg, onChange }: Props) {
   const customCron = cfg.cron || "0 * * * *";
   const timezoneValue = cfg.timezone || "UTC";
 
+  const { hour12, minute, ampm } = parseTimeStr(timeValue);
+
   const update = (updates: Record<string, any>) => {
     const next = { ...cfg, ...updates };
     const f = next.frequency || (next.cron ? "cron" : "interval");
@@ -24,7 +42,6 @@ export function ScheduleConfig({ cfg, onChange }: Props) {
     const timeStr = next.time || "12:00";
     const days = next.days_of_week || [];
     const custom = next.cron || "0 * * * *";
-
 
     let cron = "0 * * * *";
     if (f === "interval") {
@@ -44,11 +61,22 @@ export function ScheduleConfig({ cfg, onChange }: Props) {
     onChange({ ...next, cron });
   };
 
+  const handleTimePartChange = (part: "hour" | "minute" | "ampm", val: string) => {
+    const nextH = part === "hour" ? parseInt(val, 10) : hour12;
+    const nextM = part === "minute" ? parseInt(val, 10) : minute;
+    const nextA = part === "ampm" ? val : ampm;
+    update({ time: formatTimeStr(nextH, nextM, nextA) });
+  };
+
+  // Build range dropdown values based on unit
+  const intervalMax = intervalUnit === "minutes" ? 59 : intervalUnit === "hours" ? 23 : 30;
+  const intervalOptions = Array.from({ length: intervalMax }, (_, i) => i + 1);
+
   return (
     <div className="space-y-4">
       <div>
         <label className="mb-1.5 block text-xs font-medium text-slate-400">Trigger Frequency</label>
-        <select value={frequency} onChange={e => update({ frequency: e.target.value })} className={baseCls}>
+        <select value={frequency} onChange={e => update({ frequency: e.target.value })} className={cn(baseCls, "w-full")}>
           <option value="interval">Every Interval (Minutes/Hours/Days)</option>
           <option value="daily">Daily at Specific Time</option>
           <option value="weekly">Weekly on Specific Days</option>
@@ -60,11 +88,13 @@ export function ScheduleConfig({ cfg, onChange }: Props) {
         <div className="flex gap-2.5">
           <div className="flex-1">
             <label className="mb-1 block text-[11px] font-medium text-slate-400">Every</label>
-            <input type="number" min={1} value={intervalValue} onChange={e => update({ interval_value: Math.max(1, parseInt(e.target.value, 10) || 1) })} className={baseCls} />
+            <select value={intervalValue} onChange={e => update({ interval_value: parseInt(e.target.value, 10) })} className={cn(baseCls, "w-full")}>
+              {intervalOptions.map(v => <option key={v} value={v}>{v}</option>)}
+            </select>
           </div>
           <div className="flex-1">
             <label className="mb-1 block text-[11px] font-medium text-slate-400">Unit</label>
-            <select value={intervalUnit} onChange={e => update({ interval_unit: e.target.value })} className={baseCls}>
+            <select value={intervalUnit} onChange={e => update({ interval_unit: e.target.value, interval_value: 1 })} className={cn(baseCls, "w-full")}>
               <option value="minutes">Minutes</option>
               <option value="hours">Hours</option>
               <option value="days">Days</option>
@@ -75,8 +105,23 @@ export function ScheduleConfig({ cfg, onChange }: Props) {
 
       {(frequency === "daily" || frequency === "weekly") && (
         <div>
-          <label className="mb-1 block text-[11px] font-medium text-slate-400">Trigger Time (24h format)</label>
-          <input type="time" value={timeValue} onChange={e => update({ time: e.target.value })} className={baseCls} />
+          <label className="mb-1 block text-[11px] font-medium text-slate-400">Trigger Time</label>
+          <div className="flex gap-2">
+            <select value={hour12} onChange={e => handleTimePartChange("hour", e.target.value)} className={cn(baseCls, "flex-1")}>
+              {Array.from({ length: 12 }, (_, i) => i + 1).map(h => (
+                <option key={h} value={h}>{h}</option>
+              ))}
+            </select>
+            <select value={minute} onChange={e => handleTimePartChange("minute", e.target.value)} className={cn(baseCls, "flex-1")}>
+              {Array.from({ length: 60 }, (_, i) => i).map(m => (
+                <option key={m} value={m}>{String(m).padStart(2, "0")}</option>
+              ))}
+            </select>
+            <select value={ampm} onChange={e => handleTimePartChange("ampm", e.target.value)} className={cn(baseCls, "flex-1")}>
+              <option value="AM">AM</option>
+              <option value="PM">PM</option>
+            </select>
+          </div>
         </div>
       )}
 
@@ -100,14 +145,9 @@ export function ScheduleConfig({ cfg, onChange }: Props) {
       {frequency === "cron" && (
         <div>
           <label className="mb-1 block text-[11px] font-medium text-slate-400">Cron Expression</label>
-          <input type="text" value={customCron} onChange={e => update({ cron: e.target.value })} placeholder="e.g. 0 * * * *" className={baseCls} />
+          <input type="text" value={customCron} onChange={e => update({ cron: e.target.value })} placeholder="e.g. 0 * * * *" className={cn(baseCls, "w-full")} />
         </div>
       )}
-
-      <div className="pt-2">
-        <label className="mb-1 block text-[11px] font-medium text-slate-400">Timezone</label>
-        <input type="text" value={timezoneValue} onChange={e => update({ timezone: e.target.value })} placeholder="UTC" className={baseCls} />
-      </div>
     </div>
   );
 }

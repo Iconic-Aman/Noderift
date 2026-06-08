@@ -61,11 +61,46 @@ async def test_langgraph_agent():
         print(result["messages"][-1].content)
         
         print("\n=== GENERATED PROPOSAL ===")
-        print(json.dumps(result.get("proposal"), indent=2))
+        proposal = result.get("proposal")
+        print(json.dumps(proposal, indent=2))
         
         print("\n=== RETRIES RUN ===")
         print(f"Retry count: {result.get('retry_count')}")
         print(f"Validation error: {result.get('validation_error')}")
+
+        if proposal and proposal.get("nodes"):
+            # Simulate applying the proposal on frontend: map proposed nodes/edges as current graph
+            simulated_current_graph = {
+                "nodes": [
+                    {"id": n.get("id"), "type": n.get("type"), "config": n.get("config")}
+                    for n in proposal.get("nodes", [])
+                ],
+                "edges": proposal.get("edges", [])
+            }
+
+            user_query_2 = "Actually, remove the resend email node and add a whatsapp node instead to send the weather update to 919876543210"
+            print(f"\nUser Query 2 (Modification): {user_query_2}")
+
+            inputs_2 = {
+                "messages": result["messages"] + [HumanMessage(content=user_query_2)],
+                "current_graph": simulated_current_graph,
+                "proposal": None,
+                "validation_error": None,
+                "retry_count": 0
+            }
+
+            print("Invoking LangGraph Agent for modification...")
+            result_2 = await graph.ainvoke(inputs_2, config=config)
+
+            print("\n=== AGENT RESPONSE 2 ===")
+            print(result_2["messages"][-1].content)
+
+            print("\n=== GENERATED PROPOSAL 2 ===")
+            print(json.dumps(result_2.get("proposal"), indent=2))
+
+            print("\n=== RETRIES RUN 2 ===")
+            print(f"Retry count: {result_2.get('retry_count')}")
+            print(f"Validation error: {result_2.get('validation_error')}")
 
     except Exception as e:
         print(f"Error occurred: {e}")

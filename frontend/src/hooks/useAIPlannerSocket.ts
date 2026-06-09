@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { useWorkflowStore } from '../store/workflowStore';
 import { API_URL } from '../lib/api';
+import { getNodeTemplate } from '../lib/node-templates';
 
 export function useAIPlannerSocket(sessionId: string | undefined) {
   const addNode = useWorkflowStore((state) => state.addNode);
@@ -20,9 +21,20 @@ export function useAIPlannerSocket(sessionId: string | undefined) {
       try {
         const { type, payload } = JSON.parse(event.data);
         switch (type) {
-          case 'node_added':
+          case 'node_added': {
+            const prefix = payload.id.split('-')[0];
+            const template = getNodeTemplate(prefix);
+            if (template) {
+              payload.data = {
+                ...payload.data,
+                icon: template.icon,
+                color: template.color,
+                category: template.category,
+              };
+            }
             addNode(payload);
             break;
+          }
           case 'node_updated':
             updateNodeConfig(payload.id, payload.config);
             break;

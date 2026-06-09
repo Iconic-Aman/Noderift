@@ -52,7 +52,25 @@ async def add_node(node_type: str, label: str, node_config: dict, config: Runnab
     if node_type not in NODE_REGISTRY:
         return {"error": f"Invalid node type: {node_type}. Call get_available_nodes to check valid types."}
 
-    node_id = f"node_{uuid.uuid4().hex[:8]}"
+    # Map backend node type to frontend ID prefix
+    prefix_map = {
+        "http_request": "http",
+        "schedule": "schedule",
+        "webhook": "webhook",
+        "code": "code",
+        "playwright": "playwright",
+        "composio": "composio",
+        "whatsapp": "whatsapp",
+        "resend": "resend",
+        "ai_agent": "ai_agent",
+        "filter": "filter",
+        "merge": "merge",
+        "loop": "loop",
+        "set_variable": "set_variable",
+    }
+    id_prefix = prefix_map.get(node_type, node_type)
+    node_id = f"{id_prefix}-{uuid.uuid4().hex[:8]}"
+    
     current_graph = get_session_graph(db, session_id)
     node_count = len(current_graph.get("nodes", []))
     
@@ -61,7 +79,7 @@ async def add_node(node_type: str, label: str, node_config: dict, config: Runnab
 
     node_payload = {
         "id": node_id,
-        "type": node_type,
+        "type": "workflowNode",
         "data": {"label": label, "config": node_config},
         "position": position,
     }

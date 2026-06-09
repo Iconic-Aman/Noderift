@@ -185,7 +185,7 @@ export default function Editor() {
             )}
           </div>
         )}
-        <AIChatPanel rfInstance={rfInstance} />
+        <AIChatPanel />
       </div>
 
       {/* Bottom Terminal Toggle Button */}

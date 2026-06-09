@@ -12,6 +12,7 @@ from models.user import User
 from models.workflow import Workflow
 from ai.planner.agent import get_planner_agent
 from ai.planner.session import get_session_messages, save_session_messages
+from core.security import bearer_scheme
 
 router = APIRouter(prefix="/ai", tags=["AI Planner"])
 logger = logging.getLogger("uvicorn")
@@ -24,7 +25,7 @@ class PlanResponse(BaseModel):
     reply: str
     session_id: str
 
-@router.post("/plan", response_model=PlanResponse)
+@router.post("/plan", response_model=PlanResponse, dependencies=[Depends(bearer_scheme)])
 async def plan_workflow(req: PlanRequest, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
     """Run the AI Planner ReAct agent on a workflow."""
     # Verify workflow exists and belongs to user
@@ -61,7 +62,7 @@ async def plan_workflow(req: PlanRequest, db: Session = Depends(get_db), user: U
         logger.error(f"AI Planner execution failed: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
-@router.get("/plan/{session_id}/messages")
+@router.get("/plan/{session_id}/messages", dependencies=[Depends(bearer_scheme)])
 async def get_messages(session_id: str, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
     """Retrieve formatted conversation messages for the AI Planner session."""
     workflow = db.query(Workflow).filter(Workflow.id == session_id, Workflow.user_id == user.id).first()

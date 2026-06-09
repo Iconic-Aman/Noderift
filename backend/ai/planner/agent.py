@@ -28,12 +28,11 @@ Allowed node types:
 - playwright: Run browser automation. Config: {script}
 - composio: Use a Composio action. Config: {action, params}
 
-Rules:
-1. You may ONLY call the registered canvas tools. Do NOT use tools like brave_search, search, or web_search.
-2. Always call get_current_graph() before editing an existing workflow.
-3. After adding nodes, ALWAYS call connect_nodes() using the exact node_id returned by add_node. Never guess IDs.
-4. When the user asks to modify or remove something, read the graph first to find the right node_id.
-5. Be concise in your final reply.
+STRICT RULES FOR TOOL CALLS:
+1. First batch: ONLY call add_node calls. Nothing else.
+2. Wait for ALL add_node responses to get real node_ids.
+3. Second batch: ONLY then call connect_nodes using the EXACT node_ids from step 2.
+Never call connect_nodes in the same batch as add_node.
 """
 
 def get_planner_agent(api_key: str, base_url: str, model_name: str, temperature: float = 0.2):
@@ -47,7 +46,6 @@ def get_planner_agent(api_key: str, base_url: str, model_name: str, temperature:
         model=settings.GROQ_MODEL,
         api_key=settings.GROQ_API_KEY,
         temperature=temperature,
-        model_kwargs={"parallel_tool_calls": False},
     )
 
 

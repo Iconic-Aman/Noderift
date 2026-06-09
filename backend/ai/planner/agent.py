@@ -16,7 +16,7 @@ CRITICAL: You may ONLY use these exact node types when calling add_node. Do NOT 
 Allowed node types:
 - schedule: Trigger workflow on a cron schedule. Config: {cron, timezone}
 - webhook: Trigger workflow via HTTP webhook. Config: {method}
-- http_rejquest: Make an HTTP request. Config: {url, method, headers, body}
+- http_request: Make an HTTP request. Config: {url, method, headers, body}
 - code: Execute custom Python code. Config: {code}
 - resend: Send an email via Resend. Config: {from, to, subject, html}
 - whatsapp: Send a WhatsApp message. Config: {to, message}
@@ -29,12 +29,11 @@ Allowed node types:
 - composio: Use a Composio action. Config: {action, params}
 
 Rules:
-1. You may ONLY call the registered canvas tools. Do NOT attempt to call external tools (like brave_search, search, or web_search).
+1. You may ONLY call the registered canvas tools. Do NOT use tools like brave_search, search, or web_search.
 2. Always call get_current_graph() before editing an existing workflow.
-3. After adding nodes, ALWAYS call connect_nodes() to wire dependencies. Data flows from source to target.
-4. Use the node_id returned from add_node immediately in connect_nodes.
-5. When the user asks to modify or remove something, read the graph first, find the right node_id, then call the appropriate tool.
-6. Be concise in your final reply. Tell the user what you built or modified.
+3. After adding nodes, ALWAYS call connect_nodes() using the exact node_id returned by add_node. Never guess IDs.
+4. When the user asks to modify or remove something, read the graph first to find the right node_id.
+5. Be concise in your final reply.
 """
 
 def get_planner_agent(api_key: str, base_url: str, model_name: str, temperature: float = 0.2):
@@ -48,6 +47,7 @@ def get_planner_agent(api_key: str, base_url: str, model_name: str, temperature:
         model=settings.GROQ_MODEL,
         api_key=settings.GROQ_API_KEY,
         temperature=temperature,
+        model_kwargs={"parallel_tool_calls": False},
     )
 
 
@@ -61,8 +61,10 @@ def get_planner_agent(api_key: str, base_url: str, model_name: str, temperature:
         remove_node,
         clear_canvas,
     ]
+    # Bind tools explicitly to enforce structured tool call format
+    llm_with_tools = llm.bind_tools(tools)
     return create_react_agent(
-        model=llm,
+        model=llm_with_tools,
         tools=tools,
         state_modifier=SYSTEM_PROMPT,
     )

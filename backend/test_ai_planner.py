@@ -50,10 +50,11 @@ async def run_test():
         
         agent = get_planner_agent(key, base_url, model)
 
-        query = "add a webhook node, and connect it to a code node"
+        query = "create a workflow which will send me a picture of dog getting from https://dog.ceo/api/breeds/image/random and send me everyday"
         print(f"\nUser: {query}")
         
         from langchain_core.messages import HumanMessage
+        import time
         inputs = {"messages": [HumanMessage(content=query)]}
 
         config = {
@@ -64,7 +65,10 @@ async def run_test():
         }
 
         print("Running agent...")
+        start = time.time()
         result = await agent.ainvoke(inputs, config=config)
+        elapsed = time.time() - start
+        print(f"\nAgent finished in {elapsed:.1f} seconds")
 
         print("\n=== Full Conversation Message Trajectory ===")
         for idx, msg in enumerate(result.get("messages", [])):

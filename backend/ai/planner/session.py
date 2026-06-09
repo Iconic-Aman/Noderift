@@ -4,13 +4,14 @@ from sqlalchemy.orm import Session
 from core.config import settings
 from models.workflow import Workflow
 
-# Initialize Redis client using environment variable
-redis_client = redis.from_url(settings.REDIS_URL) if settings.REDIS_URL else None
+# Redis connections are initialized dynamically in functions.
 
 async def emit_canvas_patch(session_id: str, event_type: str, payload: dict):
     """Publish graph changes to Redis for real-time WebSocket delivery."""
-    if redis_client:
-        await redis_client.publish(
+    if not settings.REDIS_URL:
+        return
+    async with redis.from_url(settings.REDIS_URL) as r:
+        await r.publish(
             f"ai_plan:{session_id}",
             json.dumps({"type": event_type, "payload": payload})
         )
@@ -78,28 +79,30 @@ from langchain_core.messages import messages_to_dict, messages_from_dict
 
 async def get_session_messages(session_id: str) -> list:
     """Retrieve message history for this session from Redis."""
-    if not redis_client:
-        return []
-    data = await redis_client.get(f"ai_session_messages:{session_id}")
-    if not data:
+    if not settings.REDIS_URL:
         return []
     try:
-        raw_msgs = json.loads(data)
-        return messages_from_dict(raw_msgs)
+        async with redis.from_url(settings.REDIS_URL) as r:
+            data = await r.get(f"ai_session_messages:{session_id}")
+            if not data:
+                return []
+            raw_msgs = json.loads(data)
+            return messages_from_dict(raw_msgs)
     except Exception:
         return []
 
 async def save_session_messages(session_id: str, messages: list):
     """Save message history for this session to Redis."""
-    if not redis_client:
+    if not settings.REDIS_URL:
         return
     try:
         serializable = messages_to_dict(messages)
-        await redis_client.setex(
-            f"ai_session_messages:{session_id}",
-            86400,
-            json.dumps(serializable)
-        )
+        async with redis.from_url(settings.REDIS_URL) as r:
+            await r.setex(
+                f"ai_session_messages:{session_id}",
+                86400,
+                json.dumps(serializable)
+            )
     except Exception:
         pass
 

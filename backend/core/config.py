@@ -51,6 +51,11 @@ class Settings(BaseSettings):
     LLM_MODEL: str = ""
     EMBEDDING_MODEL: str = ""
 
+    # Groq Config
+    GROQ_API_KEY: str = ""
+    GROQ_MODEL: str = ""
+
+
 
 
     # Redis

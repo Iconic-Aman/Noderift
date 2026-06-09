@@ -6,6 +6,7 @@ import { apiFetch } from "@/lib/api";
 import { useWorkflowStore } from "@/store/workflowStore";
 import { useExecution } from "@/hooks/useExecution";
 import { useWebSocket } from "@/hooks/useWebSocket";
+import { getNodeTemplate } from "@/lib/node-templates";
 
 export function useEditorLogic() {
   const { id } = useParams();
@@ -140,7 +141,26 @@ export function useEditorLogic() {
         const wf = await apiFetch(`/workflows/${id}`);
         setWorkflowName(wf.name);
         setIsActive(wf.is_active);
-        if (wf.graph && wf.graph.nodes) { setNodes(wf.graph.nodes); setEdges(wf.graph.edges || []); }
+        if (wf.graph && wf.graph.nodes) {
+          const styledNodes = wf.graph.nodes.map((node: any) => {
+            const prefix = node.id.split("-")[0];
+            const template = getNodeTemplate(prefix);
+            if (template) {
+              return {
+                ...node,
+                data: {
+                  icon: template.icon,
+                  color: template.color,
+                  category: template.category,
+                  ...node.data,
+                },
+              };
+            }
+            return node;
+          });
+          setNodes(styledNodes);
+          setEdges(wf.graph.edges || []);
+        }
       } catch (err) {
         console.error("Failed to load workflow", err);
       }

@@ -17,6 +17,8 @@ services:
       NVIDIA_API_URL: ${NVIDIA_API_URL}
       LLM_MODEL: ${LLM_MODEL}
       EMBEDDING_MODEL: ${EMBEDDING_MODEL}
+      GROQ_API_KEY: ${GROQ_API_KEY}
+      GROQ_MODEL: ${GROQ_MODEL}
     ports:
       - "8000:8000"
     depends_on:
@@ -52,6 +54,8 @@ services:
       NVIDIA_API_URL: ${NVIDIA_API_URL}
       LLM_MODEL: ${LLM_MODEL}
       EMBEDDING_MODEL: ${EMBEDDING_MODEL}
+      GROQ_API_KEY: ${GROQ_API_KEY}
+      GROQ_MODEL: ${GROQ_MODEL}
     depends_on:
       - redis
       - backend

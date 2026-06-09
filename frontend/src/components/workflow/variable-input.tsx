@@ -100,8 +100,8 @@ export function VariableInput({
       {/* Absolute overlay mirror ON TOP (z-10) with pointer-events-none */}
       <div
         className={cn(
-          "overlay-mirror absolute inset-0 w-full overflow-hidden select-none pointer-events-none text-sm font-normal text-slate-200 px-3 py-2 border border-transparent whitespace-pre-wrap break-words z-10",
-          isTextArea ? "min-h-[80px]" : "h-9 leading-5"
+          "overlay-mirror absolute inset-0 w-full overflow-hidden select-none pointer-events-none text-sm font-normal text-slate-200 px-3 py-2 border border-transparent z-10",
+          isTextArea ? "min-h-[80px] whitespace-pre-wrap break-words" : "h-9 leading-5 whitespace-nowrap"
         )}
         style={{
           fontFamily: 'inherit',
@@ -110,8 +110,7 @@ export function VariableInput({
       >
         {segments.map((seg, idx) => {
           if (seg.type === "text") {
-            // Invisible placeholder text to match text sizing exactly
-            return <span key={idx} className="opacity-0">{seg.text}</span>;
+            return <span key={idx}>{seg.text}</span>;
           } else {
             const varVal = getVarValue(seg.text);
             const isClicked = clickedVar === seg.text;
@@ -119,10 +118,10 @@ export function VariableInput({
               <span
                 key={idx}
                 className={cn(
-                  "inline-block px-1.5 py-0.5 rounded border pointer-events-auto cursor-pointer select-none mx-0.5 text-xs transition-colors font-semibold",
+                  "inline px-1 rounded pointer-events-auto cursor-pointer select-none mx-0.5 text-sm transition-colors font-semibold",
                   isClicked 
-                    ? "bg-emerald-600/35 border-emerald-500/50 text-emerald-300" 
-                    : "bg-blue-600/35 border-blue-500/50 text-blue-300 hover:bg-blue-500/40"
+                    ? "bg-emerald-600/35 text-emerald-300" 
+                    : "bg-blue-600/35 text-blue-300 hover:bg-blue-500/40"
                 )}
                 title="Click to toggle value"
                 onMouseEnter={(e) => {
@@ -164,7 +163,8 @@ export function VariableInput({
           rows={rows}
           className={cn(
             baseCls,
-            "resize-y min-h-[80px] text-slate-200 bg-transparent relative z-0 selection:bg-blue-500/30"
+            "resize-y min-h-[80px] bg-transparent relative z-0 selection:bg-blue-500/30",
+            value ? "text-transparent caret-slate-200" : "text-slate-200"
           )}
           style={{
             lineHeight: '1.25rem',
@@ -183,7 +183,8 @@ export function VariableInput({
           placeholder={placeholder}
           className={cn(
             baseCls,
-            "h-9 text-slate-200 bg-transparent relative z-0 selection:bg-blue-500/30"
+            "h-9 bg-transparent relative z-0 selection:bg-blue-500/30",
+            value ? "text-transparent caret-slate-200" : "text-slate-200"
           )}
           style={{
             lineHeight: '1.25rem',

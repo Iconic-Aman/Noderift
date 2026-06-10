@@ -67,6 +67,7 @@ async def add_node(node_type: str, label: str, node_config: dict, config: Runnab
         "merge": "merge",
         "loop": "loop",
         "set_variable": "set_variable",
+        "database": "database",
     }
     id_prefix = prefix_map.get(node_type, node_type)
     node_id = f"{id_prefix}-{uuid.uuid4().hex[:8]}"

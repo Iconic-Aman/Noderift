@@ -27,6 +27,10 @@ export function useEditorLogic() {
   const [isLeftOpen, setIsLeftOpen] = useState(true);
   const [isRightOpen, setIsRightOpen] = useState(true);
 
+  // Mode and active right panel tab state
+  const [mode, setMode] = useState<"manual" | "automatic">("manual");
+  const [activeRightTab, setActiveRightTab] = useState<"chat" | "config">("chat");
+
   // Resizable sidebar and logs panel states
   const [leftWidth, setLeftWidth] = useState(260);
   const [rightWidth, setRightWidth] = useState(450);
@@ -296,6 +300,7 @@ export function useEditorLogic() {
     updateNodeConfig,
     workflowName, setWorkflowName,
     isActive, isLeftOpen, setIsLeftOpen, isRightOpen, setIsRightOpen,
+    mode, setMode, activeRightTab, setActiveRightTab,
     leftWidth, rightWidth, panelHeight,
     isResizingLeft, isResizingRight, isResizingPanel,
     startLeftResize, startRightResize, startPanelResize,

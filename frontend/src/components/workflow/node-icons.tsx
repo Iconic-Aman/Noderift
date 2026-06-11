@@ -26,11 +26,36 @@ const WhatsAppIcon = ({ className, style }: { className?: string; style?: React.
   </svg>
 );
 
+const PostgresIcon = ({ className, style }: { className?: string; style?: React.CSSProperties }) => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} style={style}>
+    <ellipse cx="12" cy="5" rx="9" ry="3" />
+    <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5" />
+    <path d="M3 12c0 1.66 4 3 9 3s9-1.34 9-3" />
+    <path d="M12 5v17" />
+  </svg>
+);
+
+const MySqlIcon = ({ className, style }: { className?: string; style?: React.CSSProperties }) => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} style={style}>
+    <ellipse cx="12" cy="5" rx="9" ry="3" />
+    <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5" />
+    <path d="M3 12c0 1.66 4 3 9 3s9-1.34 9-3" />
+    <path d="M3 10c6-2 12 2 18 0" />
+  </svg>
+);
+
+const MongoDbIcon = ({ className, style }: { className?: string; style?: React.CSSProperties }) => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} style={style}>
+    <path d="M12 2C9 7 7 11 7 14.5a5 5 0 0 0 10 0C17 11 15 7 12 2z" />
+    <path d="M12 2v17" />
+  </svg>
+);
+
 export const iconMap: Record<string, LucideIcon | React.ComponentType<any>> = {
   webhook: Webhook, clock: Clock, mail: Mail, slack: SlackIcon, gmail: GmailIcon, globe: Globe,
   database: Database, openai: OpenAI, brain: Brain, "git-branch": GitBranch, layers: Layers,
   repeat: Repeat, timer: Timer, merge: Merge, search: Search, zap: Zap, code: Code,
-  whatsapp: WhatsAppIcon,
+  whatsapp: WhatsAppIcon, postgres: PostgresIcon, mysql: MySqlIcon, mongodb: MongoDbIcon,
 };
 
 

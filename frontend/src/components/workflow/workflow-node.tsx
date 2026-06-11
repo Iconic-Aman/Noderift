@@ -13,6 +13,22 @@ export const WorkflowNode = memo(({ id, data, selected }: NodeProps<Node<NodeDat
     setEdges((edges) => edges.filter((edge) => edge.source !== id && edge.target !== id));
   };
 
+  // Dynamically resolve icon and color for database nodes
+  let displayIcon = data.icon;
+  let displayColor = data.color;
+  
+  if (id.startsWith("database")) {
+    const dbType = data.config?.db_type || "postgres";
+    displayIcon = dbType;
+    if (dbType === "postgres") {
+      displayColor = "#3b82f6"; // Postgres Blue
+    } else if (dbType === "mysql") {
+      displayColor = "#00758f"; // MySQL Teal
+    } else if (dbType === "mongodb") {
+      displayColor = "#47A248"; // MongoDB Green
+    }
+  }
+
   return (
     <div
       className={`
@@ -40,8 +56,9 @@ export const WorkflowNode = memo(({ id, data, selected }: NodeProps<Node<NodeDat
           : data.status === "failed"
           ? "0 0 25px rgba(244, 63, 94, 0.3)"
           : selected
-          ? `0 0 20px ${data.color}30, 0 0 40px ${data.color}10`
+          ? `0 0 20px ${displayColor}30, 0 0 40px ${displayColor}10`
           : "0 4px 20px rgba(0, 0, 0, 0.3)",
+        transition: "all 0.4s ease-out",
       }}
     >
       {/* Status Badge */}
@@ -76,13 +93,14 @@ export const WorkflowNode = memo(({ id, data, selected }: NodeProps<Node<NodeDat
       />
       <div className="flex flex-col items-center gap-2 px-6 py-4">
         <div
-          className="flex h-12 w-12 items-center justify-center rounded-xl transition-transform duration-200 group-hover:scale-105"
+          className="flex h-12 w-12 items-center justify-center rounded-xl group-hover:scale-105"
           style={{
-            backgroundColor: `${data.color}15`,
-            boxShadow: `0 0 20px ${data.color}20`,
+            backgroundColor: `${displayColor}15`,
+            boxShadow: `0 0 20px ${displayColor}20`,
+            transition: "all 0.4s ease-out",
           }}
         >
-          <NodeIcon icon={data.icon} color={data.color} className="h-6 w-6" />
+          <NodeIcon icon={displayIcon} color={displayColor} className="h-6 w-6" />
         </div>
         <span className="max-w-[100px] truncate text-center text-xs font-medium text-slate-300">
           {data.label}

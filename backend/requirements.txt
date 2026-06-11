@@ -36,6 +36,8 @@ langgraph
 langchain
 langchain-openai
 langchain-groq
+pymongo==4.7.2
+pymysql==1.1.0
 
 
 

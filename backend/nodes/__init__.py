@@ -28,4 +28,5 @@ from nodes.composio_node import ComposioNode
 from nodes.whatsapp_node import WhatsAppNode
 from nodes.ai_agent_node import AiAgentNode
 from nodes.resend_node import ResendNode
+from nodes.database_node import DatabaseNode
 from nodes.logic_nodes import FilterNode, MergeNode, LoopNode, SetVariableNode

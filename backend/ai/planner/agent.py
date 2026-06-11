@@ -27,6 +27,7 @@ Allowed node types:
 - set_variable: Set a variable. Config: {key, value}
 - playwright: Run browser automation. Config: {script}
 - composio: Use a Composio action. Config: {action, params}
+- database: Query Postgres/MySQL/MongoDB databases. Config: {db_type, connection_type, connection_string, host, port, username, password, database_name, query, mongodb_collection, mongodb_operation, mongodb_query}
 
 STRICT RULES FOR TOOL CALLS:
 1. First batch: ONLY call add_node calls. Nothing else.

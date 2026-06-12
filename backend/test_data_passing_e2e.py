@@ -40,31 +40,33 @@ async def test_data_passing():
                         "id": "http-2",
                         "type": "http",
                         "data": {
-                            "label": "Get Weather",
+                            "label": "Get Joke",
                             "config": {
-                                "url": "https://api.open-meteo.com/v1/forecast?latitude=25.59&longitude=85.13&current_weather=true",
+                                "url": "https://official-joke-api.appspot.com/random_joke",
                                 "method": "GET"
                             }
                         }
                     },
                     {
-                        "id": "whatsapp-3",
-                        "type": "whatsapp",
+                        "id": "resend-3",
+                        "type": "resend",
                         "data": {
-                            "label": "WhatsApp Send",
+                            "label": "Send Joke Email",
                             "config": {
-                                "whatsapp_access_token": "mock_token",
-                                "whatsapp_phone_number_id": "mock_id",
-                                "whatsapp_api_url": "https://graph.facebook.com/v17.0",
-                                "to": "919876543210",
-                                "message": "Patna weather temp is {current_weather.temperature} C."
+                                "to": "aman.apk01@gmail.com",
+                                "from": "onboarding@resend.dev",
+                                "subject": "Joke of the Day",
+                                "html": "Here is a joke for you:<br><br><b>{setup}</b><br><i>{punchline}</i>",
+                                "_credential": {
+                                    "api_key": "re_mock_key"
+                                }
                             }
                         }
                     }
                 ],
                 "edges": [
                     {"source": "schedule-1", "target": "http-2"},
-                    {"source": "http-2", "target": "whatsapp-3"}
+                    {"source": "http-2", "target": "resend-3"}
                 ]
             }
         )
@@ -89,7 +91,7 @@ async def test_data_passing():
         try:
             await runner.run()
         except Exception as e:
-            # We expect whatsapp node to fail due to mock token, which is fine!
+            # We expect resend node to fail due to mock token, which is fine!
             print(f"Execution run completed (expected failure/success): {e}")
 
         # Inspect database node logs
@@ -102,14 +104,14 @@ async def test_data_passing():
             print(f"  Output: {log.output}")
             print(f"  Error: {log.error}")
 
-            if log.node_id == "whatsapp-3":
+            if log.node_id == "resend-3":
                 # Check that placeholder was replaced with a number/string in the input config
-                msg = log.input.get("message", "")
-                print(f"\nResult message: {msg}")
-                if "Patna weather temp is" in msg and "{current_weather.temperature}" not in msg:
-                    print("SUCCESS: Interpolation worked! Temperature resolved.")
+                html = log.input.get("html", "")
+                print(f"\nResult html: {html}")
+                if "Here is a joke for you" in html and "{setup}" not in html and "{punchline}" not in html:
+                    print("SUCCESS: Interpolation worked! Joke resolved.")
                 else:
-                    print("FAILURE: Interpolation failed or did not resolve placeholder.")
+                    print("FAILURE: Interpolation failed or did not resolve placeholders.")
 
         # Cleanup
         db.delete(execution)

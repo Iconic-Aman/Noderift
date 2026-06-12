@@ -1,4 +1,5 @@
 import uuid
+import json
 from typing import Dict, Any, List
 from langchain_core.tools import tool
 from langchain_core.runnables import RunnableConfig
@@ -11,11 +12,28 @@ def get_available_nodes() -> List[dict]:
     Returns all node types registered in Noderift.
     Use this first to know what nodes you can add.
     """
+    schemas = {
+        "schedule": {"triggered_at": "string", "cron": "string", "timezone": "string"},
+        "webhook": {"body": "object", "headers": "object", "query": "object"},
+        "http_request": {"status_code": "number", "headers": "object", "response": "object/any"},
+        "code": {"_logs": "string", "...": "dynamic keys defined by output_data in user script"},
+        "resend": {"status": "string", "result": "object"},
+        "whatsapp": {"status": "string", "response": "object"},
+        "ai_agent": {"text": "string", "raw": "object"},
+        "filter": {"...": "passes upstream variables if condition is true"},
+        "merge": {"merged": "object"},
+        "loop": {"items": "array", "count": "number"},
+        "set_variable": {"...": "stores custom variables key/value in state"},
+        "playwright": {"url": "string", "title": "string", "...": "dynamic keys defined by output_data in script"},
+        "composio": {"result": "object"},
+        "database": {"results": "array (for select/find)", "row_count": "number", "status": "string"}
+    }
     return [
         {
             "type": node_type,
             "display_name": node_cls.display_name,
             "description": node_cls.description,
+            "expected_output_keys": schemas.get(node_type, {})
         }
         for node_type, node_cls in NODE_REGISTRY.items()
     ]
@@ -33,7 +51,7 @@ def get_current_graph(config: RunnableConfig) -> dict:
     return get_session_graph(db, session_id)
 
 @tool
-async def add_node(node_type: str, label: str, node_config: dict, config: RunnableConfig) -> dict:
+async def add_node(node_type: str, label: str, node_config: str, config: RunnableConfig) -> dict:
     """
     Add a node to the canvas.
     Returns the node_id — save it to use in connect_nodes later.
@@ -41,8 +59,12 @@ async def add_node(node_type: str, label: str, node_config: dict, config: Runnab
     Args:
         node_type: Must be a valid type from get_available_nodes()
         label: Human-readable name shown on the canvas
-        node_config: Node-specific configuration (url, script, channel etc.)
+        node_config: Node-specific configuration as a JSON string, e.g. '{"url": "https://...", "method": "GET"}'
     """
+    try:
+        parsed_config = json.loads(node_config) if isinstance(node_config, str) else node_config
+    except Exception:
+        parsed_config = {}
     db = config.get("configurable", {}).get("db")
     session_id = config.get("configurable", {}).get("session_id")
     if not db or not session_id:
@@ -81,7 +103,7 @@ async def add_node(node_type: str, label: str, node_config: dict, config: Runnab
     node_payload = {
         "id": node_id,
         "type": "workflowNode",
-        "data": {"label": label, "config": node_config},
+        "data": {"label": label, "config": parsed_config},
         "position": position,
     }
 
@@ -111,21 +133,26 @@ async def connect_nodes(source_id: str, target_id: str, config: RunnableConfig) 
     return {"edge_id": edge_id, "status": "connected"}
 
 @tool
-async def update_node_config(node_id: str, node_config: dict, config: RunnableConfig) -> dict:
+async def update_node_config(node_id: str, node_config: str, config: RunnableConfig) -> dict:
     """
     Update the configuration of an existing node.
     Use this when the user asks to change a node's settings.
 
     Args:
         node_id: ID of the node to update
-        node_config: Partial or full config dict to merge into existing config
+        node_config: Partial or full config as a JSON string, e.g. '{"method": "POST"}'
     """
     db = config.get("configurable", {}).get("db")
     session_id = config.get("configurable", {}).get("session_id")
     if not db or not session_id:
         return {"error": "No db session or session_id in config"}
 
-    payload = {"id": node_id, "config": node_config}
+    try:
+        parsed_config = json.loads(node_config) if isinstance(node_config, str) else node_config
+    except Exception:
+        parsed_config = {}
+
+    payload = {"id": node_id, "config": parsed_config}
     await patch_graph(db, session_id, "update_node", payload)
     return {"node_id": node_id, "status": "updated"}
 

@@ -9,6 +9,7 @@ from models.execution import Execution
 from models.node_log import NodeLog
 from models.workflow import Workflow
 from nodes import get_node_class, NodeInput
+from core.resolver import resolve_config
 
 class DAGRunner:
     def __init__(self, execution_id: str, trigger_payload: dict = None):
@@ -208,6 +209,8 @@ class DAGRunner:
             if (node_type == "webhook" or node_type == "schedule") and not parents:
                 input_data.update(self.trigger_payload)
 
+            resolved_config = resolve_config(node_config, upstream_data)
+
             input_data["_upstream"] = upstream_data
             node_input = NodeInput(data=input_data)
 
@@ -218,7 +221,7 @@ class DAGRunner:
                 node_instance = node_cls()
 
                 # Execute node
-                node_output = await node_instance.execute(node_input, node_config)
+                node_output = await node_instance.execute(node_input, resolved_config)
 
                 # Store output for child nodes
                 node_outputs[node_id] = node_output.data
@@ -228,7 +231,7 @@ class DAGRunner:
 
                 if not is_ancestor:
                     node_log.status = "success"
-                    node_log.input = input_data
+                    node_log.input = resolved_config
                     node_log.output = node_output.data
                     node_log.duration_ms = duration_ms
                     node_log.finished_at = datetime.now(timezone.utc)
@@ -250,7 +253,7 @@ class DAGRunner:
 
                 if not is_ancestor:
                     node_log.status = "failed"
-                    node_log.input = input_data
+                    node_log.input = resolved_config
                     node_log.error = error_msg
                     node_log.duration_ms = duration_ms
                     node_log.finished_at = datetime.now(timezone.utc)

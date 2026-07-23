@@ -22,8 +22,8 @@ export function useAIPlannerSocket(sessionId: string | undefined) {
         const { type, payload } = JSON.parse(event.data);
         switch (type) {
           case 'node_added': {
-            const prefix = payload.id.split('-')[0];
-            const template = getNodeTemplate(prefix);
+            const nodeType = payload.data?.node_type || payload.id.split('-')[0];
+            const template = getNodeTemplate(nodeType);
             if (template) {
               payload.data = {
                 ...payload.data,

@@ -56,6 +56,29 @@ def test_resolver():
     assert resolved5["payload"]["items"] == [5, "hello hello"]
     assert resolved5["payload"]["nested_dict"]["flag"] is True
 
+    # Test 6: List resolving
+    upstream_list = {
+        "node_http": {
+            "response": [
+                {
+                    "setup": "What's the best thing about a Boolean?",
+                    "punchline": "Even if you are wrong, you are only off by a bit."
+                }
+            ]
+        }
+    }
+    config6 = {
+        "setup_with_idx": "{node_http.response.0.setup}",
+        "punchline_with_idx": "{response.0.punchline}",
+        "setup_no_idx": "{node_http.response.setup}",
+        "punchline_no_idx": "{response.punchline}"
+    }
+    resolved6 = resolve_config(config6, upstream_list)
+    assert resolved6["setup_with_idx"] == "What's the best thing about a Boolean?"
+    assert resolved6["punchline_with_idx"] == "Even if you are wrong, you are only off by a bit."
+    assert resolved6["setup_no_idx"] == "What's the best thing about a Boolean?"
+    assert resolved6["punchline_no_idx"] == "Even if you are wrong, you are only off by a bit."
+
     print("All resolver tests passed successfully!")
 
 if __name__ == "__main__":

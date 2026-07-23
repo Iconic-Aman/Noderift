@@ -51,7 +51,7 @@ def get_current_graph(config: RunnableConfig) -> dict:
     return get_session_graph(db, session_id)
 
 @tool
-async def add_node(node_type: str, label: str, node_config: str, config: RunnableConfig) -> dict:
+async def add_node(node_type: str, label: str, node_config: Any, config: RunnableConfig) -> dict:
     """
     Add a node to the canvas.
     Returns the node_id — save it to use in connect_nodes later.
@@ -103,7 +103,7 @@ async def add_node(node_type: str, label: str, node_config: str, config: Runnabl
     node_payload = {
         "id": node_id,
         "type": "workflowNode",
-        "data": {"label": label, "config": parsed_config},
+        "data": {"label": label, "node_type": node_type, "config": parsed_config},
         "position": position,
     }
 
@@ -133,7 +133,7 @@ async def connect_nodes(source_id: str, target_id: str, config: RunnableConfig) 
     return {"edge_id": edge_id, "status": "connected"}
 
 @tool
-async def update_node_config(node_id: str, node_config: str, config: RunnableConfig) -> dict:
+async def update_node_config(node_id: str, node_config: Any, config: RunnableConfig) -> dict:
     """
     Update the configuration of an existing node.
     Use this when the user asks to change a node's settings.
@@ -182,3 +182,35 @@ async def clear_canvas(config: RunnableConfig) -> dict:
 
     await patch_graph(db, session_id, "clear", {})
     return {"status": "cleared"}
+
+@tool
+async def test_node_execution(node_type: str, node_config: Any, inputs: Any = "{}") -> dict:
+    """
+    Execute/test a node with config and optional mock inputs.
+    Use this at design-time to verify an API response or see the structure of a node's output.
+
+    Args:
+        node_type: The type of node (e.g. 'http_request', 'code')
+        node_config: The config JSON string for the node
+        inputs: Mock input data JSON string (optional, defaults to '{}')
+    """
+    from nodes import get_node_class, NodeInput
+    import json
+    
+    try:
+        parsed_config = json.loads(node_config) if isinstance(node_config, str) else node_config
+    except Exception:
+        parsed_config = {}
+
+    try:
+        parsed_inputs = json.loads(inputs) if isinstance(inputs, str) else inputs
+    except Exception:
+        parsed_inputs = {}
+
+    try:
+        node_cls = get_node_class(node_type)
+        node_instance = node_cls()
+        result = await node_instance.execute(NodeInput(data=parsed_inputs), parsed_config)
+        return {"status": "success", "output": result.data}
+    except Exception as e:
+        return {"status": "error", "error": str(e)}

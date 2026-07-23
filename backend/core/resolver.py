@@ -3,7 +3,7 @@ from typing import Any, Dict
 
 def _flatten(data: Any, prefix: str = "") -> Dict[str, Any]:
     """
-    Flatten nested dictionary for dot-notation access.
+    Flatten nested dictionary and list structure for dot-notation access.
     E.g. {"dog": {"url": "http://..."}} -> {"dog.url": "http://...", "url": "http://..."}
     """
     result = {}
@@ -17,6 +17,16 @@ def _flatten(data: Any, prefix: str = "") -> Dict[str, Any]:
             result[key] = value
         if isinstance(value, dict):
             result.update(_flatten(value, full_key))
+        elif isinstance(value, list):
+            for idx, item in enumerate(value):
+                list_key = f"{full_key}.{idx}"
+                result[list_key] = item
+                if isinstance(item, dict):
+                    result.update(_flatten(item, list_key))
+                    # Shortcut for index 0: also allow omitting the index
+                    if idx == 0:
+                        for sub_k, sub_v in _flatten(item, full_key).items():
+                            result[sub_k] = sub_v
     return result
 
 def resolve_config(config: Any, upstream_data: Dict[str, Any]) -> Any:

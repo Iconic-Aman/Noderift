@@ -86,8 +86,33 @@ async def health():
 # ---------------------------------------------------------------------------
 # Global error handler
 # ---------------------------------------------------------------------------
+from starlette.exceptions import HTTPException as StarletteHTTPException
+from fastapi.exceptions import RequestValidationError
+
 @app.exception_handler(Exception)
 async def global_exception_handler(request, exc):
+    if isinstance(exc, StarletteHTTPException):
+        return JSONResponse(
+            status_code=exc.status_code,
+            content={
+                "error": {
+                    "code": "HTTP_ERROR",
+                    "message": exc.detail,
+                    "detail": None,
+                }
+            },
+        )
+    if isinstance(exc, RequestValidationError):
+        return JSONResponse(
+            status_code=422,
+            content={
+                "error": {
+                    "code": "VALIDATION_ERROR",
+                    "message": "Validation failed",
+                    "detail": exc.errors(),
+                }
+            },
+        )
     return JSONResponse(
         status_code=500,
         content={

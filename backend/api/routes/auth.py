@@ -19,8 +19,8 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(
     prefix="/auth", 
-    tags=["auth"],
-    dependencies=[Depends(bearer_scheme)])
+    tags=["auth"]
+)
 
 @router.get("/google/login")
 async def google_login():
@@ -107,7 +107,7 @@ async def google_callback(code: str, db: Session = Depends(get_db)):
     redirect_url = f"{settings.FRONTEND_URL}/login?token={user.id}"
     return RedirectResponse(url=redirect_url)
 
-@router.get("/me")
+@router.get("/me", dependencies=[Depends(bearer_scheme)])
 async def get_me(request: Request):
     logger.info("[STEP 3] /auth/me called")
     token = request.state.token

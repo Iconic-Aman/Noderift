@@ -211,6 +211,25 @@ class DAGRunner:
 
             resolved_config = resolve_config(node_config, upstream_data)
 
+            # JIT Gmail auth check — stop if user hasn't connected Gmail
+            if node_type == "gmail_trigger":
+                from services.gmail_service import get_user_gmail_credential
+                user_id = workflow.user_id
+                if not user_id or not get_user_gmail_credential(db, user_id):
+                    await self.publish_log("needs_auth", {
+                        "provider": "gmail",
+                        "node_id": node_id,
+                        "connect_url": f"/api/oauth/gmail/start?user_id={user_id}",
+                    })
+                    execution.status = "needs_auth"
+                    execution.error = "Gmail not connected"
+                    execution.finished_at = datetime.now(timezone.utc)
+                    db.commit()
+                    db.close()
+                    return
+                resolved_config["user_id"] = user_id
+                resolved_config["_db"] = db
+
             input_data["_upstream"] = upstream_data
             node_input = NodeInput(data=input_data)
 

@@ -30,6 +30,7 @@ Allowed node types:
 - playwright: Run browser automation. Config: {script}
 - composio: Use a Composio action. Config: {action, params}
 - database: Query Postgres/MySQL/MongoDB databases. Config: {db_type, connection_type, connection_string, host, port, username, password, database_name, query, mongodb_collection, mongodb_operation, mongodb_query}
+- gmail_trigger: Fetch emails from user's Gmail. Config: {query, max_results}. Output: emails (array of {id,subject,from,date,snippet}), count (number)
 
 STRICT RULES FOR TOOL CALLS:
 1. When downstream nodes need data from an upstream node (especially HTTP requests to external APIs), you MUST first execute/test the upstream node's configuration using the `test_node_execution` tool to inspect the exact structure of its response.

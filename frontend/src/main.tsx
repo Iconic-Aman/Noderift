@@ -6,6 +6,7 @@ import { Login } from './pages/login'
 import { Dashboard } from './pages/dashboard'
 import { Credentials } from './pages/credentials'
 import { Landing } from './pages/landing'
+import { OAuthSuccess } from './pages/oauth-success'
 import History from './pages/history'
 import './index.css'
 
@@ -24,6 +25,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
         <Route path="/credentials" element={<PrivateRoute><Credentials /></PrivateRoute>} />
         <Route path="/editor/:id" element={<PrivateRoute><Editor /></PrivateRoute>} />
         <Route path="/history/:id" element={<PrivateRoute><History /></PrivateRoute>} />
+        <Route path="/oauth/success" element={<OAuthSuccess />} />
       </Routes>
     </BrowserRouter>
   </React.StrictMode>,

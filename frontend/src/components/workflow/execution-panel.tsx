@@ -56,11 +56,24 @@ export function ExecutionPanel({ isOpen, onClose, logs, status, onRun, loading, 
         <div className="flex items-center gap-2">
           <Terminal className="h-4 w-4 text-blue-400" />
           <span className="text-sm font-semibold text-slate-200">Execution Logs & Trace</span>
-          <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${status === "running" ? "bg-blue-500/10 text-blue-400 border border-blue-500/20" : status === "success" ? "bg-green-500/10 text-green-400 border border-green-500/20" : status === "failed" ? "bg-red-500/10 text-red-400 border border-red-500/20" : "bg-slate-800 text-slate-400"}`}>
+          <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${status === "running" ? "bg-blue-500/10 text-blue-400 border border-blue-500/20" : status === "success" ? "bg-green-500/10 text-green-400 border border-green-500/20" : status === "needs_auth" ? "bg-amber-500/10 text-amber-400 border border-amber-500/20" : status === "failed" ? "bg-red-500/10 text-red-400 border border-red-500/20" : "bg-slate-800 text-slate-400"}`}>
             {status.toUpperCase()}
           </span>
         </div>
         <div className="flex items-center gap-3">
+          {logs.some((l) => l.type === "needs_auth") && (
+            <button
+              onClick={() => {
+                const authLog = logs.find((l) => l.type === "needs_auth");
+                const connectUrl = authLog?.connect_url || "/api/oauth/gmail/start";
+                const baseUrl = import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL.replace(/\/api$/, "") : "";
+                window.open(`${baseUrl}${connectUrl}`, "_blank", "width=500,height=600");
+              }}
+              className="flex items-center gap-1.5 rounded bg-amber-600 px-3 py-1 text-xs font-medium text-white hover:bg-amber-500"
+            >
+              Connect Gmail
+            </button>
+          )}
           <button onClick={onRun} disabled={loading || status === "running"} className="flex items-center gap-1.5 rounded bg-blue-600 px-3 py-1 text-xs font-medium text-white hover:bg-blue-500 disabled:opacity-50">
             {loading ? <Loader2 className="h-3 w-3 animate-spin" /> : <Play className="h-3 w-3" />}
             Run Workflow

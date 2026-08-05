@@ -13,11 +13,14 @@ export function AIChatPanel({ isDocked = false, onClose }: { isDocked?: boolean;
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
+  const [steps, setSteps] = useState<string[]>([]);
 
   const active = isDocked || open;
 
-  // Enable live websocket canvas updates while the chat panel is open
-  useAIPlannerSocket(active ? workflowId : undefined);
+  // Enable live websocket canvas updates & agent step events while panel open
+  useAIPlannerSocket(active ? workflowId : undefined, (stepText) => {
+    setSteps((prev) => [...prev, stepText]);
+  });
 
   useEffect(() => {
     if (!active || !workflowId) return;
@@ -31,6 +34,7 @@ export function AIChatPanel({ isDocked = false, onClose }: { isDocked?: boolean;
     const userMessage: Message = { id: `local-${Date.now()}`, role: "user", content: input.trim() };
     setMessages((prev) => [...prev, userMessage]);
     setInput("");
+    setSteps([]);
     setLoading(true);
     try {
       const res = await apiFetch("/ai/plan", {
@@ -55,6 +59,7 @@ export function AIChatPanel({ isDocked = false, onClose }: { isDocked?: boolean;
       ]);
     } finally {
       setLoading(false);
+      setSteps([]);
     }
   };
 
@@ -93,7 +98,7 @@ export function AIChatPanel({ isDocked = false, onClose }: { isDocked?: boolean;
       {messages.map((message) => (
         <AIChatMessage key={message.id} message={message} />
       ))}
-      {loading && <TypingIndicator />}
+      {loading && <TypingIndicator steps={steps} />}
     </div>
   );
 

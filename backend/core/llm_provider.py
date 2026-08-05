@@ -17,8 +17,9 @@ async def chat_completion(
     api_key: str,
     base_url: str,
     model: str,
-    messages: List[Dict[str, str]],
+    messages: List[Dict[str, Any]],
     temperature: float = 0.7,
+    enable_reasoning: bool = False,
 ) -> Dict[str, Any]:
     if not api_key:
         raise ValueError("Provider API key is required")
@@ -28,11 +29,14 @@ async def chat_completion(
         raise ValueError("Model name is required")
 
     endpoint = f"{base_url.rstrip('/')}/chat/completions"
-    payload = {
+    payload: Dict[str, Any] = {
         "model": model,
         "messages": messages,
         "temperature": temperature,
     }
+
+    if enable_reasoning or "openrouter.ai" in base_url:
+        payload["reasoning"] = {"enabled": True}
 
     try:
         async with httpx.AsyncClient(timeout=120) as client:

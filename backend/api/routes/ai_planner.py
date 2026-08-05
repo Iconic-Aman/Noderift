@@ -52,9 +52,15 @@ async def plan_workflow(req: PlanRequest, db: Session = Depends(get_db), user: U
             config={"configurable": {"session_id": req.session_id, "db": db}}
         )
         
-        # Extract reply and save history
+        # Extract reply from last AI message with actual text content
         messages = result.get("messages", [])
-        reply = messages[-1].content if messages else "No response generated."
+        reply = ""
+        for msg in reversed(messages):
+            if hasattr(msg, "content") and msg.content and msg.__class__.__name__ == "AIMessage":
+                reply = msg.content if isinstance(msg.content, str) else str(msg.content)
+                break
+        if not reply:
+            reply = "Workflow built on canvas. Check the nodes above."
         await save_session_messages(req.session_id, messages)
         
         return PlanResponse(reply=reply, session_id=req.session_id)

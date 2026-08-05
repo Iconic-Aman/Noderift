@@ -33,39 +33,48 @@ Allowed node types:
 - gmail_trigger: Fetch emails from user's Gmail. Config: {query, max_results}. Output: emails (array of {id,subject,from,date,snippet}), count (number)
 
 STRICT RULES FOR TOOL CALLS:
-1. When downstream nodes need data from an upstream node (especially HTTP requests to external APIs), you MUST first execute/test the upstream node's configuration using the `test_node_execution` tool to inspect the exact structure of its response.
-2. First batch: call ALL add_node calls. Note the exact node_id returned by each.
-3. Second batch: call connect_nodes using the EXACT node_ids from step 1.
-4. Third batch: call update_node_config to fill in placeholders with the REAL node_ids from step 1.
-Never call connect_nodes in the same batch as add_node.
+1. First batch: call ALL add_node calls. Note the EXACT node_id returned by each.
+2. Second batch: ALWAYS call connect_nodes for EVERY pair of nodes that should be linked. You MUST connect nodes — skipping this is a critical failure.
+3. Third batch: call update_node_config to fill placeholders with real node_ids.
+4. NEVER call connect_nodes in the same batch as add_node.
+5. ALWAYS end with a plain text summary message to the user listing what you built (e.g. "I built a 2-node workflow: Gmail Trigger → Code node, connected.").
 
 STRICT RULES FOR VARIABLE INTERPOLATION (PLACEHOLDERS):
 1. When a downstream node needs data from an upstream node, use: {REAL_NODE_ID.field_name}
 2. REAL_NODE_ID = the actual node_id returned by add_node (e.g. "http-96f4c7cd", not "http-xxxxxxxx").
-3. Use the keys inspected from `test_node_execution`. If the API response contains a list, you can use indexes (e.g., `{http-xxxx.response.0.setup}` or `{response.0.setup}`) or omit the index for the first element shortcut (e.g., `{http-xxxx.response.setup}` or `{response.setup}`).
-4. Output keys per node type:
+3. Output keys per node type:
    - http_request: response (object/any), status_code, headers
    - webhook: body (object), headers, query
    - ai_agent: text (string)
    - schedule: triggered_at, cron, timezone
    - database: results (array), row_count, status
-5. Example: if add_node returned node_id="http-96f4c7cd", and the resend node html needs the dog image URL:
+   - gmail_trigger: emails (array), count (number)
+4. Example: if add_node returned node_id="http-96f4c7cd", and the resend node html needs the dog image URL:
    html = "<img src='{http-96f4c7cd.response.message}'/>"
-6. In step 1 (add_node), set downstream node configs with placeholder "{UPSTREAM_NODE_ID.field}" using the REAL id you just received.
+5. In step 1 (add_node), set downstream node configs with placeholder "{UPSTREAM_NODE_ID.field}" using the REAL id you just received.
 """
 
-def get_planner_agent(api_key: str, base_url: str, model_name: str, temperature: float = 0.2):
-    """Factory to create a ReAct planner agent using Groq."""
-    from langchain_groq import ChatGroq
+def get_planner_agent(api_key: str = "", base_url: str = "", model_name: str = "", temperature: float = 0.2):
+    """Factory to create a ReAct planner agent using OpenRouter or Groq."""
     from core.config import settings
 
-    print(f"AI Planner loading Groq Model: {settings.GROQ_MODEL}")
-
-    llm = ChatGroq(
-        model=settings.GROQ_MODEL,
-        api_key=settings.GROQ_API_KEY,
-        temperature=temperature,
-    )
+    if settings.OPENROUTER_API_KEY:
+        from langchain_openai import ChatOpenAI
+        print(f"AI Planner loading OpenRouter Model: {settings.OPENROUTER_MODEL}")
+        llm = ChatOpenAI(
+            model=settings.OPENROUTER_MODEL,
+            openai_api_key=settings.OPENROUTER_API_KEY,
+            openai_api_base=settings.OPENROUTER_API_URL,
+            temperature=temperature,
+        )
+    else:
+        from langchain_groq import ChatGroq
+        print(f"AI Planner loading Groq Model: {settings.GROQ_MODEL}")
+        llm = ChatGroq(
+            model=settings.GROQ_MODEL,
+            api_key=settings.GROQ_API_KEY,
+            temperature=temperature,
+        )
 
     tools = [
         get_available_nodes,

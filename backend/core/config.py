@@ -55,6 +55,11 @@ class Settings(BaseSettings):
     GROQ_API_KEY: str = ""
     GROQ_MODEL: str = ""
 
+    # OpenRouter Config
+    OPENROUTER_API_KEY: str = ""
+    OPENROUTER_MODEL: str = "cohere/north-mini-code:free"
+    OPENROUTER_API_URL: str = "https://openrouter.ai/api/v1"
+
 
 
 

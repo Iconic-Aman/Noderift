@@ -109,6 +109,8 @@ async def add_node(node_type: str, label: str, node_config: Any, config: Runnabl
     }
 
     await patch_graph(db, session_id, "add_node", node_payload)
+    from ai.planner.session import emit_canvas_patch
+    await emit_canvas_patch(session_id, "agent_step", {"text": f"Added node: {label} ({node_type})"})
     return {"node_id": node_id, "status": "added"}
 
 @tool
@@ -131,6 +133,8 @@ async def connect_nodes(source_id: str, target_id: str, config: RunnableConfig) 
     edge_payload = {"id": edge_id, "source": source_id, "target": target_id}
 
     await patch_graph(db, session_id, "add_edge", edge_payload)
+    from ai.planner.session import emit_canvas_patch
+    await emit_canvas_patch(session_id, "agent_step", {"text": f"Connected nodes: {source_id} ➔ {target_id}"})
     return {"edge_id": edge_id, "status": "connected"}
 
 @tool

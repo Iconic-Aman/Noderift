@@ -21,34 +21,43 @@ def verify_graph(db: Session, session_id: str) -> str | None:
     nodes = graph.get("nodes", [])
     edges = graph.get("edges", [])
 
-    # Single node is fine — nothing to connect
-    if len(nodes) <= 1:
+    # No nodes built at all — agent skipped tool calls entirely
+    if len(nodes) == 0:
+        return (
+            "You did not add any nodes to the canvas. "
+            "You MUST call add_node for each step of the workflow, "
+            "then call connect_nodes to wire them together."
+        )
+
+    # Single node workflow is valid (nothing to connect)
+    if len(nodes) == 1:
         return None
 
     # Must have at least one edge for multi-node graph
     if not edges:
-        node_labels = [n.get("data", {}).get("label", n["id"]) for n in nodes]
+        node_info = [f"'{n.get('data', {}).get('label', n['id'])}' (id: {n['id']})" for n in nodes]
         return (
-            f"You added {len(nodes)} nodes ({', '.join(node_labels)}) "
-            "but called connect_nodes 0 times. "
-            "You MUST call connect_nodes to link every node in the workflow."
+            f"Nodes already exist on canvas: {', '.join(node_info)}. "
+            "DO NOT call add_node again. "
+            "You MUST call connect_nodes NOW to link these existing nodes together."
         )
 
-    # Check for orphan nodes (no edge in AND no edge out)
+    # Check for orphan nodes
     connected_ids = set()
     for edge in edges:
         connected_ids.add(edge.get("source"))
         connected_ids.add(edge.get("target"))
 
     orphans = [
-        n.get("data", {}).get("label", n["id"])
+        f"'{n.get('data', {}).get('label', n['id'])}' (id: {n['id']})"
         for n in nodes
         if n["id"] not in connected_ids
     ]
     if orphans:
         return (
-            f"These nodes are not connected to anything: {', '.join(orphans)}. "
-            "Call connect_nodes to wire them into the workflow."
+            f"These existing nodes are not connected: {', '.join(orphans)}. "
+            "DO NOT call add_node again. "
+            "Call connect_nodes NOW using their exact IDs."
         )
 
     return None

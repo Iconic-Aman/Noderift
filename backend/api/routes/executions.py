@@ -43,17 +43,20 @@ def trigger_execution(
     db.commit()
     db.refresh(execution)
 
-    try:
-        from core.celery_app import celery_app
-        celery_app.send_task("worker.run_workflow_task", args=[execution.id, target_node_id])
-    except Exception as e:
-        # If queue fails, mark execution as failed instantly
-        execution.status = "failed"
-        execution.error = f"Failed to enqueue task: {str(e)}"
-        execution.finished_at = datetime.now(timezone.utc)
-        db.commit()
-        db.refresh(execution)
+    # Run execution directly via asyncio background task
+    import asyncio
+    from core.database import SessionLocal
+    from core.dag_runner import DAGRunner
 
+    async def _async_run_execution(exec_id: str, node_id: str | None):
+        local_db = SessionLocal()
+        try:
+            runner = DAGRunner(exec_id, target_node_id=node_id)
+            await runner.run(local_db)
+        finally:
+            local_db.close()
+
+    asyncio.create_task(_async_run_execution(execution.id, target_node_id))
     return execution
 
 @router.get("/{workflow_id}/history", response_model=List[ExecutionResponse])

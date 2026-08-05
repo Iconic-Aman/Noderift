@@ -27,7 +27,7 @@ def get_available_nodes() -> List[dict]:
         "playwright": {"url": "string", "title": "string", "...": "dynamic keys defined by output_data in script"},
         "composio": {"result": "object"},
         "database": {"results": "array (for select/find)", "row_count": "number", "status": "string"},
-        "gmail_trigger": {"emails": "array [{id,subject,from,date,snippet}]", "count": "number"},
+        "gmail_trigger": {"emails": "array [{id,subject,from,date,snippet,body}]", "count": "number"},
     }
     return [
         {

@@ -47,6 +47,36 @@ def get_user_gmail_credential(db: Session, user_id: str) -> Dict[str, Any] | Non
     return None
 
 
+import base64
+
+
+def _extract_email_body(payload: Dict[str, Any]) -> str:
+    """Extract plain text body from Gmail API payload object."""
+    if not payload:
+        return ""
+
+    # Direct body
+    body_data = payload.get("body", {}).get("data")
+    if body_data:
+        try:
+            return base64.urlsafe_b64decode(body_data).decode("utf-8", errors="ignore")
+        except Exception:
+            pass
+
+    # Multipart body
+    parts = payload.get("parts", [])
+    for part in parts:
+        if part.get("mimeType") == "text/plain":
+            data = part.get("body", {}).get("data")
+            if data:
+                try:
+                    return base64.urlsafe_b64decode(data).decode("utf-8", errors="ignore")
+                except Exception:
+                    pass
+
+    return ""
+
+
 async def fetch_gmail_messages(access_token: str, query: str = "", max_results: int = 10) -> List[Dict[str, Any]]:
     """Fetch messages matching query from Gmail API."""
     headers = {"Authorization": f"Bearer {access_token}"}
@@ -73,12 +103,14 @@ async def fetch_gmail_messages(access_token: str, query: str = "", max_results: 
             )
             if msg_res.status_code == 200:
                 data = msg_res.json()
-                headers_list = data.get("payload", {}).get("headers", [])
-                
+                payload = data.get("payload", {})
+                headers_list = payload.get("headers", [])
+
                 subject = next((h["value"] for h in headers_list if h["name"].lower() == "subject"), "")
                 sender = next((h["value"] for h in headers_list if h["name"].lower() == "from"), "")
                 date = next((h["value"] for h in headers_list if h["name"].lower() == "date"), "")
                 snippet = data.get("snippet", "")
+                body = _extract_email_body(payload) or snippet
 
                 messages.append({
                     "id": msg_id,
@@ -86,6 +118,7 @@ async def fetch_gmail_messages(access_token: str, query: str = "", max_results: 
                     "from": sender,
                     "date": date,
                     "snippet": snippet,
+                    "body": body,
                 })
 
         return messages

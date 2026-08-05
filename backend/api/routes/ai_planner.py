@@ -34,8 +34,14 @@ async def plan_workflow(req: PlanRequest, db: Session = Depends(get_db), user: U
     if not workflow:
         raise HTTPException(status_code=404, detail="Workflow not found")
 
-    # Load conversation history for this session
-    history = await get_session_messages(req.session_id)
+    # Load history but strip stale tool messages — they cause the agent to
+    # think previous work is done and skip tool calls entirely.
+    raw_history = await get_session_messages(req.session_id)
+    history = [
+        m for m in raw_history
+        if m.__class__.__name__ == "HumanMessage"
+        or (m.__class__.__name__ == "AIMessage" and not getattr(m, "tool_calls", None))
+    ]
 
     try:
         agent = get_planner_agent()
@@ -81,30 +87,17 @@ async def get_messages(session_id: str, db: Session = Depends(get_db), user: Use
 async def websocket_ai_plan(websocket: WebSocket, session_id: str):
     """WebSocket endpoint to subscribe to real-time canvas patch events."""
     await websocket.accept()
-    
-    redis_client = aioredis.from_url(settings.REDIS_URL)
-    pubsub = redis_client.pubsub()
-    channel = f"ai_plan:{session_id}"
-    
-    await pubsub.subscribe(channel)
-    logger.info(f"AI Planner WebSocket client subscribed to {channel}")
-    
+    from ai.planner.session import register_session_websocket, unregister_session_websocket
+    register_session_websocket(session_id, websocket)
+    logger.info(f"AI Planner WebSocket client connected to session {session_id}")
+
     try:
         while True:
-            message = await pubsub.get_message(ignore_subscribe_messages=True, timeout=1.0)
-            if message:
-                data = message["data"]
-                if isinstance(data, bytes):
-                    data = data.decode("utf-8")
-                await websocket.send_text(data)
-            await asyncio.sleep(0.05)
+            # Keep connection alive
+            await websocket.receive_text()
     except WebSocketDisconnect:
-        logger.info(f"AI Planner WebSocket client disconnected from {channel}")
+        logger.info(f"AI Planner WebSocket client disconnected from session {session_id}")
     except Exception as e:
         logger.error(f"AI Planner WebSocket error: {str(e)}")
     finally:
-        try:
-            await pubsub.unsubscribe(channel)
-        except Exception:
-            pass
-        await redis_client.close()
+        unregister_session_websocket(session_id, websocket)

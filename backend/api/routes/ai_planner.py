@@ -11,6 +11,7 @@ from core.database import get_db
 from models.user import User
 from models.workflow import Workflow
 from ai.planner.agent import get_planner_agent
+from ai.planner.loop import run_agent_loop
 from ai.planner.session import get_session_messages, save_session_messages
 from core.security import bearer_scheme
 
@@ -33,36 +34,19 @@ async def plan_workflow(req: PlanRequest, db: Session = Depends(get_db), user: U
     if not workflow:
         raise HTTPException(status_code=404, detail="Workflow not found")
 
-    # Load Nvidia settings
-    key = settings.NVIDIA_API_KEY
-    base_url = settings.NVIDIA_API_URL
-    model = settings.LLM_MODEL
-    if not key or not base_url or not model:
-        raise HTTPException(status_code=400, detail="Missing required NVIDIA LLM configurations.")
-
     # Load conversation history for this session
     history = await get_session_messages(req.session_id)
-    history.append({"role": "user", "content": req.message})
 
     try:
-        # Get and invoke agent
-        agent = get_planner_agent(key, base_url, model)
-        result = await agent.ainvoke(
-            {"messages": history},
-            config={"configurable": {"session_id": req.session_id, "db": db}}
+        agent = get_planner_agent()
+        reply, final_messages = await run_agent_loop(
+            agent=agent,
+            user_prompt=req.message,
+            history=history,
+            session_id=req.session_id,
+            db=db,
         )
-        
-        # Extract reply from last AI message with actual text content
-        messages = result.get("messages", [])
-        reply = ""
-        for msg in reversed(messages):
-            if hasattr(msg, "content") and msg.content and msg.__class__.__name__ == "AIMessage":
-                reply = msg.content if isinstance(msg.content, str) else str(msg.content)
-                break
-        if not reply:
-            reply = "Workflow built on canvas. Check the nodes above."
-        await save_session_messages(req.session_id, messages)
-        
+        await save_session_messages(req.session_id, final_messages)
         return PlanResponse(reply=reply, session_id=req.session_id)
     except Exception as e:
         logger.error(f"AI Planner execution failed: {e}")

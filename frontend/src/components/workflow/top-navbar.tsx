@@ -92,7 +92,7 @@ export function TopNavbar({
           )}
         >
           <Sparkles className="h-3 w-3" />
-          <span>AI Copilot</span>
+          <span>AI Mode</span>
         </button>
       </div>
 

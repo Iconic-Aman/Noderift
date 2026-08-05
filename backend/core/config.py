@@ -69,6 +69,7 @@ class Settings(BaseSettings):
     GOOGLE_CLIENT_ID: str = ""
     GOOGLE_CLIENT_SECRET: str = ""
     GOOGLE_REDIRECT_URI: str = ""
+    GOOGLE_GMAIL_REDIRECT_URI: str = ""
     FRONTEND_URL: str = ""
     GOOGLE_AUTH_URL: str = ""
     GOOGLE_TOKEN_URL: str = ""

@@ -52,7 +52,13 @@ async def plan_workflow(req: PlanRequest, db: Session = Depends(get_db), user: U
             session_id=req.session_id,
             db=db,
         )
-        await save_session_messages(req.session_id, final_messages)
+        # Save clean user prompt and final assistant reply into history
+        from langchain_core.messages import HumanMessage, AIMessage
+        clean_history = list(history) + [
+            HumanMessage(content=req.message),
+            AIMessage(content=reply),
+        ]
+        await save_session_messages(req.session_id, clean_history)
         return PlanResponse(reply=reply, session_id=req.session_id)
     except Exception as e:
         logger.error(f"AI Planner execution failed: {e}")
@@ -70,6 +76,9 @@ async def get_messages(session_id: str, db: Session = Depends(get_db), user: Use
     for idx, msg in enumerate(history):
         role = "assistant"
         if getattr(msg, "type", "") == "human":
+            # Ignore internal harness correction prompts
+            if "Your previous output had the following issue:" in msg.content:
+                continue
             role = "user"
         elif getattr(msg, "type", "") == "ai":
             role = "assistant"

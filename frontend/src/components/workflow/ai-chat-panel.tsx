@@ -14,12 +14,14 @@ export function AIChatPanel({ isDocked = false, onClose }: { isDocked?: boolean;
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [steps, setSteps] = useState<string[]>([]);
+  const stepsRef = useRef<string[]>([]);
 
   const active = isDocked || open;
 
   // Enable live websocket canvas updates & agent step events while panel open
   useAIPlannerSocket(active ? workflowId : undefined, (stepText) => {
-    setSteps((prev) => [...prev, stepText]);
+    stepsRef.current.push(stepText);
+    setSteps([...stepsRef.current]);
   });
 
   useEffect(() => {
@@ -34,6 +36,7 @@ export function AIChatPanel({ isDocked = false, onClose }: { isDocked?: boolean;
     const userMessage: Message = { id: `local-${Date.now()}`, role: "user", content: input.trim() };
     setMessages((prev) => [...prev, userMessage]);
     setInput("");
+    stepsRef.current = [];
     setSteps([]);
     setLoading(true);
     try {
@@ -44,9 +47,10 @@ export function AIChatPanel({ isDocked = false, onClose }: { isDocked?: boolean;
           session_id: workflowId,
         }),
       });
+      const finalSteps = [...stepsRef.current];
       setMessages((prev) => [
         ...prev,
-        { id: `res-${Date.now()}`, role: "assistant", content: res.reply },
+        { id: `res-${Date.now()}`, role: "assistant", content: res.reply, steps: finalSteps },
       ]);
     } catch (err) {
       setMessages((prev) => [
@@ -59,7 +63,6 @@ export function AIChatPanel({ isDocked = false, onClose }: { isDocked?: boolean;
       ]);
     } finally {
       setLoading(false);
-      setSteps([]);
     }
   };
 

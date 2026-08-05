@@ -19,7 +19,7 @@ router = APIRouter(
 )
 
 @router.post("/{workflow_id}", response_model=ExecutionResponse, status_code=201)
-def trigger_execution(
+async def trigger_execution(
     workflow_id: str,
     target_node_id: str = None,
     triggered_by: str = "manual",
@@ -51,7 +51,7 @@ def trigger_execution(
     async def _async_run_execution(exec_id: str, node_id: str | None):
         local_db = SessionLocal()
         try:
-            runner = DAGRunner(exec_id, target_node_id=node_id)
+            runner = DAGRunner(exec_id)
             await runner.run(local_db)
         finally:
             local_db.close()

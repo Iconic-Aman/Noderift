@@ -33,7 +33,7 @@ async def google_login():
         logger.error("[STEP 1] GOOGLE_CLIENT_ID is empty — OAuth will fail")
         raise HTTPException(status_code=500, detail="Google OAuth not configured")
 
-    url = f"{settings.GOOGLE_AUTH_URL}?response_type=code&client_id={settings.GOOGLE_CLIENT_ID}&redirect_uri={settings.GOOGLE_REDIRECT_URI}&scope=openid%20email%20profile&access_type=offline&prompt=select_account"
+    url = f"{settings.GOOGLE_AUTH_URL}?response_type=code&client_id={settings.GOOGLE_CLIENT_ID}&redirect_uri={settings.GOOGLE_REDIRECT_URI}&scope=openid%20email%20profile%20https://www.googleapis.com/auth/gmail.readonly&access_type=offline&prompt=consent"
     logger.info(f"[STEP 1] Redirecting to Google: {url}")
     return RedirectResponse(url)
 
@@ -107,8 +107,11 @@ async def google_callback(code: str, state: str = None, db: Session = Depends(ge
             db.commit()
             db.refresh(user)
 
-    # Store encrypted Gmail credential if refresh_token was returned
-    if refresh_token:
+    # Store encrypted Gmail credential if refresh_token was returned and Gmail scope was granted
+    granted_scope = tokens.get("scope", "")
+    logger.info(f"[STEP 2] Granted scope from Google: {repr(granted_scope)}")
+
+    if refresh_token and ("gmail" in granted_scope or state):
         from models.credential import Credential
         from cryptography.fernet import Fernet
         import json as _json
@@ -116,6 +119,7 @@ async def google_callback(code: str, state: str = None, db: Session = Depends(ge
             "provider": "gmail",
             "refresh_token": refresh_token,
             "email": email or user.email,
+            "scope": granted_scope,
         })
         fernet = Fernet(settings.SECRET_KEY.encode())
         encrypted = fernet.encrypt(cred_blob.encode()).decode()

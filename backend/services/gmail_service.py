@@ -21,29 +21,33 @@ async def refresh_access_token(refresh_token: str) -> str:
         )
     if res.status_code != 200:
         raise ValueError(f"Failed to refresh Google access token: {res.text}")
-    return res.json().get("access_token")
+    token_json = res.json()
+    access_token = token_json.get("access_token")
+    scope = token_json.get("scope", "N/A")
+    import logging
+    logging.getLogger("uvicorn").info(f"[GMAIL REFRESH] Refreshed access token successfully. Scope: {repr(scope)}")
+    return access_token
 
 
 def get_user_gmail_credential(db: Session, user_id: str) -> Dict[str, Any] | None:
-    """Decrypt and retrieve stored Gmail OAuth credential for a user."""
-    cred = (
+    """Decrypt and retrieve latest stored Gmail OAuth credential for a user."""
+    creds = (
         db.query(Credential)
         .filter(
             Credential.user_id == user_id,
             Credential.type == "oauth2",
         )
-        .first()
+        .order_by(Credential.created_at.desc())
+        .all()
     )
-    if not cred:
-        return None
-
     fernet = Fernet(settings.SECRET_KEY.encode())
-    try:
-        decrypted = json.loads(fernet.decrypt(cred.encrypted_data.encode()).decode())
-        if decrypted.get("provider") == "gmail":
-            return decrypted
-    except Exception:
-        pass
+    for cred in creds:
+        try:
+            decrypted = json.loads(fernet.decrypt(cred.encrypted_data.encode()).decode())
+            if decrypted.get("provider") == "gmail":
+                return decrypted
+        except Exception:
+            pass
     return None
 
 

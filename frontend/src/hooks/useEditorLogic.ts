@@ -280,6 +280,7 @@ export function useEditorLogic() {
 
   const onNodeClick = useCallback((_: React.MouseEvent, node: Node<NodeData>) => {
     setSelectedNode(node);
+    setActiveRightTab("config");
     setIsRightOpen(true);
   }, [setSelectedNode]);
 

@@ -68,17 +68,22 @@ export function useEditorLogic() {
   const { triggerExecution, loading } = useExecution();
   const [activeExecutionId, setActiveExecutionId] = useState<string | null>(null);
   const [isExecutionPanelOpen, setIsExecutionPanelOpen] = useState(false);
-  const [executionStatus, setExecutionStatus] = useState<"idle" | "running" | "success">("idle");
+  const [executionStatus, setExecutionStatus] = useState<string>("idle");
   const [isSingleRun, setIsSingleRun] = useState(false);
   const { logs, setLogs } = useWebSocket(activeExecutionId);
 
   // Sync execution status from live websocket event logs
   useEffect(() => {
     if (logs.length > 0) {
-      const lastLog = logs[logs.length - 1];
-      if (lastLog.type === "workflow_started") setExecutionStatus("running");
-      else if (lastLog.type === "workflow_success") setExecutionStatus("success");
-      else if (lastLog.type === "workflow_failed") setExecutionStatus("idle");
+      const hasNeedsAuth = logs.some((l) => l.type === "needs_auth");
+      const hasFailed = logs.some((l) => l.type === "workflow_failed");
+      const hasSuccess = logs.some((l) => l.type === "workflow_success");
+      const hasStarted = logs.some((l) => l.type === "workflow_started");
+
+      if (hasNeedsAuth) setExecutionStatus("needs_auth");
+      else if (hasFailed) setExecutionStatus("failed");
+      else if (hasSuccess) setExecutionStatus("success");
+      else if (hasStarted) setExecutionStatus("running");
     }
   }, [logs]);
 
@@ -107,6 +112,7 @@ export function useEditorLogic() {
       if (log.type === "node_started") latestStatuses[log.node_id] = "running";
       else if (log.type === "node_success") { latestStatuses[log.node_id] = "success"; latestOutputs[log.node_id] = log.output; }
       else if (log.type === "node_failed") { latestStatuses[log.node_id] = "failed"; latestErrors[log.node_id] = log.error; }
+      else if (log.type === "needs_auth") { latestStatuses[log.node_id] = "failed"; latestErrors[log.node_id] = "Gmail account not connected"; }
     }
 
     let hasChanges = false;

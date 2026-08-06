@@ -42,8 +42,10 @@ export function TopNavbar({
     idle: { label: "Idle", icon: Clock, cls: "bg-slate-700/50 text-slate-400 border-slate-600/50" },
     running: { label: "Running", icon: Loader2, cls: "bg-blue-500/10 text-blue-400 border-blue-500/30", spin: true },
     success: { label: "Success", icon: Check, cls: "bg-green-500/10 text-green-400 border-green-500/30" },
+    failed: { label: "Failed", icon: Clock, cls: "bg-red-500/10 text-red-400 border-red-500/30" },
+    needs_auth: { label: "Needs Auth", icon: Clock, cls: "bg-amber-500/10 text-amber-400 border-amber-500/30" },
   };
-  const cfg = statusCfg[status as keyof typeof statusCfg];
+  const cfg = statusCfg[status] || statusCfg.idle;
 
   return (
     <div className="flex h-14 items-center justify-between border-b border-slate-800 bg-slate-900/80 px-4 backdrop-blur-sm">

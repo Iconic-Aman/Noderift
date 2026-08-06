@@ -49,12 +49,11 @@ async def trigger_execution(
     from core.dag_runner import DAGRunner
 
     async def _async_run_execution(exec_id: str, node_id: str | None):
-        local_db = SessionLocal()
         try:
             runner = DAGRunner(exec_id)
-            await runner.run(local_db)
-        finally:
-            local_db.close()
+            await runner.run(target_node_id=node_id)
+        except Exception as e:
+            logger.error(f"[EXECUTION ERROR] Execution {exec_id} failed: {e}")
 
     asyncio.create_task(_async_run_execution(execution.id, target_node_id))
     return execution

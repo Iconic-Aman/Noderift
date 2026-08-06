@@ -26,13 +26,36 @@ function buildUnifiedLogs(logs: LogMessage[]): LogEntry[] {
       if (existingIdx !== undefined) {
         const entry = unifiedLogs[existingIdx];
         if (log.type === "node_success") { entry.status = "success"; entry.duration_ms = log.duration_ms; entry.output = log.output; }
-        else if (log.type === "node_failed") { entry.status = "failed"; entry.duration_ms = log.duration_ms; entry.error = log.error; }
+        else if (log.type === "node_failed" || log.type === "needs_auth") { entry.status = "failed"; entry.duration_ms = log.duration_ms; entry.error = log.error || "Gmail authentication required"; }
       } else {
         nodeIndexMap[log.node_id] = unifiedLogs.length;
-        unifiedLogs.push({ id: log.node_id, name: log.node_name || "Node", type: log.node_type || "node", status: log.type === "node_started" ? "running" : log.type === "node_success" ? "success" : "failed", message: "", duration_ms: log.duration_ms, output: log.output, error: log.error });
+        unifiedLogs.push({
+          id: log.node_id,
+          name: log.node_name || "Gmail Trigger",
+          type: log.node_type || "gmail_trigger",
+          status: log.type === "node_started" ? "running" : log.type === "node_success" ? "success" : "failed",
+          message: "",
+          duration_ms: log.duration_ms,
+          output: log.output,
+          error: log.error || (log.type === "needs_auth" ? "Gmail authentication required" : undefined)
+        });
       }
     } else {
-      unifiedLogs.push({ id: `system-${unifiedLogs.length}`, name: "System", type: "system", status: "system", message: log.type === "workflow_started" ? "Workflow execution started" : log.type === "workflow_success" ? "Workflow execution completed successfully" : log.type === "workflow_failed" ? `Workflow execution failed: ${log.error}` : "System event" });
+      unifiedLogs.push({
+        id: `system-${unifiedLogs.length}`,
+        name: "System",
+        type: "system",
+        status: "system",
+        message: log.type === "workflow_started"
+          ? "Workflow execution started"
+          : log.type === "workflow_success"
+          ? "Workflow execution completed successfully"
+          : log.type === "needs_auth"
+          ? "Gmail authentication required — click 'Connect Gmail' button above"
+          : log.type === "workflow_failed"
+          ? `Workflow execution failed: ${log.error}`
+          : "System event"
+      });
     }
   });
   return unifiedLogs;

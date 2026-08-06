@@ -26,7 +26,10 @@ class DAGRunner:
             "timestamp": datetime.now(timezone.utc).isoformat(),
             **data
         }
-        await self.redis_client.publish(channel, json.dumps(payload))
+        try:
+            await self.redis_client.publish(channel, json.dumps(payload))
+        except Exception:
+            pass
 
     def topological_sort(self, nodes: list, edges: list) -> list:
         """Sort nodes using Kahn's algorithm. Detects cycles."""
@@ -219,6 +222,8 @@ class DAGRunner:
                     await self.publish_log("needs_auth", {
                         "provider": "gmail",
                         "node_id": node_id,
+                        "node_name": node_name,
+                        "error": "Gmail account not connected",
                         "connect_url": f"/api/oauth/gmail/start?user_id={user_id}",
                     })
                     execution.status = "needs_auth"
@@ -304,4 +309,7 @@ class DAGRunner:
 
         await self.publish_log("workflow_success", {})
         db.close()
-        await self.redis_client.close()
+        try:
+            await self.redis_client.close()
+        except Exception:
+            pass

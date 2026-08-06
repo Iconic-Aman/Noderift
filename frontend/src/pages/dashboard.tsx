@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { KeyRound, Plus, Play, LogOut, Trash2 } from "lucide-react";
+import { KeyRound, Plus, Play, LogOut, Trash2, Home } from "lucide-react";
 import { apiFetch } from "@/lib/api";
 
 export function Dashboard() {
@@ -59,6 +59,12 @@ export function Dashboard() {
           <h1 className="text-2xl font-bold text-white">My Workflows</h1>
           <div className="flex items-center gap-4">
             <button
+              onClick={() => navigate("/")}
+              className="flex items-center gap-2 rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-sm text-slate-300 hover:bg-slate-700"
+            >
+              <Home className="h-4 w-4" /> Home
+            </button>
+            <button
               onClick={() => navigate("/credentials")}
               className="flex items-center gap-2 rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-sm text-slate-300 hover:bg-slate-700"
             >
@@ -101,10 +107,10 @@ export function Dashboard() {
             </div>
           ))}
           {workflows.length === 0 && (
-             <div className="col-span-full py-12 text-center border border-dashed border-slate-800 rounded-xl">
-               <p className="text-slate-400 mb-2">No workflows yet.</p>
-               <button onClick={createWorkflow} className="text-sm text-blue-400 hover:text-blue-300">Create your first one</button>
-             </div>
+            <div className="col-span-full py-12 text-center border border-dashed border-slate-800 rounded-xl">
+              <p className="text-slate-400 mb-2">No workflows yet.</p>
+              <button onClick={createWorkflow} className="text-sm text-blue-400 hover:text-blue-300">Create your first one</button>
+            </div>
           )}
         </div>
       </div>

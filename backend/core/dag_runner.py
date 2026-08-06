@@ -219,6 +219,10 @@ class DAGRunner:
                 from services.gmail_service import get_user_gmail_credential
                 user_id = workflow.user_id
                 if not user_id or not get_user_gmail_credential(db, user_id):
+                    if node_log:
+                        node_log.status = "failed"
+                        node_log.error = "Gmail account not connected"
+                        node_log.finished_at = datetime.now(timezone.utc)
                     await self.publish_log("needs_auth", {
                         "provider": "gmail",
                         "node_id": node_id,

@@ -26,6 +26,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
         <Route path="/editor/:id" element={<PrivateRoute><Editor /></PrivateRoute>} />
         <Route path="/history/:id" element={<PrivateRoute><History /></PrivateRoute>} />
         <Route path="/oauth/success" element={<OAuthSuccess />} />
+        <Route path="/oauth-success" element={<OAuthSuccess />} />
       </Routes>
     </BrowserRouter>
   </React.StrictMode>,

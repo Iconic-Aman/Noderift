@@ -11,22 +11,24 @@ from models.credential import Credential
 
 router = APIRouter(prefix="/oauth/gmail", tags=["Gmail OAuth"])
 
-GMAIL_SCOPE = "https://www.googleapis.com/auth/gmail.readonly"
+import urllib.parse
+
+GMAIL_SCOPE = "openid email profile https://www.googleapis.com/auth/gmail.readonly"
 
 
 @router.get("/start")
 async def gmail_oauth_start(user_id: str):
     """Start Google OAuth for Gmail read-only access."""
-    url = (
-        f"{settings.GOOGLE_AUTH_URL}"
-        f"?response_type=code"
-        f"&client_id={settings.GOOGLE_CLIENT_ID}"
-        f"&redirect_uri={settings.GOOGLE_GMAIL_REDIRECT_URI}"
-        f"&scope={GMAIL_SCOPE}"
-        f"&access_type=offline"
-        f"&prompt=consent"
-        f"&state={user_id}"
-    )
+    params = {
+        "response_type": "code",
+        "client_id": settings.GOOGLE_CLIENT_ID,
+        "redirect_uri": settings.GOOGLE_REDIRECT_URI,
+        "scope": GMAIL_SCOPE,
+        "access_type": "offline",
+        "prompt": "consent",
+        "state": user_id,
+    }
+    url = f"{settings.GOOGLE_AUTH_URL}?{urllib.parse.urlencode(params)}"
     return RedirectResponse(url)
 
 
@@ -43,7 +45,7 @@ async def gmail_oauth_callback(code: str, state: str = Query(...), db: Session =
                 "client_secret": settings.GOOGLE_CLIENT_SECRET,
                 "code": code,
                 "grant_type": "authorization_code",
-                "redirect_uri": settings.GOOGLE_GMAIL_REDIRECT_URI,
+                "redirect_uri": settings.GOOGLE_REDIRECT_URI,
             },
         )
 

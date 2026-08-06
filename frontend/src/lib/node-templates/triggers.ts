@@ -42,4 +42,15 @@ export const triggerTemplates: NodeTemplate[] = [
       { name: "filter", label: "Subject Filter", type: "text", placeholder: "Contains..." },
     ],
   },
+  {
+    id: "gmail_trigger",
+    label: "Gmail Trigger",
+    icon: "mail",
+    category: "triggers",
+    color: "#ea4335",
+    description: "Fetch emails from user's Gmail account",
+    configFields: [
+      { name: "sender_email", label: "Sender Email", type: "text", placeholder: "student@internshala.com" },
+    ],
+  },
 ];

@@ -3,7 +3,7 @@ import { useWorkflowStore } from '../store/workflowStore';
 import { API_URL } from '../lib/api';
 import { getNodeTemplate } from '../lib/node-templates';
 
-export function useAIPlannerSocket(sessionId: string | undefined) {
+export function useAIPlannerSocket(sessionId: string | undefined, onAgentStep?: (step: string) => void) {
   const addNode = useWorkflowStore((state) => state.addNode);
   const updateNodeConfig = useWorkflowStore((state) => state.updateNodeConfig);
   const addEdgeWebSocket = useWorkflowStore((state) => state.addEdgeWebSocket);
@@ -20,10 +20,13 @@ export function useAIPlannerSocket(sessionId: string | undefined) {
     ws.onmessage = (event) => {
       try {
         const { type, payload } = JSON.parse(event.data);
+        if (type === 'agent_step' && payload?.text && onAgentStep) {
+          onAgentStep(payload.text);
+        }
         switch (type) {
           case 'node_added': {
-            const prefix = payload.id.split('-')[0];
-            const template = getNodeTemplate(prefix);
+            const nodeType = payload.data?.node_type || payload.id.split('-')[0];
+            const template = getNodeTemplate(nodeType);
             if (template) {
               payload.data = {
                 ...payload.data,

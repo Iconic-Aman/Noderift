@@ -19,8 +19,8 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(
     prefix="/auth", 
-    tags=["auth"],
-    dependencies=[Depends(bearer_scheme)])
+    tags=["auth"]
+)
 
 @router.get("/google/login")
 async def google_login():
@@ -33,14 +33,14 @@ async def google_login():
         logger.error("[STEP 1] GOOGLE_CLIENT_ID is empty — OAuth will fail")
         raise HTTPException(status_code=500, detail="Google OAuth not configured")
 
-    url = f"{settings.GOOGLE_AUTH_URL}?response_type=code&client_id={settings.GOOGLE_CLIENT_ID}&redirect_uri={settings.GOOGLE_REDIRECT_URI}&scope=openid%20email%20profile&access_type=offline&prompt=select_account"
+    url = f"{settings.GOOGLE_AUTH_URL}?response_type=code&client_id={settings.GOOGLE_CLIENT_ID}&redirect_uri={settings.GOOGLE_REDIRECT_URI}&scope=openid%20email%20profile%20https://www.googleapis.com/auth/gmail.readonly&access_type=offline&prompt=consent"
     logger.info(f"[STEP 1] Redirecting to Google: {url}")
     return RedirectResponse(url)
 
 @router.get("/google/callback")
-async def google_callback(code: str, db: Session = Depends(get_db)):
+async def google_callback(code: str, state: str = None, db: Session = Depends(get_db)):
     logger.info("[STEP 2] /auth/google/callback called")
-    logger.info(f"[STEP 2] code received (first 20 chars): {repr(code[:20])}")
+    logger.info(f"[STEP 2] code received (first 20 chars): {repr(code[:20])}, state={state}")
 
     # Exchange code for tokens
     async with httpx.AsyncClient() as client:
@@ -60,54 +60,92 @@ async def google_callback(code: str, db: Session = Depends(get_db)):
         logger.error(f"[STEP 2] Token exchange failed: {token_res.text}")
         raise HTTPException(status_code=400, detail="Failed to fetch token")
 
-    access_token = token_res.json().get("access_token")
+    tokens = token_res.json()
+    access_token = tokens.get("access_token")
+    refresh_token = tokens.get("refresh_token")
     logger.info(f"[STEP 2] Access token: {'obtained' if access_token else 'MISSING'}")
 
-    # Fetch user info from Google
-    async with httpx.AsyncClient() as client:
-        user_res = await client.get(
-            settings.GOOGLE_USERINFO_URL,
-            headers={"Authorization": f"Bearer {access_token}"}
-        )
-
-    logger.info(f"[STEP 2] Userinfo status: {user_res.status_code}")
-    if user_res.status_code != 200:
-        logger.error(f"[STEP 2] Userinfo failed: {user_res.text}")
-        raise HTTPException(status_code=400, detail="Failed to fetch user info from Google")
-
-    google_user = user_res.json()
-    email = google_user.get("email")
-    name = google_user.get("name")
-    picture = google_user.get("picture")
-    logger.info(f"[STEP 2] Google user: email={email}, name={name}")
-
-    # Upsert user in DB by email (handles both new and existing users regardless of how they signed up)
-    user = db.query(User).filter(User.email == email).first()
-    if user:
-        logger.info(f"[STEP 2] Existing user found: id={user.id}")
-        user.name = name
-        user.picture = picture
-        db.commit()
-        db.refresh(user)
+    # If state contains user_id (from Gmail OAuth flow)
+    target_user = None
+    if state:
+        target_user = db.query(User).filter(User.id == str(state)).first()
+        logger.info(f"[STEP 2] Gmail OAuth state={repr(state)}, found target_user={target_user}")
+        if not target_user:
+            raise HTTPException(status_code=404, detail=f"User '{state}' not found in database. Please log in first.")
+        user = target_user
+        email = user.email
     else:
-        logger.info(f"[STEP 2] Creating new user for email={email}")
-        user = User(
-            id=str(uuid4()),
-            email=email,
-            name=name,
-            picture=picture,
-            created_at=datetime.now(timezone.utc)
-        )
-        db.add(user)
-        db.commit()
-        db.refresh(user)
+        # Fetch user info from Google (login flow)
+        async with httpx.AsyncClient() as client:
+            user_res = await client.get(
+                settings.GOOGLE_USERINFO_URL,
+                headers={"Authorization": f"Bearer {access_token}"}
+            )
+        if user_res.status_code != 200:
+            logger.error(f"[STEP 2] Userinfo failed: {user_res.text}")
+            raise HTTPException(status_code=400, detail="Failed to fetch user info from Google")
+        google_user = user_res.json()
+        email = google_user.get("email", "")
+        name = google_user.get("name", "")
+        picture = google_user.get("picture", "")
 
-    # Redirect to frontend with DB user UUID (not Google token)
-    logger.info(f"[STEP 2] Redirecting to frontend with user.id={user.id}")
-    redirect_url = f"{settings.FRONTEND_URL}/login?token={user.id}"
+        user = db.query(User).filter(User.email == email).first()
+        if user:
+            user.name = name
+            user.picture = picture
+            db.commit()
+            db.refresh(user)
+        else:
+            user = User(
+                id=str(uuid4()),
+                email=email,
+                name=name,
+                picture=picture,
+                created_at=datetime.now(timezone.utc)
+            )
+            db.add(user)
+            db.commit()
+            db.refresh(user)
+
+    # Store encrypted Gmail credential if refresh_token was returned and Gmail scope was granted
+    granted_scope = tokens.get("scope", "")
+    logger.info(f"[STEP 2] Granted scope from Google: {repr(granted_scope)}")
+
+    if refresh_token and ("gmail" in granted_scope or state):
+        from models.credential import Credential
+        from cryptography.fernet import Fernet
+        import json as _json
+        cred_blob = _json.dumps({
+            "provider": "gmail",
+            "refresh_token": refresh_token,
+            "email": email or user.email,
+            "scope": granted_scope,
+        })
+        fernet = Fernet(settings.SECRET_KEY.encode())
+        encrypted = fernet.encrypt(cred_blob.encode()).decode()
+
+        existing_cred = db.query(Credential).filter(
+            Credential.user_id == user.id,
+            Credential.name == "Gmail OAuth"
+        ).first()
+        if existing_cred:
+            existing_cred.encrypted_data = encrypted
+        else:
+            db.add(Credential(
+                user_id=user.id,
+                name="Gmail OAuth",
+                type="oauth2",
+                encrypted_data=encrypted,
+            ))
+        db.commit()
+
+    if state:
+        redirect_url = f"{settings.FRONTEND_URL}/oauth-success?provider=gmail"
+    else:
+        redirect_url = f"{settings.FRONTEND_URL}/login?token={user.id}"
     return RedirectResponse(url=redirect_url)
 
-@router.get("/me")
+@router.get("/me", dependencies=[Depends(bearer_scheme)])
 async def get_me(request: Request):
     logger.info("[STEP 3] /auth/me called")
     token = request.state.token

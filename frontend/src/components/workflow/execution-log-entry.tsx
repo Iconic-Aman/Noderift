@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { Loader2, CheckCircle2, AlertTriangle, ChevronDown, ChevronRight, Terminal } from "lucide-react";
+import { Loader2, CheckCircle2, AlertTriangle, ChevronDown, ChevronRight, Terminal, Download } from "lucide-react";
+import { API_URL } from "@/lib/api";
 
 interface LogEntry {
   id: string;
@@ -39,6 +40,16 @@ export function ExecutionLogEntry({ log }: Props) {
           </span>
         </div>
         <div className="flex items-center gap-3">
+          {log.status === "success" && (log.type === "code" || log.name.toLowerCase().includes("excel")) && (
+            <a
+              href={`${API_URL}/files/download/emails.xlsx`}
+              download="emails.xlsx"
+              className="flex items-center gap-1 rounded bg-blue-600/20 px-2 py-0.5 text-[10px] font-medium text-blue-400 hover:bg-blue-600/30 border border-blue-500/30 transition-all cursor-pointer"
+            >
+              <Download className="h-3 w-3" />
+              <span>Download emails.xlsx</span>
+            </a>
+          )}
           {log.duration_ms !== undefined && <span className="text-[10px] text-slate-500">{log.duration_ms}ms</span>}
           {isExpandable && (
             <button onClick={() => setIsExpanded(v => !v)} className="flex items-center gap-1 text-[10px] text-blue-400 hover:underline">

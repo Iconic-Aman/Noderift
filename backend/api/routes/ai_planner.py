@@ -11,6 +11,7 @@ from core.database import get_db
 from models.user import User
 from models.workflow import Workflow
 from ai.planner.agent import get_planner_agent
+from ai.planner.loop import run_agent_loop
 from ai.planner.session import get_session_messages, save_session_messages
 from core.security import bearer_scheme
 
@@ -33,30 +34,31 @@ async def plan_workflow(req: PlanRequest, db: Session = Depends(get_db), user: U
     if not workflow:
         raise HTTPException(status_code=404, detail="Workflow not found")
 
-    # Load Nvidia settings
-    key = settings.NVIDIA_API_KEY
-    base_url = settings.NVIDIA_API_URL
-    model = settings.LLM_MODEL
-    if not key or not base_url or not model:
-        raise HTTPException(status_code=400, detail="Missing required NVIDIA LLM configurations.")
-
-    # Load conversation history for this session
-    history = await get_session_messages(req.session_id)
-    history.append({"role": "user", "content": req.message})
+    # Load history but strip stale tool messages — they cause the agent to
+    # think previous work is done and skip tool calls entirely.
+    raw_history = await get_session_messages(req.session_id)
+    history = [
+        m for m in raw_history
+        if m.__class__.__name__ == "HumanMessage"
+        or (m.__class__.__name__ == "AIMessage" and not getattr(m, "tool_calls", None))
+    ]
 
     try:
-        # Get and invoke agent
-        agent = get_planner_agent(key, base_url, model)
-        result = await agent.ainvoke(
-            {"messages": history},
-            config={"configurable": {"session_id": req.session_id, "db": db}}
+        agent = get_planner_agent()
+        reply, final_messages = await run_agent_loop(
+            agent=agent,
+            user_prompt=req.message,
+            history=history,
+            session_id=req.session_id,
+            db=db,
         )
-        
-        # Extract reply and save history
-        messages = result.get("messages", [])
-        reply = messages[-1].content if messages else "No response generated."
-        await save_session_messages(req.session_id, messages)
-        
+        # Save clean user prompt and final assistant reply into history
+        from langchain_core.messages import HumanMessage, AIMessage
+        clean_history = list(history) + [
+            HumanMessage(content=req.message),
+            AIMessage(content=reply),
+        ]
+        await save_session_messages(req.session_id, clean_history)
         return PlanResponse(reply=reply, session_id=req.session_id)
     except Exception as e:
         logger.error(f"AI Planner execution failed: {e}")
@@ -74,6 +76,9 @@ async def get_messages(session_id: str, db: Session = Depends(get_db), user: Use
     for idx, msg in enumerate(history):
         role = "assistant"
         if getattr(msg, "type", "") == "human":
+            # Ignore internal harness correction prompts
+            if "Your previous output had the following issue:" in msg.content:
+                continue
             role = "user"
         elif getattr(msg, "type", "") == "ai":
             role = "assistant"
@@ -91,30 +96,17 @@ async def get_messages(session_id: str, db: Session = Depends(get_db), user: Use
 async def websocket_ai_plan(websocket: WebSocket, session_id: str):
     """WebSocket endpoint to subscribe to real-time canvas patch events."""
     await websocket.accept()
-    
-    redis_client = aioredis.from_url(settings.REDIS_URL)
-    pubsub = redis_client.pubsub()
-    channel = f"ai_plan:{session_id}"
-    
-    await pubsub.subscribe(channel)
-    logger.info(f"AI Planner WebSocket client subscribed to {channel}")
-    
+    from ai.planner.session import register_session_websocket, unregister_session_websocket
+    register_session_websocket(session_id, websocket)
+    logger.info(f"AI Planner WebSocket client connected to session {session_id}")
+
     try:
         while True:
-            message = await pubsub.get_message(ignore_subscribe_messages=True, timeout=1.0)
-            if message:
-                data = message["data"]
-                if isinstance(data, bytes):
-                    data = data.decode("utf-8")
-                await websocket.send_text(data)
-            await asyncio.sleep(0.05)
+            # Keep connection alive for server-sent events
+            await asyncio.sleep(1)
     except WebSocketDisconnect:
-        logger.info(f"AI Planner WebSocket client disconnected from {channel}")
+        logger.info(f"AI Planner WebSocket client disconnected from session {session_id}")
     except Exception as e:
         logger.error(f"AI Planner WebSocket error: {str(e)}")
     finally:
-        try:
-            await pubsub.unsubscribe(channel)
-        except Exception:
-            pass
-        await redis_client.close()
+        unregister_session_websocket(session_id, websocket)

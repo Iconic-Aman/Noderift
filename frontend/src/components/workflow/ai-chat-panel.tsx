@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
 import { Send, Sparkles, X } from "lucide-react";
 import { apiFetch } from "@/lib/api";
@@ -13,16 +13,33 @@ export function AIChatPanel({ isDocked = false, onClose }: { isDocked?: boolean;
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
+  const [steps, setSteps] = useState<string[]>([]);
+  const stepsRef = useRef<string[]>([]);
 
   const active = isDocked || open;
 
-  // Enable live websocket canvas updates while the chat panel is open
-  useAIPlannerSocket(active ? workflowId : undefined);
+  // Enable live websocket canvas updates & agent step events while panel open
+  useAIPlannerSocket(active ? workflowId : undefined, (stepText) => {
+    stepsRef.current.push(stepText);
+    setSteps([...stepsRef.current]);
+  });
 
   useEffect(() => {
     if (!active || !workflowId) return;
     apiFetch(`/ai/plan/${workflowId}/messages`)
-      .then(setMessages)
+      .then((history: Message[]) => {
+        setMessages((prev) => {
+          if (prev.length === 0) return history;
+          const stepsMap: Record<string, string[]> = {};
+          prev.forEach((m) => {
+            if (m.steps && m.steps.length > 0) stepsMap[m.content] = m.steps;
+          });
+          return history.map((m) => ({
+            ...m,
+            steps: m.steps || stepsMap[m.content],
+          }));
+        });
+      })
       .catch(() => setMessages([]));
   }, [active, workflowId]);
 
@@ -31,6 +48,8 @@ export function AIChatPanel({ isDocked = false, onClose }: { isDocked?: boolean;
     const userMessage: Message = { id: `local-${Date.now()}`, role: "user", content: input.trim() };
     setMessages((prev) => [...prev, userMessage]);
     setInput("");
+    stepsRef.current = [];
+    setSteps([]);
     setLoading(true);
     try {
       const res = await apiFetch("/ai/plan", {
@@ -40,9 +59,10 @@ export function AIChatPanel({ isDocked = false, onClose }: { isDocked?: boolean;
           session_id: workflowId,
         }),
       });
+      const finalSteps = [...stepsRef.current];
       setMessages((prev) => [
         ...prev,
-        { id: `res-${Date.now()}`, role: "assistant", content: res.reply },
+        { id: `res-${Date.now()}`, role: "assistant", content: res.reply, steps: finalSteps },
       ]);
     } catch (err) {
       setMessages((prev) => [
@@ -93,7 +113,7 @@ export function AIChatPanel({ isDocked = false, onClose }: { isDocked?: boolean;
       {messages.map((message) => (
         <AIChatMessage key={message.id} message={message} />
       ))}
-      {loading && <TypingIndicator />}
+      {loading && <TypingIndicator steps={steps} />}
     </div>
   );
 

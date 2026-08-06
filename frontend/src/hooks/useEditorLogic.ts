@@ -27,8 +27,15 @@ export function useEditorLogic() {
   const [isLeftOpen, setIsLeftOpen] = useState(true);
   const [isRightOpen, setIsRightOpen] = useState(true);
 
-  // Mode and active right panel tab state
-  const [mode, setMode] = useState<"manual" | "automatic">("manual");
+  // Mode and active right panel tab state (persisted in localStorage)
+  const [mode, setModeState] = useState<"manual" | "automatic">(() => {
+    return (localStorage.getItem("noderift_editor_mode") as "manual" | "automatic") || "manual";
+  });
+  const setMode = useCallback((newMode: "manual" | "automatic") => {
+    setModeState(newMode);
+    localStorage.setItem("noderift_editor_mode", newMode);
+  }, []);
+
   const [activeRightTab, setActiveRightTab] = useState<"chat" | "config">("chat");
 
   // Resizable sidebar and logs panel states
@@ -170,6 +177,10 @@ export function useEditorLogic() {
           });
           setNodes(styledNodes);
           setEdges(wf.graph.edges || []);
+        }
+        const history = await apiFetch(`/executions/${id}/history`);
+        if (history && history.length > 0) {
+          setActiveExecutionId(history[0].id);
         }
       } catch (err) {
         console.error("Failed to load workflow", err);

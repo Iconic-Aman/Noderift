@@ -68,23 +68,19 @@ def get_planner_agent(api_key: str = "", base_url: str = "", model_name: str = "
     """Factory to create a ReAct planner agent using OpenRouter or Groq."""
     from core.config import settings
 
-    if settings.OPENROUTER_API_KEY:
-        from langchain_openai import ChatOpenAI
-        print(f"AI Planner loading OpenRouter Model: {settings.OPENROUTER_MODEL}")
-        llm = ChatOpenAI(
-            model=settings.OPENROUTER_MODEL,
-            openai_api_key=settings.OPENROUTER_API_KEY,
-            openai_api_base=settings.OPENROUTER_API_URL,
-            temperature=temperature,
-        )
-    else:
-        from langchain_groq import ChatGroq
-        print(f"AI Planner loading Groq Model: {settings.GROQ_MODEL}")
-        llm = ChatGroq(
-            model=settings.GROQ_MODEL,
-            api_key=settings.GROQ_API_KEY,
-            temperature=temperature,
-        )
+    import logging
+    logger = logging.getLogger("uvicorn")
+
+    target_model = model_name or settings.OPENROUTER_MODEL
+    logger.info(f"🤖 [AI PLANNER] Using OpenRouter Model: '{target_model}'")
+
+    from langchain_openai import ChatOpenAI
+    llm = ChatOpenAI(
+        model=target_model,
+        openai_api_key=settings.OPENROUTER_API_KEY,
+        openai_api_base=settings.OPENROUTER_API_URL,
+        temperature=temperature,
+    )
 
     tools = [
         get_available_nodes,

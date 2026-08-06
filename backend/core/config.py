@@ -51,10 +51,6 @@ class Settings(BaseSettings):
     LLM_MODEL: str = ""
     EMBEDDING_MODEL: str = ""
 
-    # Groq Config
-    GROQ_API_KEY: str = ""
-    GROQ_MODEL: str = ""
-
     # OpenRouter Config
     OPENROUTER_API_KEY: str = ""
     OPENROUTER_MODEL: str = "cohere/north-mini-code:free"

@@ -14,7 +14,7 @@ class CodeNode(BaseNode):
     async def execute(self, inputs: NodeInput, config: Dict[str, Any]) -> NodeOutput:
         code_str = config.get("code", "").strip()
         if not code_str:
-            raise ValueError("No code provided for Code node")
+            code_str = "output_data = {'status': 'processed', 'input': input_data}"
 
         # Prepare context
         local_vars = {
@@ -25,6 +25,8 @@ class CodeNode(BaseNode):
             "datetime": __import__("datetime"),
             "math": __import__("math"),
             "re": __import__("re"),
+            "csv": __import__("csv"),
+            "os": __import__("os"),
         }
 
         # Capture print outputs

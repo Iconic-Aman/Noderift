@@ -9,6 +9,7 @@ from models.user import User
 from models.workflow import Workflow
 from models.execution import Execution
 from models.node_log import NodeLog
+from core.dag_runner import DAGRunner
 from schemas.execution import ExecutionResponse, ExecutionDetailResponse
 from core.security import bearer_scheme
 
@@ -45,15 +46,17 @@ async def trigger_execution(
 
     # Run execution directly via asyncio background task
     import asyncio
-    from core.database import SessionLocal
-    from core.dag_runner import DAGRunner
+    import logging
+    log = logging.getLogger("uvicorn")
 
     async def _async_run_execution(exec_id: str, node_id: str | None):
+        log.info(f"[EXEC] _async_run_execution STARTED for exec_id={exec_id}")
         try:
             runner = DAGRunner(exec_id)
             await runner.run(target_node_id=node_id)
+            log.info(f"[EXEC] _async_run_execution COMPLETED for exec_id={exec_id}")
         except Exception as e:
-            logger.error(f"[EXECUTION ERROR] Execution {exec_id} failed: {e}")
+            log.error(f"[EXECUTION ERROR] Execution {exec_id} failed: {e}")
 
     asyncio.create_task(_async_run_execution(execution.id, target_node_id))
     return execution

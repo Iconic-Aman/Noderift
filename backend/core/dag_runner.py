@@ -63,6 +63,8 @@ class DAGRunner:
 
     async def run(self, target_node_id: str = None):
         """Execute the DAG."""
+        import logging
+        logging.getLogger("uvicorn").info(f"[DAGRunner] run() STARTED for execution_id={self.execution_id}")
         db: Session = SessionLocal()
         execution = db.query(Execution).filter(Execution.id == self.execution_id).first()
         if not execution:
@@ -257,9 +259,11 @@ class DAGRunner:
                 # Calculate duration
                 duration_ms = int((time.time() - start_time) * 1000)
 
+                log_input = {k: v for k, v in resolved_config.items() if not k.startswith("_")}
+
                 if not is_ancestor:
                     node_log.status = "success"
-                    node_log.input = resolved_config
+                    node_log.input = log_input
                     node_log.output = node_output.data
                     node_log.duration_ms = duration_ms
                     node_log.finished_at = datetime.now(timezone.utc)
@@ -278,10 +282,11 @@ class DAGRunner:
                 # Capture exact duration on failure too
                 duration_ms = int((time.time() - start_time) * 1000)
                 error_msg = str(e)
+                log_input = {k: v for k, v in resolved_config.items() if not k.startswith("_")}
 
                 if not is_ancestor:
                     node_log.status = "failed"
-                    node_log.input = resolved_config
+                    node_log.input = log_input
                     node_log.error = error_msg
                     node_log.duration_ms = duration_ms
                     node_log.finished_at = datetime.now(timezone.utc)

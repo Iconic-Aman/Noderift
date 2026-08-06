@@ -31,8 +31,8 @@ function buildUnifiedLogs(logs: LogMessage[]): LogEntry[] {
         nodeIndexMap[log.node_id] = unifiedLogs.length;
         unifiedLogs.push({
           id: log.node_id,
-          name: log.node_name || "Gmail Trigger",
-          type: log.node_type || "gmail_trigger",
+          name: log.node_name || log.node_id,
+          type: log.node_type || log.node_id.split("-")[0],
           status: log.type === "node_started" ? "running" : log.type === "node_success" ? "success" : "failed",
           message: "",
           duration_ms: log.duration_ms,

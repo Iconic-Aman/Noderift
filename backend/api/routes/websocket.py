@@ -13,6 +13,12 @@ async def websocket_execution_logs(websocket: WebSocket, execution_id: str):
     """WebSocket endpoint to subscribe to execution pub/sub logs."""
     await websocket.accept()
 
+    redis_client = aioredis.from_url(settings.REDIS_URL)
+    pubsub = redis_client.pubsub()
+    channel = f"execution:{execution_id}:logs"
+    await pubsub.subscribe(channel)
+    logger.info(f"WebSocket client subscribed to {channel}")
+
     # Replay stored logs from database to handle race conditions
     from core.database import SessionLocal
     from models.execution import Execution
@@ -31,11 +37,21 @@ async def websocket_execution_logs(websocket: WebSocket, execution_id: str):
             node_logs = db.query(NodeLog).filter(NodeLog.execution_id == execution_id).order_by(NodeLog.started_at).all()
             for log in node_logs:
                 await websocket.send_text(json.dumps({
+                    "type": "node_started",
+                    "execution_id": execution_id,
+                    "node_id": log.node_id,
+                    "node_name": log.node_id,
+                    "node_type": log.node_type,
+                    "timestamp": log.started_at.isoformat() if log.started_at else "",
+                }))
+                await websocket.send_text(json.dumps({
                     "type": "node_success" if log.status == "success" else "node_failed",
                     "execution_id": execution_id,
                     "node_id": log.node_id,
+                    "node_name": log.node_id,
+                    "node_type": log.node_type,
                     "duration_ms": log.duration_ms,
-                    "output": log.output_data,
+                    "output": log.output,
                     "error": log.error,
                     "timestamp": log.finished_at.isoformat() if log.finished_at else "",
                 }))
@@ -50,13 +66,6 @@ async def websocket_execution_logs(websocket: WebSocket, execution_id: str):
         logger.error(f"Error replaying DB execution logs: {e}")
     finally:
         db.close()
-
-    redis_client = aioredis.from_url(settings.REDIS_URL)
-    pubsub = redis_client.pubsub()
-    channel = f"execution:{execution_id}:logs"
-
-    await pubsub.subscribe(channel)
-    logger.info(f"WebSocket client subscribed to {channel}")
 
     try:
         while True:

@@ -30,7 +30,17 @@ Allowed node types:
 - playwright: Run browser automation. Config: {script}
 - composio: Use a Composio action. Config: {action, params}
 - database: Query Postgres/MySQL/MongoDB databases. Config: {db_type, connection_type, connection_string, host, port, username, password, database_name, query, mongodb_collection, mongodb_operation, mongodb_query}
-- gmail_trigger: Fetch emails from user's Gmail. Config: {query, max_results}. Output: emails (array of {id,subject,from,date,snippet,body}), count (number)
+- gmail_trigger: Fetch emails from user's Gmail. Config: {sender_email}. Output: emails (array of {id,subject,from,date,snippet,body}), count (number)
+
+SPECIAL RULE FOR CODE NODES:
+When writing Python code for `code` nodes that process data from upstream nodes (such as Gmail Trigger or HTTP Request), your code MUST read input data using `input_data.get("emails", [])` or `input_data.get("key")`. NEVER hardcode empty arrays `emails = []`! Example:
+```python
+import pandas as pd
+emails = input_data.get("emails", [])
+df = pd.DataFrame(emails)
+df.to_excel("emails.xlsx", index=False)
+output_data = {"status": "saved", "rows": len(df)}
+```
 
 STRICT RULES FOR TOOL CALLS:
 1. First batch: call ALL add_node calls. Note the EXACT node_id returned by each.

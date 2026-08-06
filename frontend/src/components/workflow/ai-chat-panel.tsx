@@ -27,7 +27,19 @@ export function AIChatPanel({ isDocked = false, onClose }: { isDocked?: boolean;
   useEffect(() => {
     if (!active || !workflowId) return;
     apiFetch(`/ai/plan/${workflowId}/messages`)
-      .then(setMessages)
+      .then((history: Message[]) => {
+        setMessages((prev) => {
+          if (prev.length === 0) return history;
+          const stepsMap: Record<string, string[]> = {};
+          prev.forEach((m) => {
+            if (m.steps && m.steps.length > 0) stepsMap[m.content] = m.steps;
+          });
+          return history.map((m) => ({
+            ...m,
+            steps: m.steps || stepsMap[m.content],
+          }));
+        });
+      })
       .catch(() => setMessages([]));
   }, [active, workflowId]);
 

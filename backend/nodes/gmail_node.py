@@ -24,7 +24,13 @@ class GmailNode(BaseNode):
         refresh_token = cred_data["refresh_token"]
         access_token = await refresh_access_token(refresh_token)
 
-        query = config.get("query", "")
+        raw_query = config.get("query") or config.get("sender_email") or config.get("email") or ""
+        raw_query = raw_query.strip()
+        if raw_query and ":" not in raw_query and "@" in raw_query:
+            query = f"from:{raw_query}"
+        else:
+            query = raw_query
+
         max_results = int(config.get("max_results", 10))
 
         emails = await fetch_gmail_messages(access_token, query=query, max_results=max_results)

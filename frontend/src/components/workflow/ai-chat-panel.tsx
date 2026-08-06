@@ -5,7 +5,7 @@ import { apiFetch } from "@/lib/api";
 import { AIChatMessage, TypingIndicator } from "./ai-chat-message";
 import { useAIPlannerSocket } from "@/hooks/useAIPlannerSocket";
 
-type Message = { id: string; role: "user" | "assistant"; content: string };
+type Message = { id: string; role: "user" | "assistant"; content: string; steps?: string[] };
 
 export function AIChatPanel({ isDocked = false, onClose }: { isDocked?: boolean; onClose?: () => void }) {
   const { id: workflowId } = useParams();

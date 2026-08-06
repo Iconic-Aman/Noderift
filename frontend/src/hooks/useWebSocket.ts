@@ -10,6 +10,7 @@ export interface LogMessage {
   error?: string;
   output?: any;
   duration_ms?: number;
+  connect_url?: string;
 }
 
 export function useWebSocket(executionId: string | null) {

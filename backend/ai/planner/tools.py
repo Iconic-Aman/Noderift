@@ -159,6 +159,8 @@ async def update_node_config(node_id: str, node_config: Any, config: RunnableCon
 
     payload = {"id": node_id, "config": parsed_config}
     await patch_graph(db, session_id, "update_node", payload)
+    from ai.planner.session import emit_canvas_patch
+    await emit_canvas_patch(session_id, "agent_step", {"text": f"Configured node {node_id}"})
     return {"node_id": node_id, "status": "updated"}
 
 @tool

@@ -147,11 +147,11 @@ export default function Editor() {
             className="bg-slate-950"
           >
             <Background variant={BackgroundVariant.Dots} gap={20} size={1} color="#334155" />
-            <Controls 
-              position="bottom-left" 
+            <Controls
+              position="bottom-left"
               className="!bg-slate-800/80 !border-slate-700 !rounded-lg !shadow-xl [&>button]:!bg-slate-800 [&>button]:!border-slate-700 [&>button]:!text-slate-300 [&>button:hover]:!bg-slate-700"
             />
-            <MiniMap 
+            <MiniMap
               position="bottom-right"
               className="!bg-slate-800/80 !border-slate-700 !rounded-lg"
               nodeColor="#3b82f6"
@@ -201,50 +201,56 @@ export default function Editor() {
               className={cn("overflow-hidden flex flex-col h-full bg-slate-900 border-l border-slate-800", !isResizingRight && "transition-all duration-300")}
               style={{ width: `${rightWidth}px` }}
             >
-              {selectedNode ? (
-                <>
-                  {/* Tab Selector */}
-                  <div className="flex h-10 border-b border-slate-800 bg-slate-950">
-                    <button
-                      onClick={() => setActiveRightTab("chat")}
-                      className={cn(
-                        "flex flex-1 items-center justify-center gap-1.5 text-xs font-semibold border-b-2 transition-all cursor-pointer",
-                        activeRightTab === "chat"
-                          ? "border-violet-500 text-violet-400 bg-violet-500/5"
-                          : "border-transparent text-slate-400 hover:text-slate-200 hover:bg-slate-900"
-                      )}
-                    >
-                      <Sparkles className="h-3.5 w-3.5" />
-                      AI Assistant
-                    </button>
-                    <button
-                      onClick={() => setActiveRightTab("config")}
-                      className={cn(
-                        "flex flex-1 items-center justify-center gap-1.5 text-xs font-semibold border-b-2 transition-all cursor-pointer",
-                        activeRightTab === "config"
-                          ? "border-blue-500 text-blue-400 bg-blue-500/5"
-                          : "border-transparent text-slate-400 hover:text-slate-200 hover:bg-slate-900"
-                      )}
-                    >
-                      <Settings className="h-3.5 w-3.5" />
-                      Node Config
-                    </button>
-                  </div>
-                  <div className="flex-1 overflow-hidden flex flex-col">
-                    {activeRightTab === "chat" ? (
-                      <AIChatPanel isDocked={true} />
-                    ) : (
-                      <NodeConfigPanel
-                        node={selectedNode}
-                        onClose={() => setSelectedNode(null)}
-                        onConfigChange={updateNodeConfig}
-                        onRunNode={handleRunNode}
-                      />
+              {selectedNode && (
+                /* Tab Selector — only shown when a node is selected */
+                <div className="flex h-10 border-b border-slate-800 bg-slate-950 shrink-0">
+                  <button
+                    onClick={() => setActiveRightTab("chat")}
+                    className={cn(
+                      "flex flex-1 items-center justify-center gap-1.5 text-xs font-semibold border-b-2 transition-all cursor-pointer",
+                      activeRightTab === "chat"
+                        ? "border-violet-500 text-violet-400 bg-violet-500/5"
+                        : "border-transparent text-slate-400 hover:text-slate-200 hover:bg-slate-900"
                     )}
-                  </div>
-                </>
-              ) : (
+                  >
+                    <Sparkles className="h-3.5 w-3.5" />
+                    AI Assistant
+                  </button>
+                  <button
+                    onClick={() => setActiveRightTab("config")}
+                    className={cn(
+                      "flex flex-1 items-center justify-center gap-1.5 text-xs font-semibold border-b-2 transition-all cursor-pointer",
+                      activeRightTab === "config"
+                        ? "border-blue-500 text-blue-400 bg-blue-500/5"
+                        : "border-transparent text-slate-400 hover:text-slate-200 hover:bg-slate-900"
+                    )}
+                  >
+                    <Settings className="h-3.5 w-3.5" />
+                    Node Config
+                  </button>
+                </div>
+              )}
+
+              {/* AIChatPanel — always mounted, never unmounts, CSS hides when config tab active */}
+              <div
+                className="flex-1 overflow-hidden flex flex-col"
+                style={{
+                  display: selectedNode && activeRightTab === "config" ? "none" : "flex"
+                }}
+              >
                 <AIChatPanel isDocked={true} />
+              </div>
+
+              {/* NodeConfigPanel — only when node selected + config tab */}
+              {selectedNode && activeRightTab === "config" && (
+                <div className="flex-1 overflow-hidden flex flex-col">
+                  <NodeConfigPanel
+                    node={selectedNode}
+                    onClose={() => setSelectedNode(null)}
+                    onConfigChange={updateNodeConfig}
+                    onRunNode={handleRunNode}
+                  />
+                </div>
               )}
             </div>
             <div

@@ -44,6 +44,9 @@ async def run_agent_loop(
     config = {"configurable": {"session_id": session_id, "db": db}}
     final_messages = messages
 
+    from core.config import settings
+    logger.info(f"🤖 [AI PLANNER] Starting workflow generation loop using Model: '{settings.OPENROUTER_MODEL}'")
+
     for attempt in range(1, MAX_RETRIES + 1):
         logger.info(f"[Harness] Attempt {attempt}/{MAX_RETRIES}")
 
@@ -60,20 +63,21 @@ async def run_agent_loop(
             if has_xml_tool_calls(err_str):
                 logger.info("[Harness] OpenRouter tool_use_failed detected — recovering XML tool calls...")
                 parsed_calls = parse_xml_tool_calls(err_str)
-                from ai.planner import tools
+                import inspect
                 for call in parsed_calls:
                     func_name = call.get("name")
                     func_args = call.get("args", {})
                     if hasattr(tools, func_name):
                         tool_func = getattr(tools, func_name)
                         try:
-                            if hasattr(tool_func, "invoke"):
-                                tool_func.invoke(func_args, config=config)
+                            if hasattr(tool_func, "ainvoke"):
+                                await tool_func.ainvoke(func_args, config=config)
+                            elif inspect.iscoroutinefunction(tool_func):
+                                await tool_func(**func_args, config=config)
                             else:
                                 tool_func(**func_args)
                         except Exception as tool_err:
                             logger.error(f"[Harness] Error executing recovered tool {func_name}: {tool_err}")
-                return "Workflow generated on canvas.", messages
             else:
                 raise e
 

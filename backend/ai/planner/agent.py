@@ -72,7 +72,16 @@ def get_planner_agent(api_key: str = "", base_url: str = "", model_name: str = "
     logger = logging.getLogger("uvicorn")
 
     target_model = model_name or settings.OPENROUTER_MODEL
-    logger.info(f"🤖 [AI PLANNER] Using OpenRouter Model: '{target_model}'")
+    key_len = len(settings.OPENROUTER_API_KEY) if settings.OPENROUTER_API_KEY else 0
+    key_preview = f"{settings.OPENROUTER_API_KEY[:8]}...{settings.OPENROUTER_API_KEY[-4:]}" if key_len > 12 else "EMPTY/MISSING"
+
+    logger.info("🤖 [AI PLANNER DIAGNOSTICS]")
+    logger.info(f"   -> Model: '{target_model}'")
+    logger.info(f"   -> API Base: '{settings.OPENROUTER_API_URL}'")
+    logger.info(f"   -> API Key Length: {key_len} ({key_preview})")
+
+    if not settings.OPENROUTER_API_KEY:
+        logger.error("❌ [AI PLANNER ERROR] OPENROUTER_API_KEY is EMPTY in settings!")
 
     from langchain_openai import ChatOpenAI
 

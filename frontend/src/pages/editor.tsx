@@ -9,7 +9,7 @@ import { WorkflowNode } from "@/components/workflow/workflow-node";
 import { AIChatPanel } from "@/components/workflow/ai-chat-panel";
 import { NodeData } from "@/types/workflow";
 import { ExecutionPanel } from "@/components/workflow/execution-panel";
-import { ChevronLeft, ChevronRight, Terminal } from "lucide-react";
+import { ChevronLeft, ChevronRight, Terminal, Sparkles, Settings } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ButtonEdge } from "@/components/workflow/custom-edge";
 import { useEditorLogic } from "@/hooks/useEditorLogic";
@@ -49,6 +49,10 @@ export default function Editor() {
     setIsLeftOpen,
     isRightOpen,
     setIsRightOpen,
+    mode,
+    setMode,
+    activeRightTab,
+    setActiveRightTab,
     leftWidth,
     rightWidth,
     panelHeight,
@@ -88,34 +92,38 @@ export default function Editor() {
         isActive={isActive}
         onToggleActive={onToggleActive}
         onDownload={handleDownload}
+        mode={mode}
+        onModeChange={setMode}
       />
       <div className="flex flex-1 overflow-hidden">
-        {/* Left Sliding Sidebar */}
-        <div className="relative flex h-full shrink-0 z-10">
-          <div
-            className={cn("overflow-hidden flex flex-col h-full", !isResizingLeft && "transition-all duration-300")}
-            style={{ width: isLeftOpen ? `${leftWidth}px` : "0px" }}
-          >
-            <NodePalette />
-          </div>
-          <button
-            onClick={() => setIsLeftOpen(!isLeftOpen)}
-            className="absolute top-1/2 -right-3.5 z-20 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-full border border-slate-800 bg-slate-900 text-slate-400 hover:text-white shadow-lg hover:bg-slate-800 transition-all cursor-pointer"
-            style={{ transform: "translateX(50%)" }}
-          >
-            {isLeftOpen ? <ChevronLeft className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-          </button>
-          {isLeftOpen && (
+        {/* Left Sliding Sidebar - Manual Mode only */}
+        {mode === "manual" && (
+          <div className="relative flex h-full shrink-0 z-10">
             <div
-              onMouseDown={startLeftResize}
-              className={cn(
-                "absolute top-0 right-0 w-1.5 h-full cursor-col-resize hover:bg-blue-500/40 active:bg-blue-500 transition-all z-10",
-                isResizingLeft && "bg-blue-500/40 w-1.5"
-              )}
+              className={cn("overflow-hidden flex flex-col h-full", !isResizingLeft && "transition-all duration-300")}
+              style={{ width: isLeftOpen ? `${leftWidth}px` : "0px" }}
+            >
+              <NodePalette />
+            </div>
+            <button
+              onClick={() => setIsLeftOpen(!isLeftOpen)}
+              className="absolute top-1/2 -right-3.5 z-20 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-full border border-slate-800 bg-slate-900 text-slate-400 hover:text-white shadow-lg hover:bg-slate-800 transition-all cursor-pointer"
               style={{ transform: "translateX(50%)" }}
-            />
-          )}
-        </div>
+            >
+              {isLeftOpen ? <ChevronLeft className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+            </button>
+            {isLeftOpen && (
+              <div
+                onMouseDown={startLeftResize}
+                className={cn(
+                  "absolute top-0 right-0 w-1.5 h-full cursor-col-resize hover:bg-blue-500/40 active:bg-blue-500 transition-all z-10",
+                  isResizingLeft && "bg-blue-500/40 w-1.5"
+                )}
+                style={{ transform: "translateX(50%)" }}
+              />
+            )}
+          </div>
+        )}
 
         <div ref={reactFlowWrapper} className="relative flex-1">
           <ReactFlow<Node<NodeData>, Edge>
@@ -139,11 +147,11 @@ export default function Editor() {
             className="bg-slate-950"
           >
             <Background variant={BackgroundVariant.Dots} gap={20} size={1} color="#334155" />
-            <Controls 
-              position="bottom-left" 
+            <Controls
+              position="bottom-left"
               className="!bg-slate-800/80 !border-slate-700 !rounded-lg !shadow-xl [&>button]:!bg-slate-800 [&>button]:!border-slate-700 [&>button]:!text-slate-300 [&>button:hover]:!bg-slate-700"
             />
-            <MiniMap 
+            <MiniMap
               position="bottom-right"
               className="!bg-slate-800/80 !border-slate-700 !rounded-lg"
               nodeColor="#3b82f6"
@@ -152,8 +160,8 @@ export default function Editor() {
           </ReactFlow>
         </div>
 
-        {/* Right Sliding Sidebar */}
-        {selectedNode && (
+        {/* Right Sliding Sidebar - Manual Mode */}
+        {mode === "manual" && selectedNode && (
           <div className="relative flex h-full shrink-0 z-10">
             <button
               onClick={() => setIsRightOpen(!isRightOpen)}
@@ -185,7 +193,76 @@ export default function Editor() {
             )}
           </div>
         )}
-        <AIChatPanel />
+
+        {/* Right Docked Panel - Automatic Mode (Chat Sidebar like Cursor) */}
+        {mode === "automatic" && (
+          <div className="relative flex h-full shrink-0 z-10">
+            <div
+              className={cn("overflow-hidden flex flex-col h-full bg-slate-900 border-l border-slate-800", !isResizingRight && "transition-all duration-300")}
+              style={{ width: `${rightWidth}px` }}
+            >
+              {selectedNode && (
+                /* Tab Selector — only shown when a node is selected */
+                <div className="flex h-10 border-b border-slate-800 bg-slate-950 shrink-0">
+                  <button
+                    onClick={() => setActiveRightTab("chat")}
+                    className={cn(
+                      "flex flex-1 items-center justify-center gap-1.5 text-xs font-semibold border-b-2 transition-all cursor-pointer",
+                      activeRightTab === "chat"
+                        ? "border-violet-500 text-violet-400 bg-violet-500/5"
+                        : "border-transparent text-slate-400 hover:text-slate-200 hover:bg-slate-900"
+                    )}
+                  >
+                    <Sparkles className="h-3.5 w-3.5" />
+                    AI Assistant
+                  </button>
+                  <button
+                    onClick={() => setActiveRightTab("config")}
+                    className={cn(
+                      "flex flex-1 items-center justify-center gap-1.5 text-xs font-semibold border-b-2 transition-all cursor-pointer",
+                      activeRightTab === "config"
+                        ? "border-blue-500 text-blue-400 bg-blue-500/5"
+                        : "border-transparent text-slate-400 hover:text-slate-200 hover:bg-slate-900"
+                    )}
+                  >
+                    <Settings className="h-3.5 w-3.5" />
+                    Node Config
+                  </button>
+                </div>
+              )}
+
+              {/* AIChatPanel — always mounted, never unmounts, CSS hides when config tab active */}
+              <div
+                className="flex-1 overflow-hidden flex flex-col"
+                style={{
+                  display: selectedNode && activeRightTab === "config" ? "none" : "flex"
+                }}
+              >
+                <AIChatPanel isDocked={true} />
+              </div>
+
+              {/* NodeConfigPanel — only when node selected + config tab */}
+              {selectedNode && activeRightTab === "config" && (
+                <div className="flex-1 overflow-hidden flex flex-col">
+                  <NodeConfigPanel
+                    node={selectedNode}
+                    onClose={() => setSelectedNode(null)}
+                    onConfigChange={updateNodeConfig}
+                    onRunNode={handleRunNode}
+                  />
+                </div>
+              )}
+            </div>
+            <div
+              onMouseDown={startRightResize}
+              className={cn(
+                "absolute top-0 left-0 w-1.5 h-full cursor-col-resize hover:bg-blue-500/40 active:bg-blue-500 transition-all z-10",
+                isResizingRight && "bg-blue-500/40 w-1.5"
+              )}
+              style={{ transform: "translateX(-50%)" }}
+            />
+          </div>
+        )}
       </div>
 
       {/* Bottom Terminal Toggle Button */}

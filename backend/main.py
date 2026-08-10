@@ -6,7 +6,7 @@ import uvicorn
 
 from core.config import settings
 from core.security import AuthMiddleware, bearer_scheme
-from api.routes import auth, workflows, credentials, executions, websocket, webhooks, node_testing, ai, ai_planner
+from api.routes import auth, workflows, credentials, executions, websocket, webhooks, node_testing, ai, ai_planner, gmail_oauth, files
 from core.scheduler import scheduler_manager
 from core.database import SessionLocal
 import logging
@@ -43,6 +43,8 @@ app.include_router(webhooks.router, prefix="/api", tags=["webhooks"])
 app.include_router(node_testing.router, prefix="/api", tags=["nodes"])
 app.include_router(ai.router, prefix="/api", tags=["ai"])
 app.include_router(ai_planner.router, prefix="/api", tags=["ai_planner"])
+app.include_router(gmail_oauth.router, prefix="/api", tags=["gmail"])
+app.include_router(files.router, prefix="/api", tags=["files"])
 
 
 @app.on_event("startup")
@@ -86,8 +88,33 @@ async def health():
 # ---------------------------------------------------------------------------
 # Global error handler
 # ---------------------------------------------------------------------------
+from starlette.exceptions import HTTPException as StarletteHTTPException
+from fastapi.exceptions import RequestValidationError
+
 @app.exception_handler(Exception)
 async def global_exception_handler(request, exc):
+    if isinstance(exc, StarletteHTTPException):
+        return JSONResponse(
+            status_code=exc.status_code,
+            content={
+                "error": {
+                    "code": "HTTP_ERROR",
+                    "message": exc.detail,
+                    "detail": None,
+                }
+            },
+        )
+    if isinstance(exc, RequestValidationError):
+        return JSONResponse(
+            status_code=422,
+            content={
+                "error": {
+                    "code": "VALIDATION_ERROR",
+                    "message": "Validation failed",
+                    "detail": exc.errors(),
+                }
+            },
+        )
     return JSONResponse(
         status_code=500,
         content={

@@ -7,7 +7,9 @@
 .agents/
 LEARNING/
 Noderift_Complete_DevOps_Guide.pdf
+Node_Drift_Gmail_Integration_Architecture.md
 noderift-landing-page
+output.txt
 
 # ── Python ───────────────────────────────────────────────────────────────────
 __pycache__/

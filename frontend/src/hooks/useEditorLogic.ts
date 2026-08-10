@@ -27,6 +27,17 @@ export function useEditorLogic() {
   const [isLeftOpen, setIsLeftOpen] = useState(true);
   const [isRightOpen, setIsRightOpen] = useState(true);
 
+  // Mode and active right panel tab state (persisted in localStorage)
+  const [mode, setModeState] = useState<"manual" | "automatic">(() => {
+    return (localStorage.getItem("noderift_editor_mode") as "manual" | "automatic") || "manual";
+  });
+  const setMode = useCallback((newMode: "manual" | "automatic") => {
+    setModeState(newMode);
+    localStorage.setItem("noderift_editor_mode", newMode);
+  }, []);
+
+  const [activeRightTab, setActiveRightTab] = useState<"chat" | "config">("chat");
+
   // Resizable sidebar and logs panel states
   const [leftWidth, setLeftWidth] = useState(260);
   const [rightWidth, setRightWidth] = useState(450);
@@ -64,17 +75,22 @@ export function useEditorLogic() {
   const { triggerExecution, loading } = useExecution();
   const [activeExecutionId, setActiveExecutionId] = useState<string | null>(null);
   const [isExecutionPanelOpen, setIsExecutionPanelOpen] = useState(false);
-  const [executionStatus, setExecutionStatus] = useState<"idle" | "running" | "success">("idle");
+  const [executionStatus, setExecutionStatus] = useState<string>("idle");
   const [isSingleRun, setIsSingleRun] = useState(false);
   const { logs, setLogs } = useWebSocket(activeExecutionId);
 
   // Sync execution status from live websocket event logs
   useEffect(() => {
     if (logs.length > 0) {
-      const lastLog = logs[logs.length - 1];
-      if (lastLog.type === "workflow_started") setExecutionStatus("running");
-      else if (lastLog.type === "workflow_success") setExecutionStatus("success");
-      else if (lastLog.type === "workflow_failed") setExecutionStatus("idle");
+      const hasNeedsAuth = logs.some((l) => l.type === "needs_auth");
+      const hasFailed = logs.some((l) => l.type === "workflow_failed");
+      const hasSuccess = logs.some((l) => l.type === "workflow_success");
+      const hasStarted = logs.some((l) => l.type === "workflow_started");
+
+      if (hasNeedsAuth) setExecutionStatus("needs_auth");
+      else if (hasFailed) setExecutionStatus("failed");
+      else if (hasSuccess) setExecutionStatus("success");
+      else if (hasStarted) setExecutionStatus("running");
     }
   }, [logs]);
 
@@ -103,6 +119,7 @@ export function useEditorLogic() {
       if (log.type === "node_started") latestStatuses[log.node_id] = "running";
       else if (log.type === "node_success") { latestStatuses[log.node_id] = "success"; latestOutputs[log.node_id] = log.output; }
       else if (log.type === "node_failed") { latestStatuses[log.node_id] = "failed"; latestErrors[log.node_id] = log.error; }
+      else if (log.type === "needs_auth") { latestStatuses[log.node_id] = "failed"; latestErrors[log.node_id] = "Gmail account not connected"; }
     }
 
     let hasChanges = false;
@@ -160,6 +177,10 @@ export function useEditorLogic() {
           });
           setNodes(styledNodes);
           setEdges(wf.graph.edges || []);
+        }
+        const history = await apiFetch(`/executions/${id}/history`);
+        if (history && history.length > 0) {
+          setActiveExecutionId(history[0].id);
         }
       } catch (err) {
         console.error("Failed to load workflow", err);
@@ -259,6 +280,7 @@ export function useEditorLogic() {
 
   const onNodeClick = useCallback((_: React.MouseEvent, node: Node<NodeData>) => {
     setSelectedNode(node);
+    setActiveRightTab("config");
     setIsRightOpen(true);
   }, [setSelectedNode]);
 
@@ -296,6 +318,7 @@ export function useEditorLogic() {
     updateNodeConfig,
     workflowName, setWorkflowName,
     isActive, isLeftOpen, setIsLeftOpen, isRightOpen, setIsRightOpen,
+    mode, setMode, activeRightTab, setActiveRightTab,
     leftWidth, rightWidth, panelHeight,
     isResizingLeft, isResizingRight, isResizingPanel,
     startLeftResize, startRightResize, startPanelResize,

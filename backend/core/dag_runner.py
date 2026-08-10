@@ -9,6 +9,7 @@ from models.execution import Execution
 from models.node_log import NodeLog
 from models.workflow import Workflow
 from nodes import get_node_class, NodeInput
+from core.resolver import resolve_config
 
 class DAGRunner:
     def __init__(self, execution_id: str, trigger_payload: dict = None):
@@ -25,7 +26,10 @@ class DAGRunner:
             "timestamp": datetime.now(timezone.utc).isoformat(),
             **data
         }
-        await self.redis_client.publish(channel, json.dumps(payload))
+        try:
+            await self.redis_client.publish(channel, json.dumps(payload))
+        except Exception:
+            pass
 
     def topological_sort(self, nodes: list, edges: list) -> list:
         """Sort nodes using Kahn's algorithm. Detects cycles."""
@@ -59,6 +63,8 @@ class DAGRunner:
 
     async def run(self, target_node_id: str = None):
         """Execute the DAG."""
+        import logging
+        logging.getLogger("uvicorn").info(f"[DAGRunner] run() STARTED for execution_id={self.execution_id}")
         db: Session = SessionLocal()
         execution = db.query(Execution).filter(Execution.id == self.execution_id).first()
         if not execution:
@@ -208,6 +214,33 @@ class DAGRunner:
             if (node_type == "webhook" or node_type == "schedule") and not parents:
                 input_data.update(self.trigger_payload)
 
+            resolved_config = resolve_config(node_config, upstream_data)
+
+            # JIT Gmail auth check — stop if user hasn't connected Gmail
+            if node_type == "gmail_trigger":
+                from services.gmail_service import get_user_gmail_credential
+                user_id = workflow.user_id
+                if not user_id or not get_user_gmail_credential(db, user_id):
+                    if node_log:
+                        node_log.status = "failed"
+                        node_log.error = "Gmail account not connected"
+                        node_log.finished_at = datetime.now(timezone.utc)
+                    await self.publish_log("needs_auth", {
+                        "provider": "gmail",
+                        "node_id": node_id,
+                        "node_name": node_name,
+                        "error": "Gmail account not connected",
+                        "connect_url": f"/api/oauth/gmail/start?user_id={user_id}",
+                    })
+                    execution.status = "needs_auth"
+                    execution.error = "Gmail not connected"
+                    execution.finished_at = datetime.now(timezone.utc)
+                    db.commit()
+                    db.close()
+                    return
+                resolved_config["user_id"] = user_id
+                resolved_config["_db"] = db
+
             input_data["_upstream"] = upstream_data
             node_input = NodeInput(data=input_data)
 
@@ -218,7 +251,7 @@ class DAGRunner:
                 node_instance = node_cls()
 
                 # Execute node
-                node_output = await node_instance.execute(node_input, node_config)
+                node_output = await node_instance.execute(node_input, resolved_config)
 
                 # Store output for child nodes
                 node_outputs[node_id] = node_output.data
@@ -226,9 +259,11 @@ class DAGRunner:
                 # Calculate duration
                 duration_ms = int((time.time() - start_time) * 1000)
 
+                log_input = {k: v for k, v in resolved_config.items() if not k.startswith("_")}
+
                 if not is_ancestor:
                     node_log.status = "success"
-                    node_log.input = input_data
+                    node_log.input = log_input
                     node_log.output = node_output.data
                     node_log.duration_ms = duration_ms
                     node_log.finished_at = datetime.now(timezone.utc)
@@ -247,10 +282,11 @@ class DAGRunner:
                 # Capture exact duration on failure too
                 duration_ms = int((time.time() - start_time) * 1000)
                 error_msg = str(e)
+                log_input = {k: v for k, v in resolved_config.items() if not k.startswith("_")}
 
                 if not is_ancestor:
                     node_log.status = "failed"
-                    node_log.input = input_data
+                    node_log.input = log_input
                     node_log.error = error_msg
                     node_log.duration_ms = duration_ms
                     node_log.finished_at = datetime.now(timezone.utc)
@@ -282,4 +318,7 @@ class DAGRunner:
 
         await self.publish_log("workflow_success", {})
         db.close()
-        await self.redis_client.close()
+        try:
+            await self.redis_client.close()
+        except Exception:
+            pass

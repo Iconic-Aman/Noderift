@@ -4,17 +4,44 @@ from sqlalchemy.orm import Session
 from core.config import settings
 from models.workflow import Workflow
 
-# Redis connections are initialized dynamically in functions.
+from typing import Dict, Set
+from fastapi import WebSocket
+
+_ACTIVE_WEBSOCKETS: Dict[str, Set[WebSocket]] = {}
+
+
+def register_session_websocket(session_id: str, ws: WebSocket):
+    if session_id not in _ACTIVE_WEBSOCKETS:
+        _ACTIVE_WEBSOCKETS[session_id] = set()
+    _ACTIVE_WEBSOCKETS[session_id].add(ws)
+
+
+def unregister_session_websocket(session_id: str, ws: WebSocket):
+    if session_id in _ACTIVE_WEBSOCKETS:
+        _ACTIVE_WEBSOCKETS[session_id].discard(ws)
+        if not _ACTIVE_WEBSOCKETS[session_id]:
+            del _ACTIVE_WEBSOCKETS[session_id]
+
 
 async def emit_canvas_patch(session_id: str, event_type: str, payload: dict):
-    """Publish graph changes to Redis for real-time WebSocket delivery."""
-    if not settings.REDIS_URL:
-        return
-    async with redis.from_url(settings.REDIS_URL) as r:
-        await r.publish(
-            f"ai_plan:{session_id}",
-            json.dumps({"type": event_type, "payload": payload})
-        )
+    """Publish graph changes to in-memory WebSockets and Redis."""
+    message_str = json.dumps({"type": event_type, "payload": payload})
+
+    # Direct in-memory broadcast to connected WebSockets
+    connections = list(_ACTIVE_WEBSOCKETS.get(session_id, []))
+    for ws in connections:
+        try:
+            await ws.send_text(message_str)
+        except Exception:
+            unregister_session_websocket(session_id, ws)
+
+    # Optional Redis broadcast
+    if settings.REDIS_URL:
+        try:
+            async with redis.from_url(settings.REDIS_URL) as r:
+                await r.publish(f"ai_plan:{session_id}", message_str)
+        except Exception:
+            pass
 
 def get_session_graph(db: Session, session_id: str) -> dict:
     """Retrieve the current graph from the workflow database."""

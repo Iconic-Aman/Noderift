@@ -45,6 +45,7 @@ export default function Editor() {
     workflowName,
     setWorkflowName,
     isActive,
+    isDeploying,
     isLeftOpen,
     setIsLeftOpen,
     isRightOpen,
@@ -90,6 +91,7 @@ export default function Editor() {
         onRun={handleRun}
         onHistory={() => navigate(`/history/${id}`)}
         isActive={isActive}
+        isDeploying={isDeploying}
         onToggleActive={onToggleActive}
         onDownload={handleDownload}
         mode={mode}

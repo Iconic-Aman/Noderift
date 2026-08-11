@@ -189,12 +189,16 @@ export function useEditorLogic() {
     fetchWorkflow();
   }, [id, setNodes, setEdges]);
 
+  const [isDeploying, setIsDeploying] = useState(false);
+
   const onSave = async () => {
-    if (!id || !rfInstance) return;
+    if (!id) return;
+    const currentNodes = rfInstance ? rfInstance.getNodes() : nodes;
+    const currentEdges = rfInstance ? rfInstance.getEdges() : edges;
     try {
       await apiFetch(`/workflows/${id}`, {
         method: "PATCH",
-        body: JSON.stringify({ name: workflowName, graph: { nodes, edges } }),
+        body: JSON.stringify({ name: workflowName, graph: { nodes: currentNodes, edges: currentEdges } }),
       });
     } catch (err) {
       console.error("Failed to save workflow", err);
@@ -202,13 +206,16 @@ export function useEditorLogic() {
   };
 
   const onToggleActive = async () => {
-    if (!id) return;
+    if (!id || isDeploying) return;
+    setIsDeploying(true);
     try {
       await onSave();
       const res = await apiFetch(`/workflows/${id}/activate`, { method: "PATCH" });
       setIsActive(res.is_active);
     } catch (err) {
       console.error("Failed to toggle workflow triggers state", err);
+    } finally {
+      setIsDeploying(false);
     }
   };
 
@@ -317,7 +324,7 @@ export function useEditorLogic() {
     onNodesChange, onEdgesChange, onConnect, onNodeClick, onPaneClick, onDragOver, onDrop, onNodeDragStop,
     updateNodeConfig,
     workflowName, setWorkflowName,
-    isActive, isLeftOpen, setIsLeftOpen, isRightOpen, setIsRightOpen,
+    isActive, isDeploying, isLeftOpen, setIsLeftOpen, isRightOpen, setIsRightOpen,
     mode, setMode, activeRightTab, setActiveRightTab,
     leftWidth, rightWidth, panelHeight,
     isResizingLeft, isResizingRight, isResizingPanel,

@@ -13,6 +13,7 @@ from models.workflow import Workflow
 from ai.planner.agent import get_planner_agent
 from ai.planner.loop import run_agent_loop
 from ai.planner.session import get_session_messages, save_session_messages
+from ai.planner.chat_router import route_message
 from core.security import bearer_scheme
 
 router = APIRouter(prefix="/ai", tags=["AI Planner"])
@@ -28,14 +29,11 @@ class PlanResponse(BaseModel):
 
 @router.post("/plan", response_model=PlanResponse, dependencies=[Depends(bearer_scheme)])
 async def plan_workflow(req: PlanRequest, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
-    """Run the AI Planner ReAct agent on a workflow."""
-    # Verify workflow exists and belongs to user
+    """Run the AI Planner — routes through 8B chat model first, 70B builder only if needed."""
     workflow = db.query(Workflow).filter(Workflow.id == req.session_id, Workflow.user_id == user.id).first()
     if not workflow:
         raise HTTPException(status_code=404, detail="Workflow not found")
 
-    # Load history but strip stale tool messages — they cause the agent to
-    # think previous work is done and skip tool calls entirely.
     raw_history = await get_session_messages(req.session_id)
     history = [
         m for m in raw_history
@@ -44,6 +42,21 @@ async def plan_workflow(req: PlanRequest, db: Session = Depends(get_db), user: U
     ]
 
     try:
+        from langchain_core.messages import HumanMessage, AIMessage
+
+        # Step 1: Route through lightweight 8B model
+        chat_reply, should_build = await route_message(req.message, history)
+
+        if not should_build:
+            # 8B handled it — save and return directly, no heavy model needed
+            clean_history = list(history) + [
+                HumanMessage(content=req.message),
+                AIMessage(content=chat_reply),
+            ]
+            await save_session_messages(req.session_id, clean_history)
+            return PlanResponse(reply=chat_reply, session_id=req.session_id)
+
+        # Step 2: BUILD_REQUEST — run heavy 70B agent loop
         agent = get_planner_agent()
         reply, final_messages = await run_agent_loop(
             agent=agent,
@@ -52,14 +65,13 @@ async def plan_workflow(req: PlanRequest, db: Session = Depends(get_db), user: U
             session_id=req.session_id,
             db=db,
         )
-        # Save clean user prompt and final assistant reply into history
-        from langchain_core.messages import HumanMessage, AIMessage
         clean_history = list(history) + [
             HumanMessage(content=req.message),
             AIMessage(content=reply),
         ]
         await save_session_messages(req.session_id, clean_history)
         return PlanResponse(reply=reply, session_id=req.session_id)
+
     except Exception as e:
         logger.error(f"AI Planner execution failed: {e}")
         raise HTTPException(status_code=500, detail=str(e))

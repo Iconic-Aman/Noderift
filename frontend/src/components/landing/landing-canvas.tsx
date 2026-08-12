@@ -96,7 +96,7 @@ export function LandingCanvas() {
 
   return (
     <section className="relative py-12 md:py-16 px-6 md:px-8 bg-slate-950">
-      <div className="max-w-5xl mx-auto animate-[fadeInUp_0.8s_ease-out_0.4s_forwards] opacity-0 translate-y-4">
+      <div className="max-w-5xl mx-auto">
         <div className="relative rounded-2xl overflow-hidden border border-slate-800 bg-slate-950/40 shadow-2xl shadow-blue-500/5">
           {/* Top Bar (Browser style) */}
           <div className="h-10 bg-slate-900/60 border-b border-slate-800/80 flex items-center px-5 gap-2 select-none">

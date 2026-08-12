@@ -4,6 +4,7 @@ import { LandingModes } from "@/components/landing/landing-modes";
 import { LandingCanvas } from "@/components/landing/landing-canvas";
 import { LandingTerminal } from "@/components/landing/landing-terminal";
 import { LandingFeatures } from "@/components/landing/landing-features";
+import { FeedbackButton } from "@/components/feedback-button";
 
 export function Landing() {
   return (
@@ -16,6 +17,7 @@ export function Landing() {
         <LandingTerminal />
         <LandingFeatures />
       </main>
+      <FeedbackButton />
       <footer className="border-t border-slate-900 bg-slate-950 py-10 px-6 md:px-8">
         <div className="max-w-5xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 text-slate-500 text-xs font-medium">
           <p>© 2026 Noderift. All rights reserved.</p>

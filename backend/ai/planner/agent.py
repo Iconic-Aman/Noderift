@@ -58,14 +58,21 @@ When writing Python code for `code` nodes:
 - ALWAYS use `import pandas as pd` for Excel — NEVER import xlsxwriter (not installed).
 - pandas .to_excel() uses openpyxl by default — that's already installed. Just call df.to_excel("file.xlsx", index=False).
 - Read input with input_data.get("key") — NEVER hardcode data.
-Example:
+- IMPORTANT: When bsing the Joke API (jokeapi.dev), jokes can be "single" OR "twopart" type. ALWAYS handle both:
+  - single: response has "joke" key
+  - twopart: response has "setup" and "delivery" keys, NO "joke" key
+Example for Joke API:
 ```python
 import pandas as pd
 response = input_data.get('response', {})
-joke = response.get('joke', '')
-df = pd.DataFrame([{'Joke': joke}])
+joke_type = response.get('type', 'single')
+if joke_type == 'twopart':
+    joke_text = response.get('setup', '') + ' ' + response.get('delivery', '')
+else:
+    joke_text = response.get('joke', '')
+df = pd.DataFrame([{'Joke': joke_text, 'Category': response.get('category', ''), 'Type': joke_type}])
 df.to_excel('daily_joke.xlsx', index=False)
-output_data = {'status': 'saved', 'rows': 1}
+output_data = {'status': 'saved', 'joke': joke_text}
 ```
 
 STRICT RULES FOR VARIABLE INTERPOLATION (PLACEHOLDERS):

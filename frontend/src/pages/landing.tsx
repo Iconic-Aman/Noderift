@@ -11,8 +11,8 @@ export function Landing() {
       <LandingNavbar />
       <main className="flex-1">
         <LandingHero />
-        <LandingModes />
         <LandingCanvas />
+        <LandingModes />
         <LandingTerminal />
         <LandingFeatures />
       </main>

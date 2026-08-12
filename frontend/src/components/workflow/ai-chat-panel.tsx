@@ -7,10 +7,16 @@ import { useAIPlannerSocket } from "@/hooks/useAIPlannerSocket";
 
 type Message = { id: string; role: "user" | "assistant"; content: string; steps?: string[] };
 
+const GREETING: Message = {
+  id: "greeting",
+  role: "assistant",
+  content: "👋 Hey! I'm your AI workflow assistant.\n\nTell me what you want to automate and I'll build it live on the canvas — or ask me anything about what Noderift can do!",
+};
+
 export function AIChatPanel({ isDocked = false, onClose }: { isDocked?: boolean; onClose?: () => void }) {
   const { id: workflowId } = useParams();
   const [open, setOpen] = useState(false);
-  const [messages, setMessages] = useState<Message[]>([]);
+  const [messages, setMessages] = useState<Message[]>([GREETING]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [steps, setSteps] = useState<string[]>([]);
@@ -28,20 +34,21 @@ export function AIChatPanel({ isDocked = false, onClose }: { isDocked?: boolean;
     if (!active || !workflowId) return;
     apiFetch(`/ai/plan/${workflowId}/messages`)
       .then((history: Message[]) => {
-        setMessages((prev) => {
-          if (prev.length === 0) return history;
-          const stepsMap: Record<string, string[]> = {};
-          prev.forEach((m) => {
-            if (m.steps && m.steps.length > 0) stepsMap[m.content] = m.steps;
-          });
-          return history.map((m) => ({
-            ...m,
-            steps: m.steps || stepsMap[m.content],
-          }));
+        const stepsMap: Record<string, string[]> = {};
+        // preserve in-memory steps
+        messages.forEach((m) => {
+          if (m.steps && m.steps.length > 0) stepsMap[m.content] = m.steps;
         });
+        const merged = history.map((m) => ({
+          ...m,
+          steps: m.steps || stepsMap[m.content],
+        }));
+        // always keep greeting at top
+        setMessages([GREETING, ...merged]);
       })
-      .catch(() => setMessages([]));
+      .catch(() => setMessages([GREETING]));
   }, [active, workflowId]);
+
 
   const sendMessage = async () => {
     if (!workflowId || !input.trim()) return;
@@ -59,7 +66,8 @@ export function AIChatPanel({ isDocked = false, onClose }: { isDocked?: boolean;
           session_id: workflowId,
         }),
       });
-      const finalSteps = [...stepsRef.current];
+      // Only show execution steps for actual build requests, not conversation
+      const finalSteps = res.is_build ? [...stepsRef.current] : [];
       setMessages((prev) => [
         ...prev,
         { id: `res-${Date.now()}`, role: "assistant", content: res.reply, steps: finalSteps },

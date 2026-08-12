@@ -63,7 +63,7 @@ export function LandingTerminal() {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-5 gap-8 items-center animate-[fadeInUp_0.8s_ease-out_0.5s_forwards] opacity-0 translate-y-4">
+        <div className="grid grid-cols-1 lg:grid-cols-5 gap-8 items-center">
           {/* Steps selector - Left Pane */}
           <div className="lg:col-span-2 space-y-3.5">
             {steps.map((step, idx) => (

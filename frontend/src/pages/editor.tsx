@@ -9,7 +9,8 @@ import { WorkflowNode } from "@/components/workflow/workflow-node";
 import { AIChatPanel } from "@/components/workflow/ai-chat-panel";
 import { NodeData } from "@/types/workflow";
 import { ExecutionPanel } from "@/components/workflow/execution-panel";
-import { ChevronLeft, ChevronRight, Terminal, Sparkles, Settings } from "lucide-react";
+import { ChevronLeft, ChevronRight, Terminal, Sparkles, Settings, AlertTriangle, X } from "lucide-react";
+import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { ButtonEdge } from "@/components/workflow/custom-edge";
 import { useEditorLogic } from "@/hooks/useEditorLogic";
@@ -45,6 +46,7 @@ export default function Editor() {
     workflowName,
     setWorkflowName,
     isActive,
+    isDeploying,
     isLeftOpen,
     setIsLeftOpen,
     isRightOpen,
@@ -75,12 +77,57 @@ export default function Editor() {
     handleDownload,
   } = useEditorLogic();
 
+  const [showUndeployWarning, setShowUndeployWarning] = useState(false);
+
+  const handleDeployClick = () => {
+    if (isActive) {
+      setShowUndeployWarning(true);
+    } else {
+      onToggleActive();
+    }
+  };
+
+  const confirmUndeploy = () => {
+    setShowUndeployWarning(false);
+    onToggleActive();
+  };
+
   return (
     <div className={cn(
       "flex h-screen w-full flex-col bg-slate-950 text-slate-200",
       (isResizingLeft || isResizingRight) && "select-none cursor-col-resize",
       isResizingPanel && "select-none cursor-row-resize"
     )}>
+      {/* Undeploy Warning Modal */}
+      {showUndeployWarning && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+          <div className="w-[420px] rounded-xl border border-amber-500/30 bg-slate-900 p-6 shadow-2xl">
+            <div className="mb-4 flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-amber-500/15">
+                <AlertTriangle className="h-5 w-5 text-amber-400" />
+              </div>
+              <div>
+                <p className="font-semibold text-white">Stop Automation?</p>
+                <p className="text-xs text-slate-400">This workflow is currently live</p>
+              </div>
+              <button onClick={() => setShowUndeployWarning(false)} className="ml-auto rounded p-1 text-slate-500 hover:text-white">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <p className="mb-5 text-sm text-slate-300">
+              Undeploying will immediately stop all automations, webhooks, and scheduled triggers for this workflow. Your workflow data will be kept.
+            </p>
+            <div className="flex gap-3 justify-end">
+              <button onClick={() => setShowUndeployWarning(false)} className="rounded-lg border border-slate-700 bg-slate-800 px-4 py-2 text-sm text-slate-300 hover:bg-slate-700">
+                Cancel
+              </button>
+              <button onClick={confirmUndeploy} className="rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-500">
+                Yes, Stop Automation
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       <TopNavbar
         workflowName={workflowName}
         onNameChange={setWorkflowName}
@@ -90,7 +137,8 @@ export default function Editor() {
         onRun={handleRun}
         onHistory={() => navigate(`/history/${id}`)}
         isActive={isActive}
-        onToggleActive={onToggleActive}
+        isDeploying={isDeploying}
+        onToggleActive={handleDeployClick}
         onDownload={handleDownload}
         mode={mode}
         onModeChange={setMode}

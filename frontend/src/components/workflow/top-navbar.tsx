@@ -12,6 +12,7 @@ export function TopNavbar({
   onHistory,
   onUndo,
   isActive,
+  isDeploying,
   onToggleActive,
   onDownload,
   mode,
@@ -136,20 +137,26 @@ export function TopNavbar({
         </button>
         <button
           onClick={onToggleActive}
+          disabled={isDeploying}
           className={cn(
-            "flex items-center gap-2 rounded-lg border px-3 py-1.5 text-sm font-medium transition-all shadow-md active:scale-95 cursor-pointer",
+            "flex items-center gap-2 rounded-lg border px-3 py-1.5 text-sm font-medium transition-all shadow-md active:scale-95 cursor-pointer disabled:opacity-50",
             isActive
               ? "bg-emerald-500/15 border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/20 shadow-emerald-950/20"
               : "bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-700/80"
           )}
         >
-          {isActive ? (
+          {isDeploying ? (
+            <>
+              <Loader2 className="h-4 w-4 animate-spin text-slate-400" />
+              <span>Deploying...</span>
+            </>
+          ) : isActive ? (
             <>
               <span className="relative flex h-2 w-2">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
                 <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
               </span>
-              <span>Active</span>
+              <span>Deployed</span>
             </>
           ) : (
             <>

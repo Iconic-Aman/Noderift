@@ -1,16 +1,17 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { KeyRound, Plus, Play, LogOut, Trash2, Home } from "lucide-react";
+import { KeyRound, Plus, Play, LogOut, Trash2, Home, AlertTriangle, X } from "lucide-react";
 import { apiFetch } from "@/lib/api";
+
+type ConfirmModal = { type: "delete" | "undeploy"; workflowId: string; workflowName: string } | null;
 
 export function Dashboard() {
   const [workflows, setWorkflows] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [confirm, setConfirm] = useState<ConfirmModal>(null);
   const navigate = useNavigate();
 
-  useEffect(() => {
-    loadWorkflows();
-  }, []);
+  useEffect(() => { loadWorkflows(); }, []);
 
   const loadWorkflows = async () => {
     try {
@@ -30,19 +31,23 @@ export function Dashboard() {
         body: JSON.stringify({ name: "New Workflow", description: "", is_active: false, graph: { nodes: [], edges: [] } }),
       });
       navigate(`/editor/${nw.id}`);
-    } catch (e) {
-      console.error(e);
+    } catch (e) { console.error(e); }
+  };
+
+  const handleDeleteClick = (wf: any, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (wf.is_active) {
+      setConfirm({ type: "delete", workflowId: wf.id, workflowName: wf.name });
+    } else {
+      confirmDelete(wf.id);
     }
   };
 
-  const deleteWorkflow = async (id: string, e: React.MouseEvent) => {
-    e.stopPropagation();
+  const confirmDelete = async (id: string) => {
     try {
       await apiFetch(`/workflows/${id}`, { method: "DELETE" });
       setWorkflows((prev) => prev.filter((w) => w.id !== id));
-    } catch (err) {
-      console.error(err);
-    }
+    } catch (err) { console.error(err); } finally { setConfirm(null); }
   };
 
   const logout = () => {
@@ -54,26 +59,56 @@ export function Dashboard() {
 
   return (
     <div className="min-h-screen bg-slate-950 px-8 py-10 text-slate-200">
+      {/* Confirmation Modal */}
+      {confirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+          <div className="w-[420px] rounded-xl border border-amber-500/30 bg-slate-900 p-6 shadow-2xl">
+            <div className="mb-4 flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-amber-500/15">
+                <AlertTriangle className="h-5 w-5 text-amber-400" />
+              </div>
+              <div>
+                <p className="font-semibold text-white">
+                  {confirm.type === "delete" ? "Delete Deployed Workflow?" : "Stop Automation?"}
+                </p>
+                <p className="text-xs text-slate-400">{confirm.workflowName}</p>
+              </div>
+              <button onClick={() => setConfirm(null)} className="ml-auto rounded p-1 text-slate-500 hover:text-white">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <p className="mb-5 text-sm text-slate-300">
+              {confirm.type === "delete"
+                ? "This workflow is currently deployed and running automations. Deleting it will permanently stop all its triggers and scheduled jobs. This cannot be undone."
+                : "This workflow is currently active. Undeploying it will stop all automations, webhooks, and scheduled triggers immediately."
+              }
+            </p>
+            <div className="flex gap-3 justify-end">
+              <button onClick={() => setConfirm(null)} className="rounded-lg border border-slate-700 bg-slate-800 px-4 py-2 text-sm text-slate-300 hover:bg-slate-700">
+                Cancel
+              </button>
+              <button
+                onClick={() => confirm.type === "delete" ? confirmDelete(confirm.workflowId) : setConfirm(null)}
+                className="rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-500"
+              >
+                {confirm.type === "delete" ? "Yes, Delete" : "Yes, Stop"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="mx-auto max-w-5xl">
         <div className="mb-8 flex items-center justify-between">
           <h1 className="text-2xl font-bold text-white">My Workflows</h1>
           <div className="flex items-center gap-4">
-            <button
-              onClick={() => navigate("/")}
-              className="flex items-center gap-2 rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-sm text-slate-300 hover:bg-slate-700"
-            >
+            <button onClick={() => navigate("/")} className="flex items-center gap-2 rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-sm text-slate-300 hover:bg-slate-700">
               <Home className="h-4 w-4" /> Home
             </button>
-            <button
-              onClick={() => navigate("/credentials")}
-              className="flex items-center gap-2 rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-sm text-slate-300 hover:bg-slate-700"
-            >
+            <button onClick={() => navigate("/credentials")} className="flex items-center gap-2 rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-sm text-slate-300 hover:bg-slate-700">
               <KeyRound className="h-4 w-4" /> Credentials
             </button>
-            <button
-              onClick={createWorkflow}
-              className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-500"
-            >
+            <button onClick={createWorkflow} className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-500">
               <Plus className="h-4 w-4" /> New Workflow
             </button>
             <button onClick={logout} className="flex items-center gap-2 rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-sm text-slate-300 hover:bg-slate-700">
@@ -94,10 +129,11 @@ export function Dashboard() {
                   <Play className="h-5 w-5" />
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${wf.is_active ? 'bg-green-500/10 text-green-400' : 'bg-slate-800 text-slate-400'}`}>
-                    {wf.is_active ? 'Active' : 'Inactive'}
+                  <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${wf.is_active ? 'bg-green-500/10 text-green-400' : 'bg-slate-800 text-slate-400'}`}>
+                    {wf.is_active && <span className="h-1.5 w-1.5 rounded-full bg-green-400 animate-pulse inline-block" />}
+                    {wf.is_active ? 'Deployed' : 'Inactive'}
                   </span>
-                  <button onClick={(e) => deleteWorkflow(wf.id, e)} className="text-slate-500 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <button onClick={(e) => handleDeleteClick(wf, e)} className="text-slate-500 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity">
                     <Trash2 className="h-4 w-4" />
                   </button>
                 </div>

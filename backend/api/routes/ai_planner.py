@@ -13,6 +13,7 @@ from models.workflow import Workflow
 from ai.planner.agent import get_planner_agent
 from ai.planner.loop import run_agent_loop
 from ai.planner.session import get_session_messages, save_session_messages
+from ai.planner.chat_router import route_message
 from core.security import bearer_scheme
 
 router = APIRouter(prefix="/ai", tags=["AI Planner"])
@@ -25,17 +26,15 @@ class PlanRequest(BaseModel):
 class PlanResponse(BaseModel):
     reply: str
     session_id: str
+    is_build: bool = False
 
 @router.post("/plan", response_model=PlanResponse, dependencies=[Depends(bearer_scheme)])
 async def plan_workflow(req: PlanRequest, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
-    """Run the AI Planner ReAct agent on a workflow."""
-    # Verify workflow exists and belongs to user
+    """Run the AI Planner — routes through 8B chat model first, 70B builder only if needed."""
     workflow = db.query(Workflow).filter(Workflow.id == req.session_id, Workflow.user_id == user.id).first()
     if not workflow:
         raise HTTPException(status_code=404, detail="Workflow not found")
 
-    # Load history but strip stale tool messages — they cause the agent to
-    # think previous work is done and skip tool calls entirely.
     raw_history = await get_session_messages(req.session_id)
     history = [
         m for m in raw_history
@@ -43,25 +42,56 @@ async def plan_workflow(req: PlanRequest, db: Session = Depends(get_db), user: U
         or (m.__class__.__name__ == "AIMessage" and not getattr(m, "tool_calls", None))
     ]
 
+    logger.info(f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+    logger.info(f"[AI PLANNER] New request from user: '{user.email}'")
+    logger.info(f"[AI PLANNER] Message: '{req.message[:120]}'")
+    logger.info(f"[AI PLANNER] Session: {req.session_id}")
+    logger.info(f"[AI PLANNER] History messages loaded from Redis: {len(raw_history)} raw → {len(history)} filtered")
+    logger.info(f"[AI PLANNER] CHAT model (8B): '{settings.OPENROUTER_CHAT_MODEL}'")
+    logger.info(f"[AI PLANNER] BUILD model (70B): '{settings.OPENROUTER_MODEL}'")
+    logger.info(f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+
     try:
+        from langchain_core.messages import HumanMessage, AIMessage
+
+        # Step 1: Route through lightweight 8B model
+        logger.info(f"[AI PLANNER] STEP 1 → Calling chat_router.route_message() with 8B model...")
+        chat_reply, should_build = await route_message(req.message, history)
+        logger.info(f"[AI PLANNER] STEP 1 RESULT → should_build={should_build}, reply_preview='{chat_reply[:80] if chat_reply else 'N/A'}'")
+
+        if not should_build:
+            # 8B handled it — save and return directly, no heavy model needed
+            logger.info(f"[AI PLANNER] ✅ CONVERSATION — 8B model ({settings.OPENROUTER_CHAT_MODEL}) handled reply. 70B NOT called.")
+            clean_history = list(history) + [
+                HumanMessage(content=req.message),
+                AIMessage(content=chat_reply),
+            ]
+            await save_session_messages(req.session_id, clean_history)
+            return PlanResponse(reply=chat_reply, session_id=req.session_id, is_build=False)
+
+        # Step 2: BUILD_REQUEST — reset stale history, run heavy 70B agent loop
+        # IMPORTANT: Pass EMPTY history so old build prompts don't contaminate new build
+        logger.info(f"[AI PLANNER] 🔨 BUILD REQUEST — calling 70B model ({settings.OPENROUTER_MODEL})")
+        logger.info(f"[AI PLANNER] STEP 2 → Resetting history to avoid stale build context from previous sessions")
         agent = get_planner_agent()
         reply, final_messages = await run_agent_loop(
             agent=agent,
             user_prompt=req.message,
-            history=history,
+            history=[],   # Always start fresh — no old build prompts bleeding in
             session_id=req.session_id,
             db=db,
         )
-        # Save clean user prompt and final assistant reply into history
-        from langchain_core.messages import HumanMessage, AIMessage
-        clean_history = list(history) + [
+        logger.info(f"[AI PLANNER] ✅ BUILD COMPLETE — reply: '{reply[:120]}'")
+        # Save only this clean turn to history
+        clean_history = [
             HumanMessage(content=req.message),
             AIMessage(content=reply),
         ]
         await save_session_messages(req.session_id, clean_history)
-        return PlanResponse(reply=reply, session_id=req.session_id)
+        return PlanResponse(reply=reply, session_id=req.session_id, is_build=True)
+
     except Exception as e:
-        logger.error(f"AI Planner execution failed: {e}")
+        logger.error(f"[AI PLANNER] ❌ EXCEPTION: {type(e).__name__}: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/plan/{session_id}/messages", dependencies=[Depends(bearer_scheme)])

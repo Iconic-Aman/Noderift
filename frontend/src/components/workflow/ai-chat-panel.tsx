@@ -7,10 +7,16 @@ import { useAIPlannerSocket } from "@/hooks/useAIPlannerSocket";
 
 type Message = { id: string; role: "user" | "assistant"; content: string; steps?: string[] };
 
+const GREETING: Message = {
+  id: "greeting",
+  role: "assistant",
+  content: "👋 Hey! I'm your AI workflow assistant.\n\nTell me what you want to automate and I'll build it live on the canvas — or ask me anything about what Noderift can do!",
+};
+
 export function AIChatPanel({ isDocked = false, onClose }: { isDocked?: boolean; onClose?: () => void }) {
   const { id: workflowId } = useParams();
   const [open, setOpen] = useState(false);
-  const [messages, setMessages] = useState<Message[]>([]);
+  const [messages, setMessages] = useState<Message[]>([GREETING]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [steps, setSteps] = useState<string[]>([]);
@@ -28,20 +34,21 @@ export function AIChatPanel({ isDocked = false, onClose }: { isDocked?: boolean;
     if (!active || !workflowId) return;
     apiFetch(`/ai/plan/${workflowId}/messages`)
       .then((history: Message[]) => {
-        setMessages((prev) => {
-          if (prev.length === 0) return history;
-          const stepsMap: Record<string, string[]> = {};
-          prev.forEach((m) => {
-            if (m.steps && m.steps.length > 0) stepsMap[m.content] = m.steps;
-          });
-          return history.map((m) => ({
-            ...m,
-            steps: m.steps || stepsMap[m.content],
-          }));
+        const stepsMap: Record<string, string[]> = {};
+        // preserve in-memory steps
+        messages.forEach((m) => {
+          if (m.steps && m.steps.length > 0) stepsMap[m.content] = m.steps;
         });
+        const merged = history.map((m) => ({
+          ...m,
+          steps: m.steps || stepsMap[m.content],
+        }));
+        // always keep greeting at top
+        setMessages([GREETING, ...merged]);
       })
-      .catch(() => setMessages([]));
+      .catch(() => setMessages([GREETING]));
   }, [active, workflowId]);
+
 
   const sendMessage = async () => {
     if (!workflowId || !input.trim()) return;
@@ -59,7 +66,8 @@ export function AIChatPanel({ isDocked = false, onClose }: { isDocked?: boolean;
           session_id: workflowId,
         }),
       });
-      const finalSteps = [...stepsRef.current];
+      // Only show execution steps for actual build requests, not conversation
+      const finalSteps = res.is_build ? [...stepsRef.current] : [];
       setMessages((prev) => [
         ...prev,
         { id: `res-${Date.now()}`, role: "assistant", content: res.reply, steps: finalSteps },
@@ -95,18 +103,31 @@ export function AIChatPanel({ isDocked = false, onClose }: { isDocked?: boolean;
   const bodyContent = (
     <div className="flex-1 space-y-3 overflow-y-auto p-4">
       {messages.length === 0 && (
-        <div className="space-y-3">
-          <p className="text-center text-xs text-slate-500">
-            Ask me to design or modify this workflow live. Watch changes appear on canvas!
-          </p>
+        <div className="space-y-4">
+          <div className="text-center space-y-1">
+            <p className="text-sm font-semibold text-slate-200">👋 What do you want to automate?</p>
+            <p className="text-xs text-slate-500">Describe it in plain English — I'll build the workflow on canvas.</p>
+          </div>
           <div className="space-y-2">
-            <p className="text-xs font-medium text-slate-400">⚡ Examples</p>
-            <button
-              onClick={() => setInput("add a webhook node, then add a code node and connect them")}
-              className="w-full rounded border border-slate-700 bg-slate-800/60 px-3 py-2 text-left text-xs text-slate-300 hover:border-violet-500/50 hover:bg-slate-700 transition-colors"
-            >
-              📡 Webhook → Code flow
-            </button>
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">⚡ Try these examples</p>
+            {[
+              { emoji: "📧", label: "Gmail → Excel", prompt: "find all emails from student@internshala.com and save them to excel" },
+              { emoji: "📡", label: "Webhook → Code", prompt: "add a webhook node, then add a code node and connect them" },
+              { emoji: "⏰", label: "Daily API Fetch", prompt: "every day at 9am, fetch data from https://api.coindesk.com/v1/bpi/currentprice.json and save bitcoin price to excel" },
+              { emoji: "🤖", label: "Webhook → AI Reply", prompt: "when webhook receives a message, use AI agent to generate a reply and send it to Slack" },
+              { emoji: "🗄️", label: "DB → Excel Export", prompt: "every Monday, query all users from database and save to excel" },
+              { emoji: "🔀", label: "Conditional Filter", prompt: "when webhook fires, if the amount field is greater than 1000, send a POST request to my API" },
+            ].map(({ emoji, label, prompt }) => (
+              <button
+                key={label}
+                onClick={() => setInput(prompt)}
+                className="w-full rounded border border-slate-700 bg-slate-800/60 px-3 py-2 text-left text-xs text-slate-300 hover:border-violet-500/50 hover:bg-slate-700/80 transition-all"
+              >
+                <span className="mr-2">{emoji}</span>
+                <span className="font-medium text-slate-200">{label}</span>
+                <span className="ml-1 text-slate-500">→ click to use</span>
+              </button>
+            ))}
           </div>
         </div>
       )}

@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 from core.config import settings
 from core.database import get_db
 from models.user import User
-from api.routes.auth import get_current_user
+from api.deps import get_current_user
 
 router = APIRouter(prefix="/feedback", tags=["Feedback"])
 

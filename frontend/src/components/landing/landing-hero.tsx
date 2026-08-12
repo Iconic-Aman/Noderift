@@ -73,22 +73,78 @@ export function LandingHero() {
       <div className="relative z-10 max-w-3xl mx-auto px-6 md:px-8 text-center">
         {/* Headline */}
         <h1 className="text-balance text-4xl sm:text-5xl md:text-6xl font-extrabold mb-6 leading-[1.15] text-white">
+          {/* Line 1 — outer to inner: letters start spread wide + blurred, compress to normal */}
           <span
-            className="inline-block opacity-0 translate-y-4"
-            style={{ animation: "fadeInUp 0.8s ease-out forwards" }}
+            className="inline-block hero-line-1"
           >
             Stop building automations.
           </span>
           <br />
-          <span
-            className="inline-block opacity-0 translate-y-4 bg-gradient-to-r from-blue-500 via-indigo-400 to-cyan-400 bg-clip-text text-transparent"
-            style={{ animation: "fadeInUp 0.8s ease-out 0.3s forwards" }}
-          >
+          {/* Line 2 — gradient + shimmer sweep left to right */}
+          <span className="inline-block hero-line-2 bg-gradient-to-r from-blue-500 via-indigo-400 to-cyan-400 bg-clip-text text-transparent">
             Start describing them.
           </span>
         </h1>
 
         <style>{`
+          /* Line 1: outer-to-inner — wide letter spacing collapses in + blur clears */
+          @keyframes spreadCollapse {
+            0% {
+              opacity: 0;
+              letter-spacing: 0.35em;
+              filter: blur(12px);
+              transform: scale(1.08);
+            }
+            60% {
+              opacity: 1;
+              filter: blur(0px);
+            }
+            100% {
+              opacity: 1;
+              letter-spacing: -0.01em;
+              filter: blur(0px);
+              transform: scale(1);
+            }
+          }
+
+          /* Line 2: gradient shimmer sweep */
+          @keyframes shimmerReveal {
+            0% {
+              opacity: 0;
+              letter-spacing: 0.3em;
+              filter: blur(10px);
+              transform: scale(1.06);
+            }
+            50% {
+              opacity: 1;
+              filter: blur(0px);
+            }
+            100% {
+              opacity: 1;
+              letter-spacing: -0.01em;
+              filter: blur(0px);
+              transform: scale(1);
+            }
+          }
+
+          @keyframes shimmerSweep {
+            0%   { background-position: -200% center; }
+            100% { background-position: 200% center; }
+          }
+
+          .hero-line-1 {
+            opacity: 0;
+            animation: spreadCollapse 1s cubic-bezier(0.16, 1, 0.3, 1) 0.1s forwards;
+          }
+
+          .hero-line-2 {
+            opacity: 0;
+            animation: shimmerReveal 1s cubic-bezier(0.16, 1, 0.3, 1) 0.45s forwards;
+            background-size: 300% auto;
+            animation: shimmerReveal 1s cubic-bezier(0.16, 1, 0.3, 1) 0.45s forwards,
+                       shimmerSweep 3s linear 1.4s infinite;
+          }
+
           @keyframes fadeInUp {
             to {
               opacity: 1;

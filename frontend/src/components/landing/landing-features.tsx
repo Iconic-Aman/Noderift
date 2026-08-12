@@ -2,20 +2,20 @@ import { Zap, Cpu, Plug } from "lucide-react";
 
 const features = [
   {
-    title: "Visual DAG Editor",
-    description: "Drag, drop, and connect nodes to build any complex workflow visually in real-time.",
+    title: "Just Describe It",
+    description: "Type what you want in plain English. Noderift's AI planner builds the full workflow — nodes, connections, configs — instantly.",
     icon: Zap,
     color: "#f97316",
   },
   {
-    title: "AI Agent Nodes",
-    description: "Agentic AI nodes that reason, dynamically execute tasks, and persist memory.",
+    title: "AI Runs It For You",
+    description: "After building, the AI tests each node with real data, writes the code, and verifies everything works before you deploy.",
     icon: Cpu,
     color: "#a855f7",
   },
   {
-    title: "Robust Integrations",
-    description: "Connect Slack, Gmail, database nodes, custom APIs and Python execution boxes.",
+    title: "Connect Anything",
+    description: "Gmail, HTTP APIs, databases, WhatsApp, Python code, Playwright, schedules, webhooks — all wired by the AI automatically.",
     icon: Plug,
     color: "#3b82f6",
   },

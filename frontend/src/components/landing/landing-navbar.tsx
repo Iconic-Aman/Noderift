@@ -33,12 +33,7 @@ export function LandingNavbar() {
 
       {/* Open Right Wing - Commands (Desktop) */}
       <div className="fixed top-7 right-8 z-50 hidden md:flex items-center gap-8">
-        <Link
-          to="/"
-          className="relative py-1 text-slate-400 hover:text-white transition-colors duration-300 text-xs font-bold uppercase tracking-wider after:absolute after:bottom-0 after:left-0 after:h-[1.5px] after:w-0 hover:after:w-full after:bg-blue-500 after:transition-all after:duration-300"
-        >
-          Home
-        </Link>
+
         <button
           onClick={() => setShowModal(true)}
           className="relative py-1 text-slate-400 hover:text-white transition-colors duration-300 text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 bg-transparent border-0 cursor-pointer after:absolute after:bottom-0 after:left-0 after:h-[1.5px] after:w-0 hover:after:w-full after:bg-blue-500 after:transition-all after:duration-300"
@@ -84,13 +79,7 @@ export function LandingNavbar() {
       {/* Mobile Menu Drawer */}
       {mobileMenuOpen && (
         <div className="fixed top-20 right-8 left-8 z-40 md:hidden bg-slate-950/95 border border-slate-900 rounded-2xl p-5 backdrop-blur-md flex flex-col gap-4 shadow-2xl">
-          <Link
-            to="/"
-            onClick={() => setMobileMenuOpen(false)}
-            className="text-slate-300 hover:text-white text-xs font-bold uppercase tracking-wider py-1"
-          >
-            Home
-          </Link>
+
           <button
             onClick={() => {
               setMobileMenuOpen(false);

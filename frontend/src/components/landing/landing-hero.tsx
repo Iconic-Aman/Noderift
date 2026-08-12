@@ -77,14 +77,14 @@ export function LandingHero() {
             className="inline-block opacity-0 translate-y-4"
             style={{ animation: "fadeInUp 0.8s ease-out forwards" }}
           >
-            Manual workflows,
+            Stop building automations.
           </span>
           <br />
           <span
             className="inline-block opacity-0 translate-y-4 bg-gradient-to-r from-blue-500 via-indigo-400 to-cyan-400 bg-clip-text text-transparent"
             style={{ animation: "fadeInUp 0.8s ease-out 0.3s forwards" }}
           >
-            when there&apos;s AI for that?
+            Start describing them.
           </span>
         </h1>
 
@@ -98,8 +98,13 @@ export function LandingHero() {
         `}</style>
 
         {/* Subheadline */}
-        <p className="text-base sm:text-lg md:text-xl text-slate-400 mb-10 max-w-xl mx-auto leading-relaxed">
-          Automate anything visually. Drop nodes, connect logic, and let agentic AI handle the rest.
+        <p
+          className="text-base sm:text-lg md:text-xl text-slate-400 mb-10 max-w-xl mx-auto leading-relaxed opacity-0 translate-y-4"
+          style={{ animation: "fadeInUp 0.8s ease-out 0.55s forwards" }}
+        >
+          Just describe what you want to automate. Noderift&apos;s AI builds the workflow,
+          connects the nodes, and runs it —{" "}
+          <span className="text-slate-200 font-medium">you just hit deploy.</span>
         </p>
 
         {/* CTA Buttons */}

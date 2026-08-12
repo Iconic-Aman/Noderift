@@ -108,6 +108,8 @@ jobs:
             sed -i '/^OPENROUTER_API_KEY=/d' .env
             sed -i '/^OPENROUTER_MODEL=/d' .env
             sed -i '/^OPENROUTER_API_URL=/d' .env
+            sed -i '/^RESEND_API_KEY=/d' .env
+            sed -i '/^FEEDBACK_TO_EMAIL=/d' .env
 
             # Write new values to .env
             echo "ALLOWED_HOST=${{ vars.ALLOWED_HOST }}" >> .env
@@ -134,6 +136,8 @@ jobs:
             echo "OPENROUTER_API_KEY=${{ secrets.OPENROUTER_API_KEY }}" >> .env
             echo "OPENROUTER_MODEL=${{ vars.OPENROUTER_MODEL }}" >> .env
             echo "OPENROUTER_API_URL=${{ vars.OPENROUTER_API_URL }}" >> .env
+            echo "RESEND_API_KEY=${{ secrets.RESEND_API_KEY }}" >> .env
+            echo "FEEDBACK_TO_EMAIL=${{ vars.FEEDBACK_TO_EMAIL }}" >> .env
 
             # Log in to Docker Hub on the host
             if [ ! -z "${{ secrets.DOCKERHUB_USERNAME }}" ]; then
@@ -186,6 +190,8 @@ jobs:
             sed -i '/^OPENROUTER_API_KEY=/d' .env
             sed -i '/^OPENROUTER_MODEL=/d' .env
             sed -i '/^OPENROUTER_API_URL=/d' .env
+            sed -i '/^RESEND_API_KEY=/d' .env
+            sed -i '/^FEEDBACK_TO_EMAIL=/d' .env
 
             # Write new values to .env
             echo "ALLOWED_HOST=${{ vars.ALLOWED_HOST }}" >> .env
@@ -212,6 +218,8 @@ jobs:
             echo "OPENROUTER_API_KEY=${{ secrets.OPENROUTER_API_KEY }}" >> .env
             echo "OPENROUTER_MODEL=${{ vars.OPENROUTER_MODEL }}" >> .env
             echo "OPENROUTER_API_URL=${{ vars.OPENROUTER_API_URL }}" >> .env
+            echo "RESEND_API_KEY=${{ secrets.RESEND_API_KEY }}" >> .env
+            echo "FEEDBACK_TO_EMAIL=${{ vars.FEEDBACK_TO_EMAIL }}" >> .env
 
             # Log in to Docker Hub on the host
             if [ ! -z "${{ secrets.DOCKERHUB_USERNAME }}" ]; then

@@ -1,5 +1,6 @@
 import { LandingNavbar } from "@/components/landing/landing-navbar";
 import { LandingHero } from "@/components/landing/landing-hero";
+import { LandingModes } from "@/components/landing/landing-modes";
 import { LandingCanvas } from "@/components/landing/landing-canvas";
 import { LandingTerminal } from "@/components/landing/landing-terminal";
 import { LandingFeatures } from "@/components/landing/landing-features";
@@ -11,6 +12,7 @@ export function Landing() {
       <main className="flex-1">
         <LandingHero />
         <LandingCanvas />
+        <LandingModes />
         <LandingTerminal />
         <LandingFeatures />
       </main>

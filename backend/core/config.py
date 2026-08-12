@@ -63,6 +63,10 @@ class Settings(BaseSettings):
     # Redis
     REDIS_URL: str = ""
 
+    # Resend (feedback emails)
+    RESEND_API_KEY: str = ""
+    FEEDBACK_TO_EMAIL: str = ""
+
     @property
     def db_url(self) -> str:
         return self.DATABASE_URL

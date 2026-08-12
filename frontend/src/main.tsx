@@ -8,6 +8,7 @@ import { Credentials } from './pages/credentials'
 import { Landing } from './pages/landing'
 import { OAuthSuccess } from './pages/oauth-success'
 import History from './pages/history'
+import { FeedbackButton } from './components/feedback-button'
 import './index.css'
 
 const PrivateRoute = ({ children }: { children: React.ReactNode }) => {
@@ -28,6 +29,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
         <Route path="/oauth/success" element={<OAuthSuccess />} />
         <Route path="/oauth-success" element={<OAuthSuccess />} />
       </Routes>
+      <FeedbackButton />
     </BrowserRouter>
   </React.StrictMode>,
 )

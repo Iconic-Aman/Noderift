@@ -137,7 +137,7 @@ jobs:
             echo "OPENROUTER_MODEL=${{ vars.OPENROUTER_MODEL }}" >> .env
             echo "OPENROUTER_API_URL=${{ vars.OPENROUTER_API_URL }}" >> .env
             echo "RESEND_API_KEY=${{ secrets.RESEND_API_KEY }}" >> .env
-            echo "FEEDBACK_TO_EMAIL=${{ secrets.FEEDBACK_TO_EMAIL }}" >> .env
+            echo "FEEDBACK_TO_EMAIL=${{ vars.FEEDBACK_TO_EMAIL }}" >> .env
 
             # Log in to Docker Hub on the host
             if [ ! -z "${{ secrets.DOCKERHUB_USERNAME }}" ]; then
@@ -219,7 +219,7 @@ jobs:
             echo "OPENROUTER_MODEL=${{ vars.OPENROUTER_MODEL }}" >> .env
             echo "OPENROUTER_API_URL=${{ vars.OPENROUTER_API_URL }}" >> .env
             echo "RESEND_API_KEY=${{ secrets.RESEND_API_KEY }}" >> .env
-            echo "FEEDBACK_TO_EMAIL=${{ secrets.FEEDBACK_TO_EMAIL }}" >> .env
+            echo "FEEDBACK_TO_EMAIL=${{ vars.FEEDBACK_TO_EMAIL }}" >> .env
 
             # Log in to Docker Hub on the host
             if [ ! -z "${{ secrets.DOCKERHUB_USERNAME }}" ]; then

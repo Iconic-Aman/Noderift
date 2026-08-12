@@ -66,7 +66,8 @@ export function AIChatPanel({ isDocked = false, onClose }: { isDocked?: boolean;
           session_id: workflowId,
         }),
       });
-      const finalSteps = [...stepsRef.current];
+      // Only show execution steps for actual build requests, not conversation
+      const finalSteps = res.is_build ? [...stepsRef.current] : [];
       setMessages((prev) => [
         ...prev,
         { id: `res-${Date.now()}`, role: "assistant", content: res.reply, steps: finalSteps },

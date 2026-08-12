@@ -52,6 +52,28 @@ Rules:
 - If message is a greeting, question about features, or unclear → CONVERSATION
 - Respond with ONLY the single word. Nothing else."""
 
+# Fast-path: obvious conversation starters — never need LLM to classify
+_CONVERSATION_PATTERNS = [
+    "hi", "hello", "hey", "how are you", "how r u", "sup", "what's up", "whats up",
+    "good morning", "good evening", "good afternoon", "good night",
+    "who are you", "what are you", "what can you do", "what is noderift",
+    "help", "what do you do", "tell me about", "explain", "thanks", "thank you",
+    "ok", "okay", "cool", "great", "nice", "awesome", "got it", "sure",
+    "what's new", "interesting", "bye", "goodbye", "see you",
+]
+
+def _is_obvious_conversation(message: str) -> bool:
+    """Fast keyword check — skip LLM classifier for obvious greetings/chit-chat."""
+    lower = message.lower().strip()
+    # Very short messages with no build keywords
+    build_keywords = ["build", "create", "automate", "add node", "fetch", "send email",
+                      "save", "connect", "schedule", "webhook", "when ", "trigger",
+                      "gmail", "excel", "database", "http", "workflow", "run", "deploy"]
+    has_build_keyword = any(kw in lower for kw in build_keywords)
+    if has_build_keyword:
+        return False
+    return any(lower.startswith(pat) or lower == pat for pat in _CONVERSATION_PATTERNS)
+
 
 def _get_chat_llm():
     from core.config import settings
@@ -65,6 +87,10 @@ def _get_chat_llm():
 
 async def classify_intent(user_message: str) -> str:
     """Returns 'BUILD_REQUEST' or 'CONVERSATION'."""
+    # Fast-path: skip LLM for obvious conversations
+    if _is_obvious_conversation(user_message):
+        logger.info(f"[ChatRouter] Fast-path CONVERSATION for: '{user_message[:60]}'")
+        return "CONVERSATION"
     try:
         llm = _get_chat_llm()
         result = await llm.ainvoke([
@@ -72,7 +98,7 @@ async def classify_intent(user_message: str) -> str:
             HumanMessage(content=user_message),
         ])
         intent = result.content.strip().upper()
-        logger.info(f"[ChatRouter] Intent classified: '{intent}' for message: '{user_message[:60]}'")
+        logger.info(f"[ChatRouter] LLM Intent classified: '{intent}' for: '{user_message[:60]}'")
         if "BUILD" in intent:
             return "BUILD_REQUEST"
         return "CONVERSATION"
@@ -114,14 +140,25 @@ async def route_message(user_message: str, history: list) -> tuple[str, bool]:
         - If should_build=True  → caller must run the heavy agent loop
         - If should_build=False → reply_text is the final response from 8B model
     """
+    from core.config import settings
+    logger.info(f"[ChatRouter] ── route_message() called ──")
+    logger.info(f"[ChatRouter] Chat model: '{settings.OPENROUTER_CHAT_MODEL}'")
+    logger.info(f"[ChatRouter] API URL: '{settings.OPENROUTER_API_URL}'")
+    logger.info(f"[ChatRouter] API Key present: {bool(settings.OPENROUTER_API_KEY)}")
+
     intent = await classify_intent(user_message)
+    logger.info(f"[ChatRouter] Final intent decision: {intent}")
 
     if intent == "CONVERSATION":
+        logger.info(f"[ChatRouter] → Handling as CONVERSATION with 8B model")
         reply = await handle_conversation(user_message, history)
+        logger.info(f"[ChatRouter] → 8B reply: '{reply[:100]}'")
         # If 8B model itself decided it's ready to build
         if "READY_TO_BUILD" in reply:
+            logger.info(f"[ChatRouter] → 8B said READY_TO_BUILD — escalating to heavy model")
             return "", True
         return reply, False
 
     # BUILD_REQUEST — pass to heavy model
+    logger.info(f"[ChatRouter] → BUILD_REQUEST — heavy model will take over")
     return "", True

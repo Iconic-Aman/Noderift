@@ -29,7 +29,6 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
         <Route path="/oauth/success" element={<OAuthSuccess />} />
         <Route path="/oauth-success" element={<OAuthSuccess />} />
       </Routes>
-      <FeedbackButton />
     </BrowserRouter>
   </React.StrictMode>,
 )

@@ -9,15 +9,19 @@ Build the core that actually **runs** workflows. User hits "Run" → DAG execute
 10 checklist items from design.md, grouped into 4 layers:
 
 ### Layer A — Database (already have models, need migration)
+
 `executions` + `execution_logs` tables exist in models but need Alembic migration run.
 
 ### Layer B — Backend Engine (the hard part)
+
 Core DAG runner + Celery + node registry + real nodes.
 
 ### Layer C — API Routes
+
 New `executions.py` route + WebSocket endpoint.
 
 ### Layer D — Frontend
+
 Execution panel on canvas + live log stream + history page.
 
 ---
@@ -27,10 +31,13 @@ Execution panel on canvas + live log stream + history page.
 ### 🔧 Backend — Core Engine
 
 #### [NEW] `backend/core/celery_app.py`
+
 Celery app init connected to Redis broker. Defines the Celery instance used everywhere.
 
 #### [NEW] `backend/core/dag_runner.py`
+
 The heart of Phase 3.
+
 - Reads workflow JSON (nodes + edges from ReactFlow)
 - Builds adjacency graph
 - Topological sort (Kahn's algorithm)
@@ -40,16 +47,20 @@ The heart of Phase 3.
 - Publishes progress to Redis pub/sub (for WebSocket)
 
 #### [MODIFY] `backend/nodes/__init__.py` → becomes node registry
+
 Maps `node_type` strings → handler classes.
 Currently empty. Will hold `NODE_REGISTRY = { "http_request": HttpRequestNode, "code": CodeNode }`.
 
 #### [NEW] `backend/nodes/base.py`
+
 `BaseNode` abstract class as per design.md spec. `execute(inputs, config) → NodeOutput`.
 
 #### [NEW] `backend/nodes/http_node.py`
+
 `HttpRequestNode` — uses `httpx` to call any REST API. Config: `url`, `method`, `headers`, `body`.
 
 #### [NEW] `backend/nodes/code_node.py`
+
 `CodeNode` — executes Python code string from node config in a sandboxed `exec()`. Phase 3 uses basic exec; Docker sandbox comes in Phase 5.
 
 ---
@@ -57,6 +68,7 @@ Currently empty. Will hold `NODE_REGISTRY = { "http_request": HttpRequestNode, "
 ### 🌐 Backend — API Routes
 
 #### [NEW] `backend/api/routes/executions.py`
+
 ```
 POST /executions/{workflow_id}   → enqueue Celery task, return execution_id
 GET  /executions/{workflow_id}   → list execution history
@@ -65,12 +77,15 @@ DELETE /executions/{id}          → cancel (future)
 ```
 
 #### [NEW] `backend/api/routes/websocket.py`
+
 ```
 WS /ws/executions/{execution_id}/logs
 ```
+
 Subscribes to Redis pub/sub channel for that execution. Streams JSON log events to the browser in real-time.
 
 #### [MODIFY] `backend/main.py`
+
 Register `executions` router + WebSocket router.
 
 ---
@@ -78,6 +93,7 @@ Register `executions` router + WebSocket router.
 ### 🛠️ Backend — Worker
 
 #### [MODIFY] `worker/worker.py`
+
 Currently empty stub. Will import Celery app + define `run_workflow_task(execution_id)` Celery task that calls `dag_runner.run()`.
 
 ---
@@ -85,6 +101,7 @@ Currently empty stub. Will import Celery app + define `run_workflow_task(executi
 ### 🗄️ Backend — Schemas
 
 #### [NEW] `backend/schemas/execution.py`
+
 Pydantic request/response models: `ExecutionCreate`, `ExecutionResponse`, `NodeLogResponse`.
 
 ---
@@ -92,9 +109,11 @@ Pydantic request/response models: `ExecutionCreate`, `ExecutionResponse`, `NodeL
 ### ⚛️ Frontend — Hooks
 
 #### [NEW] `frontend/src/hooks/useExecution.ts`
+
 `useExecution(workflowId)` — POST to trigger, poll status, return `{ run, status, logs }`.
 
 #### [NEW] `frontend/src/hooks/useWebSocket.ts`
+
 `useWebSocket(executionId)` — connects to WS, accumulates log events, returns `{ logs, connected }`.
 
 ---
@@ -102,7 +121,9 @@ Pydantic request/response models: `ExecutionCreate`, `ExecutionResponse`, `NodeL
 ### ⚛️ Frontend — Components
 
 #### [NEW] `frontend/src/components/panels/ExecutionPanel.tsx`
+
 Drawer/panel that opens when user clicks "Run". Shows:
+
 - Run button
 - Execution status badge (pending / running / success / failed)
 - Live scrolling log feed (one entry per node)
@@ -113,9 +134,11 @@ Drawer/panel that opens when user clicks "Run". Shows:
 ### ⚛️ Frontend — Pages
 
 #### [NEW] `frontend/src/pages/history.tsx`
+
 Execution history page per workflow. Table of past runs with status, timestamp, duration. Clicking a row shows the node logs for that run.
 
 #### [MODIFY] `frontend/src/pages/editor.tsx`
+
 Add "Run" button in toolbar. Wire it to `useExecution`. Open `ExecutionPanel` on run.
 
 ---
@@ -141,6 +164,7 @@ Add "Run" button in toolbar. Wire it to `useExecution`. Open `ExecutionPanel` on
 ```
 
 ## Verification Plan
+
 - `POST /executions/{id}` returns 200 with `execution_id`
 - Worker picks up task, DAG runs, logs appear in DB
 - WebSocket streams logs to browser in real-time

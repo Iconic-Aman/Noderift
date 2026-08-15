@@ -5,54 +5,43 @@ import {CursorDot, NodeCard, Connector, PulseDot, clampProgress} from './compone
 import {TopNavbar} from './components/demo/TopNavbar';
 import {EndCardDemo} from './components/demo/EndCardDemo';
 import {IntroCardDemo} from './components/demo/IntroCardDemo';
+import {WorkflowGalleryDemo} from './WorkflowGalleryDemo';
 import {AIChatPanelDemo} from './AIChatPanelDemo';
 import {ThinkingLogDemo} from './ThinkingLogDemo';
 
 const T = {
   logoIn: [310, 330] as const,
-  aiModeClick: 365,
-  promptBarSlideUp: [365, 385] as const,
-  typingStart: 385,
-  typingEnd: 475,
-  submitClick: 495,
-  promptDock: [495, 515] as const,
-  thinkingStart: 515,
+  thinkingStart: 560,
   thinkingStep: 40,
-  nodesStart: 650,
+  nodesStart: 685,
   nodeGap: 40,
-  connectorsStart: 770,
+  connectorsStart: 805,
   connectorGap: 40,
   connectorDuration: 28,
-  runButtonAppear: 860,
-  runClick: 890,
-  runStart: 910,
-  runEnd: 1030,
-  downloadAppear: 1040,
-  downloadClick: 1065,
-  endCardStart: 1090,
+  runButtonAppear: 895,
+  runClick: 925,
+  runStart: 945,
+  runEnd: 1065,
+  downloadAppear: 1075,
+  downloadClick: 1100,
+  endCardStart: 1125,
 };
 
-export const TOTAL_DURATION = 1130; // ~37.6s @ 30fps
+export const TOTAL_DURATION = 1165;
 
 export const NoderiftDemo: React.FC = () => {
   const frame = useCurrentFrame();
 
   const logoOpacity = clampProgress(frame, T.logoIn[0], T.logoIn[1]);
-  const pillActive = frame >= T.aiModeClick;
 
-  const chatVisible = frame >= T.promptBarSlideUp[0] && frame < T.nodesStart;
+  const chatVisible = frame >= 560 && frame < T.nodesStart;
   const chatOpacity = interpolate(
     frame,
-    [T.promptBarSlideUp[0], T.promptBarSlideUp[1], T.nodesStart - 30, T.nodesStart],
-    [0, 1, 1, 0],
+    [560, 580, T.nodesStart - 30, T.nodesStart],
+    [1, 1, 1, 0],
     {extrapolateLeft: 'clamp', extrapolateRight: 'clamp'}
   );
 
-  const charCount = Math.round(clampProgress(frame, T.typingStart, T.typingEnd) * PROMPT_TEXT.length);
-  const typedText = PROMPT_TEXT.slice(0, charCount);
-  const showCursorBlink = frame < T.typingEnd && Math.floor(frame / 10) % 2 === 0;
-
-  const isDocked = frame >= T.promptDock[0];
   const thinkingVisible = frame >= T.thinkingStart && frame < T.nodesStart;
 
   const runButtonVisible = frame >= T.runButtonAppear;
@@ -73,11 +62,12 @@ export const NoderiftDemo: React.FC = () => {
   return (
     <AbsoluteFill style={{background: '#0B0F19', fontFamily: 'Inter, system-ui, sans-serif'}}>
       <IntroCardDemo frame={frame} />
+      <WorkflowGalleryDemo frame={frame} />
 
       <AbsoluteFill style={{backgroundImage: `radial-gradient(rgba(148, 163, 184, 0.15) 1px, transparent 1px)`, backgroundSize: '32px 32px', opacity: 0.7}} />
 
       <AbsoluteFill style={{opacity: contentFadeOut}}>
-        <TopNavbar logoOpacity={logoOpacity} pillActive={pillActive} runButtonVisible={runButtonVisible} runButtonOpacity={runButtonOpacity} runClicked={runClicked} runFinished={runFinished} />
+        <TopNavbar logoOpacity={logoOpacity} pillActive={true} runButtonVisible={runButtonVisible} runButtonOpacity={runButtonOpacity} runClicked={runClicked} runFinished={runFinished} />
 
         {downloadVisible && (
           <div style={{position: 'absolute', left: 960, top: 760, transform: `translateX(-50%) scale(${downloadScale})`, padding: '14px 28px', borderRadius: 12, border: `1px solid ${downloadClicked ? '#22C55E' : 'rgba(71, 85, 105, 0.6)'}`, background: downloadClicked ? '#22C55E' : 'rgba(30, 41, 59, 0.9)', color: downloadClicked ? '#fff' : '#F8FAFC', fontSize: 16, fontWeight: 600, opacity: downloadOpacity, boxShadow: downloadClicked ? '0 0 25px rgba(34, 197, 94, 0.5)' : '0 10px 30px rgba(0, 0, 0, 0.4)', display: 'flex', alignItems: 'center', gap: 10}}>
@@ -85,12 +75,10 @@ export const NoderiftDemo: React.FC = () => {
           </div>
         )}
 
-        <CursorDot frame={frame} fromX={960} fromY={800} toX={960} toY={480} moveStart={340} moveEnd={T.aiModeClick} clickFrame={T.aiModeClick} visibleFrom={335} visibleTo={T.aiModeClick + 15} />
-        <CursorDot frame={frame} fromX={960} fromY={480} toX={960} toY={420} moveStart={T.typingEnd} moveEnd={T.submitClick} clickFrame={T.submitClick} visibleFrom={T.typingEnd - 5} visibleTo={T.submitClick + 15} />
-        <CursorDot frame={frame} fromX={960} fromY={700} toX={1790} toY={28} moveStart={865} moveEnd={T.runClick} clickFrame={T.runClick} visibleFrom={860} visibleTo={T.runClick + 15} />
-        <CursorDot frame={frame} fromX={1790} fromY={28} toX={960} toY={760} moveStart={1045} moveEnd={T.downloadClick} clickFrame={T.downloadClick} visibleFrom={1040} visibleTo={T.downloadClick + 15} />
+        <CursorDot frame={frame} fromX={960} fromY={700} toX={1790} toY={28} moveStart={900} moveEnd={T.runClick} clickFrame={T.runClick} visibleFrom={895} visibleTo={T.runClick + 15} />
+        <CursorDot frame={frame} fromX={1790} fromY={28} toX={960} toY={760} moveStart={1080} moveEnd={T.downloadClick} clickFrame={T.downloadClick} visibleFrom={1075} visibleTo={T.downloadClick + 15} />
 
-        <AIChatPanelDemo chatVisible={chatVisible} isDocked={isDocked} chatY={0} chatOpacity={chatOpacity} typedText={typedText} showCursorBlink={showCursorBlink} promptText={PROMPT_TEXT} frame={frame} aiModeClickFrame={T.aiModeClick} />
+        <AIChatPanelDemo chatVisible={chatVisible} chatOpacity={chatOpacity} promptText={PROMPT_TEXT} />
         <ThinkingLogDemo thinkingVisible={thinkingVisible} frame={frame} thinkingStart={T.thinkingStart} thinkingStep={T.thinkingStep} steps={THINKING_STEPS} />
 
         {NODES.map((node, i) => (

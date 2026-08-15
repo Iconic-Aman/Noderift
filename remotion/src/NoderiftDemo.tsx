@@ -9,30 +9,30 @@ import {AIChatPanelDemo} from './AIChatPanelDemo';
 import {ThinkingLogDemo} from './ThinkingLogDemo';
 
 const T = {
-  logoIn: [80, 100] as const,
-  aiModeClick: 135,
-  promptBarSlideUp: [135, 155] as const,
-  typingStart: 155,
-  typingEnd: 245,
-  submitClick: 265,
-  promptDock: [265, 285] as const,
-  thinkingStart: 285,
+  logoIn: [310, 330] as const,
+  aiModeClick: 365,
+  promptBarSlideUp: [365, 385] as const,
+  typingStart: 385,
+  typingEnd: 475,
+  submitClick: 495,
+  promptDock: [495, 515] as const,
+  thinkingStart: 515,
   thinkingStep: 40,
-  nodesStart: 420,
+  nodesStart: 650,
   nodeGap: 40,
-  connectorsStart: 540,
+  connectorsStart: 770,
   connectorGap: 40,
   connectorDuration: 28,
-  runButtonAppear: 630,
-  runClick: 660,
-  runStart: 680,
-  runEnd: 800,
-  downloadAppear: 810,
-  downloadClick: 835,
-  endCardStart: 860,
+  runButtonAppear: 860,
+  runClick: 890,
+  runStart: 910,
+  runEnd: 1030,
+  downloadAppear: 1040,
+  downloadClick: 1065,
+  endCardStart: 1090,
 };
 
-export const TOTAL_DURATION = 900;
+export const TOTAL_DURATION = 1130; // ~37.6s @ 30fps
 
 export const NoderiftDemo: React.FC = () => {
   const frame = useCurrentFrame();
@@ -85,12 +85,12 @@ export const NoderiftDemo: React.FC = () => {
           </div>
         )}
 
-        <CursorDot frame={frame} fromX={1700} fromY={200} toX={1820} toY={28} moveStart={120} moveEnd={T.aiModeClick} clickFrame={T.aiModeClick} visibleFrom={115} visibleTo={T.aiModeClick + 15} />
-        <CursorDot frame={frame} fromX={1820} fromY={28} toX={960} toY={420} moveStart={T.typingEnd} moveEnd={T.submitClick} clickFrame={T.submitClick} visibleFrom={T.typingEnd - 5} visibleTo={T.submitClick + 15} />
-        <CursorDot frame={frame} fromX={960} fromY={700} toX={1790} toY={28} moveStart={635} moveEnd={T.runClick} clickFrame={T.runClick} visibleFrom={630} visibleTo={T.runClick + 15} />
-        <CursorDot frame={frame} fromX={1790} fromY={28} toX={960} toY={760} moveStart={815} moveEnd={T.downloadClick} clickFrame={T.downloadClick} visibleFrom={810} visibleTo={T.downloadClick + 15} />
+        <CursorDot frame={frame} fromX={960} fromY={800} toX={960} toY={480} moveStart={340} moveEnd={T.aiModeClick} clickFrame={T.aiModeClick} visibleFrom={335} visibleTo={T.aiModeClick + 15} />
+        <CursorDot frame={frame} fromX={960} fromY={480} toX={960} toY={420} moveStart={T.typingEnd} moveEnd={T.submitClick} clickFrame={T.submitClick} visibleFrom={T.typingEnd - 5} visibleTo={T.submitClick + 15} />
+        <CursorDot frame={frame} fromX={960} fromY={700} toX={1790} toY={28} moveStart={865} moveEnd={T.runClick} clickFrame={T.runClick} visibleFrom={860} visibleTo={T.runClick + 15} />
+        <CursorDot frame={frame} fromX={1790} fromY={28} toX={960} toY={760} moveStart={1045} moveEnd={T.downloadClick} clickFrame={T.downloadClick} visibleFrom={1040} visibleTo={T.downloadClick + 15} />
 
-        <AIChatPanelDemo chatVisible={chatVisible} isDocked={isDocked} chatY={0} chatOpacity={chatOpacity} typedText={typedText} showCursorBlink={showCursorBlink} promptText={PROMPT_TEXT} />
+        <AIChatPanelDemo chatVisible={chatVisible} isDocked={isDocked} chatY={0} chatOpacity={chatOpacity} typedText={typedText} showCursorBlink={showCursorBlink} promptText={PROMPT_TEXT} frame={frame} aiModeClickFrame={T.aiModeClick} />
         <ThinkingLogDemo thinkingVisible={thinkingVisible} frame={frame} thinkingStart={T.thinkingStart} thinkingStep={T.thinkingStep} steps={THINKING_STEPS} />
 
         {NODES.map((node, i) => (

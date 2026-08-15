@@ -9,24 +9,45 @@ interface IntroCardDemoProps {
 export const IntroCardDemo: React.FC<IntroCardDemoProps> = ({frame}) => {
   const logoUrl = staticFile('noderift-icon.jpg');
 
-  if (frame > 105) return null;
+  // Return null once intro finishes (frame 310+)
+  if (frame > 310) return null;
 
-  const fadeOut = interpolate(frame, [85, 105], [1, 0], {
-    extrapolateLeft: 'clamp',
-    extrapolateRight: 'clamp',
-  });
+  // --- Scene 1: Problem statement (0–50f) ---
+  const s1In = clampProgress(frame, 0, 15);
+  const s1Out = interpolate(frame, [35, 50], [1, 0], {extrapolateLeft: 'clamp', extrapolateRight: 'clamp'});
+  const s1Opacity = s1In * s1Out;
 
-  const text1Opacity = clampProgress(frame, 0, 20);
-  const text2Opacity = clampProgress(frame, 30, 50);
-  const meetOpacity = clampProgress(frame, 55, 75);
-  const meetScale = interpolate(clampProgress(frame, 55, 75), [0, 1], [0.8, 1]);
+  // --- Scene 2: "Meet [icon] Noderift" (50–160f) ---
+  const meetIn = clampProgress(frame, 50, 70);
+  const meetX = interpolate(meetIn, [0, 1], [-40, 0]);
+
+  const noderiftIn = clampProgress(frame, 70, 90);
+  const noderiftX = interpolate(noderiftIn, [0, 1], [40, 0]);
+
+  const logoIn = clampProgress(frame, 90, 110);
+  const logoScale = interpolate(logoIn, [0, 0.7, 1], [0, 1.2, 1]);
+
+  // --- Scene 3: Zoom out & disappear (160–190f) ---
+  const s3Out = interpolate(frame, [160, 190], [1, 0], {extrapolateLeft: 'clamp', extrapolateRight: 'clamp'});
+  const s3Scale = interpolate(frame, [160, 190], [1, 0.85], {extrapolateLeft: 'clamp', extrapolateRight: 'clamp'});
+  const s2Opacity = (frame >= 50 && frame < 160 ? 1 : s3Out);
+
+  // --- Scene 4: Tagline reveal (190–310f) ---
+  const t1In = clampProgress(frame, 190, 215);
+  const t2In = clampProgress(frame, 225, 250);
+
+  const t1SlideX = interpolate(t2In, [0, 1], [0, -140]);
+  const t1Scale = interpolate(t2In, [0, 1], [1, 0.9]);
+
+  const s4Out = interpolate(frame, [280, 310], [1, 0], {extrapolateLeft: 'clamp', extrapolateRight: 'clamp'});
+  const s4Scale = interpolate(frame, [280, 310], [1, 0.85], {extrapolateLeft: 'clamp', extrapolateRight: 'clamp'});
+  const s4Opacity = (frame >= 190 && frame < 280 ? Math.min(1, t1In) : s4Out);
 
   return (
     <AbsoluteFill
       style={{
         background: '#070A12',
         zIndex: 50,
-        opacity: fadeOut,
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
@@ -34,56 +55,132 @@ export const IntroCardDemo: React.FC<IntroCardDemoProps> = ({frame}) => {
         fontFamily: 'Inter, system-ui, sans-serif',
       }}
     >
+      {/* Background ambient radial glow */}
       <div
         style={{
           position: 'absolute',
-          width: 500,
-          height: 500,
-          borderRadius: 250,
-          background: 'radial-gradient(circle, rgba(37, 99, 235, 0.3) 0%, transparent 70%)',
-          filter: 'blur(40px)',
+          width: 600,
+          height: 600,
+          borderRadius: 300,
+          background: 'radial-gradient(circle, rgba(37, 99, 235, 0.25) 0%, transparent 70%)',
+          filter: 'blur(50px)',
         }}
       />
 
-      <div style={{color: '#94A3B8', fontSize: 24, fontWeight: 500, opacity: text1Opacity, marginBottom: 12}}>
-        Why build workflows manually...
-      </div>
+      {/* Scene 1 — Problem statement */}
+      {frame < 55 && s1Opacity > 0 && (
+        <div
+          style={{
+            opacity: s1Opacity,
+            color: '#94A3B8',
+            fontSize: 32,
+            fontWeight: 500,
+            letterSpacing: '-0.01em',
+            textAlign: 'center',
+          }}
+        >
+          Building workflows takes hours.
+        </div>
+      )}
 
-      <div style={{color: '#E2E8F0', fontSize: 36, fontWeight: 700, opacity: text2Opacity, marginBottom: 36}}>
-        when AI can build them for you?
-      </div>
-
-      {meetOpacity > 0 && (
+      {/* Scene 2 & 3 — "Meet [icon] Noderift" reveal & zoom out */}
+      {frame >= 50 && frame < 195 && s2Opacity > 0 && (
         <div
           style={{
             display: 'flex',
             alignItems: 'center',
-            gap: 14,
-            background: 'rgba(15, 23, 42, 0.8)',
-            border: '1px solid rgba(37, 99, 235, 0.6)',
-            backdropFilter: 'blur(16px)',
-            borderRadius: 50,
-            padding: '12px 32px',
-            opacity: meetOpacity,
-            transform: `scale(${meetScale})`,
-            boxShadow: '0 0 40px rgba(37, 99, 235, 0.45)',
+            gap: 20,
+            opacity: s2Opacity,
+            transform: `scale(${s3Scale})`,
           }}
         >
-          <img
-            src={logoUrl}
-            alt="Noderift Logo"
+          {/* "Meet" */}
+          <span
             style={{
-              width: 44,
-              height: 44,
-              borderRadius: 12,
-              background: 'transparent',
-              objectFit: 'contain',
-              boxShadow: '0 0 16px rgba(37, 99, 235, 0.5)',
+              color: '#F8FAFC',
+              fontSize: 64,
+              fontWeight: 800,
+              letterSpacing: '-0.02em',
+              opacity: meetIn,
+              transform: `translateX(${meetX}px)`,
             }}
-          />
-          <span style={{color: '#FFF', fontSize: 28, fontWeight: 800, letterSpacing: '-0.02em'}}>
-            Meet Noderift
+          >
+            Meet
           </span>
+
+          {/* Logo Mark Pop-in */}
+          {logoIn > 0 && (
+            <img
+              src={logoUrl}
+              alt="Noderift Mark"
+              style={{
+                width: 60,
+                height: 60,
+                borderRadius: 16,
+                background: 'transparent',
+                objectFit: 'contain',
+                boxShadow: '0 0 30px rgba(37, 99, 235, 0.6)',
+                transform: `scale(${logoScale})`,
+                opacity: logoIn,
+              }}
+            />
+          )}
+
+          {/* "Noderift" */}
+          <span
+            style={{
+              color: '#3B82F6',
+              fontSize: 64,
+              fontWeight: 800,
+              letterSpacing: '-0.02em',
+              opacity: noderiftIn,
+              transform: `translateX(${noderiftX}px)`,
+            }}
+          >
+            Noderift
+          </span>
+        </div>
+      )}
+
+      {/* Scene 4 — Tagline reveal & zoom out */}
+      {frame >= 190 && s4Opacity > 0 && (
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 16,
+            opacity: s4Opacity,
+            transform: `scale(${s4Scale})`,
+          }}
+        >
+          <span
+            style={{
+              color: '#F8FAFC',
+              fontSize: 52,
+              fontWeight: 700,
+              letterSpacing: '-0.02em',
+              opacity: t1In,
+              transform: `translateX(${t1SlideX}px) scale(${t1Scale})`,
+              whiteSpace: 'nowrap',
+            }}
+          >
+            The AI-powered
+          </span>
+
+          {t2In > 0 && (
+            <span
+              style={{
+                color: '#3B82F6',
+                fontSize: 52,
+                fontWeight: 700,
+                letterSpacing: '-0.02em',
+                opacity: t2In,
+                whiteSpace: 'nowrap',
+              }}
+            >
+              workflow automation tool
+            </span>
+          )}
         </div>
       )}
     </AbsoluteFill>

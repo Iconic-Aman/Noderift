@@ -13,13 +13,13 @@ const CARDS = [
 ];
 
 export const WorkflowGalleryDemo: React.FC<{frame: number}> = ({frame}) => {
-  if (frame < 310 || frame > 560) return null;
+  if (frame < 310 || frame > 460) return null;
 
-  const f = frame - 310; // local frame 0 to 250
+  const f = frame - 310; // local frame 0 to 150 (Faster!)
   const logoUrl = staticFile('noderift-icon.jpg');
 
-  // Morph values (localFrame 210->250)
-  const morphT = clampProgress(f, 210, 250);
+  // Morph values (localFrame 120->150)
+  const morphT = clampProgress(f, 120, 150);
   const targetX = interpolate(morphT, [0, 1], [960, 960]);
   const targetY = interpolate(morphT, [0, 1], [480, 380]);
   const targetWidth = interpolate(morphT, [0, 1], [720, 860]);
@@ -29,24 +29,20 @@ export const WorkflowGalleryDemo: React.FC<{frame: number}> = ({frame}) => {
     <AbsoluteFill style={{background: '#0B0F19', zIndex: 40, fontFamily: 'Inter, system-ui, sans-serif'}}>
       <AbsoluteFill style={{backgroundImage: `radial-gradient(rgba(148, 163, 184, 0.15) 1px, transparent 1px)`, backgroundSize: '32px 32px', opacity: 0.7}} />
 
-      {/* Cards list */}
       {CARDS.map((card, i) => {
-        const staggerStart = i * 7;
-        const inProgress = clampProgress(f, staggerStart, staggerStart + 18);
+        const staggerStart = i * 4;
+        const inProgress = clampProgress(f, staggerStart, staggerStart + 12);
         if (inProgress <= 0) return null;
 
-        // Step 5: non-target clear away (165->200)
-        const clearProgress = card.isTarget ? 0 : clampProgress(f, 165 + i * 4, 195 + i * 4);
+        // Non-target clear away (95->120)
+        const clearProgress = card.isTarget ? 0 : clampProgress(f, 95 + i * 2, 115 + i * 2);
         const cardOpacity = inProgress * (1 - clearProgress);
-        const cardScale = (0.85 + 0.15 * inProgress) * (1 - 0.2 * clearProgress);
+        const cardScale = (0.88 + 0.12 * inProgress) * (1 - 0.2 * clearProgress);
 
         if (cardOpacity <= 0) return null;
 
-        // Step 2: idle floating drift (50->110)
-        const bobY = Math.sin(f * 0.08 + card.phase) * 5;
-
-        // Step 4: target highlight (150->165)
-        const highlightT = card.isTarget ? clampProgress(f, 150, 165) : 0;
+        const bobY = Math.sin(f * 0.1 + card.phase) * 4;
+        const highlightT = card.isTarget ? clampProgress(f, 80, 95) : 0;
         const borderColor = highlightT > 0 ? '#3B82F6' : 'rgba(71, 85, 105, 0.5)';
         const shadow = highlightT > 0 ? '0 0 35px rgba(59, 130, 246, 0.5)' : '0 10px 30px rgba(0, 0, 0, 0.4)';
 
@@ -86,14 +82,14 @@ export const WorkflowGalleryDemo: React.FC<{frame: number}> = ({frame}) => {
         );
       })}
 
-      {/* Step 3 & 4: Cursor movement & click target card */}
+      {/* Cursor movement & click (Faster 50->80 move, 80 click) */}
       <CursorDot
         frame={f}
         fromX={1600} fromY={300}
         toX={960} toY={480}
-        moveStart={110} moveEnd={150}
-        clickFrame={150}
-        visibleFrom={105} visibleTo={170}
+        moveStart={50} moveEnd={80}
+        clickFrame={80}
+        visibleFrom={45} visibleTo={100}
       />
     </AbsoluteFill>
   );

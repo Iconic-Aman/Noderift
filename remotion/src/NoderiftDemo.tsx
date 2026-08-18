@@ -11,33 +11,33 @@ import {ThinkingLogDemo} from './ThinkingLogDemo';
 
 const T = {
   logoIn: [310, 330] as const,
-  thinkingStart: 560,
-  thinkingStep: 40,
-  nodesStart: 685,
-  nodeGap: 40,
-  connectorsStart: 805,
-  connectorGap: 40,
-  connectorDuration: 28,
-  runButtonAppear: 895,
-  runClick: 925,
-  runStart: 945,
-  runEnd: 1065,
-  downloadAppear: 1075,
-  downloadClick: 1100,
-  endCardStart: 1125,
+  thinkingStart: 460,
+  thinkingStep: 25,
+  nodesStart: 535,
+  nodeGap: 24,
+  connectorsStart: 610,
+  connectorGap: 22,
+  connectorDuration: 18,
+  runButtonAppear: 675,
+  runClick: 695,
+  runStart: 710,
+  runEnd: 800,
+  downloadAppear: 810,
+  downloadClick: 830,
+  endCardStart: 855,
 };
 
-export const TOTAL_DURATION = 1165;
+export const TOTAL_DURATION = 890; // ~29.6s @ 30fps (Faster pacing!)
 
 export const NoderiftDemo: React.FC = () => {
   const frame = useCurrentFrame();
 
   const logoOpacity = clampProgress(frame, T.logoIn[0], T.logoIn[1]);
 
-  const chatVisible = frame >= 560 && frame < T.nodesStart;
+  const chatVisible = frame >= 460 && frame < T.nodesStart;
   const chatOpacity = interpolate(
     frame,
-    [560, 580, T.nodesStart - 30, T.nodesStart],
+    [460, 475, T.nodesStart - 20, T.nodesStart],
     [1, 1, 1, 0],
     {extrapolateLeft: 'clamp', extrapolateRight: 'clamp'}
   );
@@ -45,19 +45,19 @@ export const NoderiftDemo: React.FC = () => {
   const thinkingVisible = frame >= T.thinkingStart && frame < T.nodesStart;
 
   const runButtonVisible = frame >= T.runButtonAppear;
-  const runButtonOpacity = clampProgress(frame, T.runButtonAppear, T.runButtonAppear + 15);
+  const runButtonOpacity = clampProgress(frame, T.runButtonAppear, T.runButtonAppear + 10);
   const runClicked = frame >= T.runClick;
   const runFinished = frame >= T.runEnd;
 
   const downloadVisible = frame >= T.downloadAppear;
-  const downloadOpacity = clampProgress(frame, T.downloadAppear, T.downloadAppear + 15);
+  const downloadOpacity = clampProgress(frame, T.downloadAppear, T.downloadAppear + 10);
   const downloadClicked = frame >= T.downloadClick;
-  const downloadClickT = clampProgress(frame, T.downloadClick - 6, T.downloadClick + 6);
+  const downloadClickT = clampProgress(frame, T.downloadClick - 4, T.downloadClick + 4);
   const downloadScale = 1 + 0.08 * Math.sin(downloadClickT * Math.PI);
 
   const arrivalFrames = NODES.map((_, i) => T.runStart + ((T.runEnd - T.runStart) * i) / (NODES.length - 1));
-  const endCardT = clampProgress(frame, T.endCardStart, T.endCardStart + 20);
-  const contentFadeOut = interpolate(frame, [T.endCardStart - 10, T.endCardStart + 10], [1, 0], {extrapolateLeft: 'clamp', extrapolateRight: 'clamp'});
+  const endCardT = clampProgress(frame, T.endCardStart, T.endCardStart + 15);
+  const contentFadeOut = interpolate(frame, [T.endCardStart - 8, T.endCardStart + 8], [1, 0], {extrapolateLeft: 'clamp', extrapolateRight: 'clamp'});
 
   return (
     <AbsoluteFill style={{background: '#0B0F19', fontFamily: 'Inter, system-ui, sans-serif'}}>
@@ -75,14 +75,14 @@ export const NoderiftDemo: React.FC = () => {
           </div>
         )}
 
-        <CursorDot frame={frame} fromX={960} fromY={700} toX={1790} toY={28} moveStart={900} moveEnd={T.runClick} clickFrame={T.runClick} visibleFrom={895} visibleTo={T.runClick + 15} />
-        <CursorDot frame={frame} fromX={1790} fromY={28} toX={960} toY={760} moveStart={1080} moveEnd={T.downloadClick} clickFrame={T.downloadClick} visibleFrom={1075} visibleTo={T.downloadClick + 15} />
+        <CursorDot frame={frame} fromX={960} fromY={700} toX={1790} toY={28} moveStart={675} moveEnd={T.runClick} clickFrame={T.runClick} visibleFrom={670} visibleTo={T.runClick + 12} />
+        <CursorDot frame={frame} fromX={1790} fromY={28} toX={960} toY={760} moveStart={815} moveEnd={T.downloadClick} clickFrame={T.downloadClick} visibleFrom={810} visibleTo={T.downloadClick + 12} />
 
         <AIChatPanelDemo chatVisible={chatVisible} chatOpacity={chatOpacity} promptText={PROMPT_TEXT} />
         <ThinkingLogDemo thinkingVisible={thinkingVisible} frame={frame} thinkingStart={T.thinkingStart} thinkingStep={T.thinkingStep} steps={THINKING_STEPS} />
 
         {NODES.map((node, i) => (
-          <NodeCard key={node.title} frame={frame} appearFrame={T.nodesStart + i * T.nodeGap} node={node} runFrame={arrivalFrames[i]} doneFrame={arrivalFrames[i] + 25} />
+          <NodeCard key={node.title} frame={frame} appearFrame={T.nodesStart + i * T.nodeGap} node={node} runFrame={arrivalFrames[i]} doneFrame={arrivalFrames[i] + 20} />
         ))}
 
         {NODES.slice(0, -1).map((_, i) => (

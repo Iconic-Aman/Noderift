@@ -16,7 +16,9 @@ export const PROMPT_TEXT =
 export const THINKING_STEPS = [
   'Understanding your request…',
   'Plan: schedule trigger → Gmail → save to Excel',
-  'Generating nodes…',
+  'get_available_nodes()',
+  'add_node(), add_node(), add_node()',
+  'connect_nodes()…',
 ];
 
 export type IconKey = 'clock' | 'mail' | 'code';

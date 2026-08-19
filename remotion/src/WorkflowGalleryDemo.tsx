@@ -1,29 +1,36 @@
 import React from 'react';
-import {AbsoluteFill, interpolate, staticFile} from 'remotion';
+import {AbsoluteFill, interpolate, spring, staticFile, useVideoConfig} from 'remotion';
 import {PROMPT_TEXT} from './constants';
-import {CursorDot, clampProgress} from './components';
+import {clampProgress} from './components';
+
+// Shared constants — chat bubble must use these same values
+export const CARD_CENTER_X = 960;
+export const CARD_CENTER_Y = 480;
+export const CARD_WIDTH = 1100;
 
 const CARDS = [
-  {id: 0, text: 'Summarize new Slack messages daily', x: 280, y: 260, phase: 0},
-  {id: 1, text: 'Backup Google Drive files weekly', x: 1400, y: 240, phase: 1.2},
-  {id: 2, text: PROMPT_TEXT, x: 960, y: 480, isTarget: true, phase: 2.1},
-  {id: 3, text: 'Post new blog articles to Twitter', x: 300, y: 720, phase: 3.4},
-  {id: 4, text: 'Sync Stripe payments to Notion', x: 1420, y: 700, phase: 4.5},
-  {id: 5, text: 'Alert Slack on new GitHub issue', x: 860, y: 840, phase: 5.2},
+  {id: 0, text: 'Summarize new Slack messages daily', x: 240, y: 260, phase: 0},
+  {id: 1, text: 'Backup Google Drive files weekly', x: 1450, y: 220, phase: 1.2},
+  {id: 2, text: PROMPT_TEXT, x: CARD_CENTER_X, y: CARD_CENTER_Y, isTarget: true, phase: 2.1},
+  {id: 3, text: 'Post new blog articles to Twitter', x: 280, y: 730, phase: 3.4},
+  {id: 4, text: 'Sync Stripe payments to Notion', x: 1460, y: 710, phase: 4.5},
+  {id: 5, text: 'Alert Slack on new GitHub issue', x: 880, y: 860, phase: 5.2},
 ];
 
 export const WorkflowGalleryDemo: React.FC<{frame: number}> = ({frame}) => {
-  if (frame < 310 || frame > 460) return null;
+  // Extend window by 20 frames to overlap with chat bubble (crossfade)
+  if (frame < 310 || frame > 480) return null;
 
-  const f = frame - 310; // local frame 0 to 150 (Faster!)
+  const {fps} = useVideoConfig();
+  const f = frame - 310;
   const logoUrl = staticFile('noderift-icon.jpg');
 
-  // Morph values (localFrame 120->150)
+  // Morph: card glides to exact chat-bubble position (120->150)
   const morphT = clampProgress(f, 120, 150);
-  const targetX = interpolate(morphT, [0, 1], [960, 960]);
-  const targetY = interpolate(morphT, [0, 1], [480, 380]);
-  const targetWidth = interpolate(morphT, [0, 1], [720, 860]);
-  const isMorphed = morphT > 0.8;
+  const targetWidth = interpolate(morphT, [0, 1], [CARD_WIDTH, CARD_WIDTH]);
+
+  // Crossfade-out: gallery fades out as chat fades in (150->170)
+  const galleryOut = interpolate(f, [150, 170], [1, 0], {extrapolateLeft: 'clamp', extrapolateRight: 'clamp'});
 
   return (
     <AbsoluteFill style={{background: '#0B0F19', zIndex: 40, fontFamily: 'Inter, system-ui, sans-serif'}}>
@@ -34,39 +41,59 @@ export const WorkflowGalleryDemo: React.FC<{frame: number}> = ({frame}) => {
         const inProgress = clampProgress(f, staggerStart, staggerStart + 12);
         if (inProgress <= 0) return null;
 
-        // Non-target clear away (95->120)
         const clearProgress = card.isTarget ? 0 : clampProgress(f, 95 + i * 2, 115 + i * 2);
-        const cardOpacity = inProgress * (1 - clearProgress);
+        const cardOpacity = inProgress * (1 - clearProgress) * galleryOut;
         const cardScale = (0.88 + 0.12 * inProgress) * (1 - 0.2 * clearProgress);
 
         if (cardOpacity <= 0) return null;
 
         const bobY = Math.sin(f * 0.1 + card.phase) * 4;
-        const highlightT = card.isTarget ? clampProgress(f, 80, 95) : 0;
-        const borderColor = highlightT > 0 ? '#3B82F6' : 'rgba(71, 85, 105, 0.5)';
-        const shadow = highlightT > 0 ? '0 0 35px rgba(59, 130, 246, 0.5)' : '0 10px 30px rgba(0, 0, 0, 0.4)';
 
-        const posX = card.isTarget ? targetX : card.x;
-        const posY = (card.isTarget ? targetY : card.y) + bobY;
-        const widthVal = card.isTarget ? targetWidth : (card.text.length > 50 ? 720 : 380);
+        // Selection animation: target card starts dark like others, then lights up blue (frames 65->85)
+        const selectT = card.isTarget ? clampProgress(f, 65, 85) : 0;
+        
+        const initialWidth = card.text.length > 40 ? 520 : 360;
+        const widthVal = card.isTarget ? interpolate(morphT, [0, 1], [initialWidth, targetWidth]) : initialWidth;
+
+        const selectSpring = card.isTarget
+          ? spring({fps, frame: f - 65, config: {damping: 14, stiffness: 120, mass: 0.8}})
+          : 0;
+        const selectPop = card.isTarget ? interpolate(selectSpring, [0, 0.5, 1], [1, 1.05, 1]) : 1;
+
+        // Morph scale during transition to chat bubble
+        const morphSpring = card.isTarget
+          ? spring({fps, frame: f - 120, config: {damping: 18, stiffness: 100, mass: 1}})
+          : 1;
+        const scaleBoost = card.isTarget 
+          ? cardScale * selectPop * interpolate(morphSpring, [0, 1], [1, 1.02]) 
+          : cardScale;
+
+        const borderColor = selectT > 0 
+          ? `rgba(59, 130, 246, ${0.5 + 0.5 * selectT})` 
+          : 'rgba(71, 85, 105, 0.5)';
+        const shadow = selectT > 0 
+          ? `0 16px 45px rgba(37, 99, 235, ${0.45 * selectT})` 
+          : '0 10px 30px rgba(0, 0, 0, 0.4)';
 
         return (
           <div
             key={card.id}
             style={{
               position: 'absolute',
-              left: posX,
-              top: posY,
+              left: card.x,
+              top: card.y + (card.isTarget ? 0 : bobY),
               width: widthVal,
-              transform: `translate(-50%, -50%) scale(${cardScale})`,
+              transform: `translate(-50%, -50%) scale(${scaleBoost})`,
               opacity: cardOpacity,
-              background: card.isTarget && isMorphed ? 'linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%)' : 'rgba(15, 23, 42, 0.9)',
+              background: selectT > 0
+                ? `linear-gradient(135deg, rgba(37, 99, 235, ${selectT}) 0%, rgba(29, 78, 216, ${selectT}) 100%), rgba(15, 23, 42, 0.9)`
+                : 'rgba(15, 23, 42, 0.9)',
               backdropFilter: 'blur(16px)',
               border: `1.5px solid ${borderColor}`,
-              borderRadius: card.isTarget && isMorphed ? 20 : 16,
-              padding: '16px 24px',
+              borderRadius: selectT > 0 ? 20 : 16,
+              padding: '18px 24px',
               color: '#F8FAFC',
-              fontSize: 16,
+              fontSize: selectT > 0 ? 17 : 16,
               fontWeight: 500,
               boxShadow: shadow,
               display: 'flex',
@@ -75,22 +102,12 @@ export const WorkflowGalleryDemo: React.FC<{frame: number}> = ({frame}) => {
             }}
           >
             <img src={logoUrl} alt="Icon" style={{width: 28, height: 28, borderRadius: 8, flexShrink: 0}} />
-            <span style={{whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', flex: 1}}>
+            <span style={{whiteSpace: card.isTarget && morphT > 0.5 ? 'normal' : 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', flex: 1, lineHeight: 1.4}}>
               {card.text}
             </span>
           </div>
         );
       })}
-
-      {/* Cursor movement & click (Faster 50->80 move, 80 click) */}
-      <CursorDot
-        frame={f}
-        fromX={1600} fromY={300}
-        toX={960} toY={480}
-        moveStart={50} moveEnd={80}
-        clickFrame={80}
-        visibleFrom={45} visibleTo={100}
-      />
     </AbsoluteFill>
   );
 };

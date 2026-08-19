@@ -1,8 +1,8 @@
 import React from 'react';
 import {AbsoluteFill, useCurrentFrame, interpolate} from 'remotion';
 import {PROMPT_TEXT, THINKING_STEPS, NODES} from './constants';
-import {CursorDot, NodeCard, Connector, PulseDot, clampProgress} from './components';
-import {TopNavbar} from './components/demo/TopNavbar';
+import {NodeCard, Connector, PulseDot, clampProgress} from './components';
+
 import {EndCardDemo} from './components/demo/EndCardDemo';
 import {IntroCardDemo} from './components/demo/IntroCardDemo';
 import {WorkflowGalleryDemo} from './WorkflowGalleryDemo';
@@ -32,22 +32,21 @@ export const TOTAL_DURATION = 890; // ~29.6s @ 30fps (Faster pacing!)
 export const NoderiftDemo: React.FC = () => {
   const frame = useCurrentFrame();
 
-  const logoOpacity = clampProgress(frame, T.logoIn[0], T.logoIn[1]);
 
-  const chatVisible = frame >= 460 && frame < T.nodesStart;
+
+  const chatVisible = frame >= 455 && frame < T.nodesStart;
   const chatOpacity = interpolate(
     frame,
-    [460, 475, T.nodesStart - 20, T.nodesStart],
-    [1, 1, 1, 0],
+    [455, 475, T.nodesStart - 20, T.nodesStart],
+    [0, 1, 1, 0],
     {extrapolateLeft: 'clamp', extrapolateRight: 'clamp'}
   );
 
+
   const thinkingVisible = frame >= T.thinkingStart && frame < T.nodesStart;
 
-  const runButtonVisible = frame >= T.runButtonAppear;
-  const runButtonOpacity = clampProgress(frame, T.runButtonAppear, T.runButtonAppear + 10);
-  const runClicked = frame >= T.runClick;
-  const runFinished = frame >= T.runEnd;
+
+
 
   const downloadVisible = frame >= T.downloadAppear;
   const downloadOpacity = clampProgress(frame, T.downloadAppear, T.downloadAppear + 10);
@@ -66,20 +65,16 @@ export const NoderiftDemo: React.FC = () => {
 
       <AbsoluteFill style={{backgroundImage: `radial-gradient(rgba(148, 163, 184, 0.15) 1px, transparent 1px)`, backgroundSize: '32px 32px', opacity: 0.7}} />
 
-      <AbsoluteFill style={{opacity: contentFadeOut}}>
-        <TopNavbar logoOpacity={logoOpacity} pillActive={true} runButtonVisible={runButtonVisible} runButtonOpacity={runButtonOpacity} runClicked={runClicked} runFinished={runFinished} />
+      <AIChatPanelDemo chatVisible={chatVisible} chatOpacity={chatOpacity} promptText={PROMPT_TEXT} />
+      <ThinkingLogDemo thinkingVisible={thinkingVisible} frame={frame} thinkingStart={T.thinkingStart} thinkingStep={T.thinkingStep} steps={THINKING_STEPS} />
 
+      <AbsoluteFill style={{opacity: contentFadeOut}}>
         {downloadVisible && (
           <div style={{position: 'absolute', left: 960, top: 760, transform: `translateX(-50%) scale(${downloadScale})`, padding: '14px 28px', borderRadius: 12, border: `1px solid ${downloadClicked ? '#22C55E' : 'rgba(71, 85, 105, 0.6)'}`, background: downloadClicked ? '#22C55E' : 'rgba(30, 41, 59, 0.9)', color: downloadClicked ? '#fff' : '#F8FAFC', fontSize: 16, fontWeight: 600, opacity: downloadOpacity, boxShadow: downloadClicked ? '0 0 25px rgba(34, 197, 94, 0.5)' : '0 10px 30px rgba(0, 0, 0, 0.4)', display: 'flex', alignItems: 'center', gap: 10}}>
             {downloadClicked ? '✓ Downloaded Excel File' : '⬇ Download Excel Output'}
           </div>
         )}
 
-        <CursorDot frame={frame} fromX={960} fromY={700} toX={1790} toY={28} moveStart={675} moveEnd={T.runClick} clickFrame={T.runClick} visibleFrom={670} visibleTo={T.runClick + 12} />
-        <CursorDot frame={frame} fromX={1790} fromY={28} toX={960} toY={760} moveStart={815} moveEnd={T.downloadClick} clickFrame={T.downloadClick} visibleFrom={810} visibleTo={T.downloadClick + 12} />
-
-        <AIChatPanelDemo chatVisible={chatVisible} chatOpacity={chatOpacity} promptText={PROMPT_TEXT} />
-        <ThinkingLogDemo thinkingVisible={thinkingVisible} frame={frame} thinkingStart={T.thinkingStart} thinkingStep={T.thinkingStep} steps={THINKING_STEPS} />
 
         {NODES.map((node, i) => (
           <NodeCard key={node.title} frame={frame} appearFrame={T.nodesStart + i * T.nodeGap} node={node} runFrame={arrivalFrames[i]} doneFrame={arrivalFrames[i] + 20} />

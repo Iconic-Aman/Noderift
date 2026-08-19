@@ -1,7 +1,7 @@
 import React from 'react';
 import {spring, staticFile, useVideoConfig} from 'remotion';
 
-const AGENT_TOP = 520;
+const AGENT_TOP = 630;
 
 export const ThinkingLogDemo: React.FC<{
   thinkingVisible: boolean;

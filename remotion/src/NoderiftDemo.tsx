@@ -10,34 +10,34 @@ import {AIChatPanelDemo} from './AIChatPanelDemo';
 import {ThinkingLogDemo} from './ThinkingLogDemo';
 
 const T = {
-  logoIn: [310, 330] as const,
-  thinkingStart: 460,
+  logoIn: [425, 445] as const,
+  thinkingStart: 575,
   thinkingStep: 25,
-  nodesStart: 535,
+  nodesStart: 650,
   nodeGap: 24,
-  connectorsStart: 610,
+  connectorsStart: 725,
   connectorGap: 22,
   connectorDuration: 18,
-  runButtonAppear: 675,
-  runClick: 695,
-  runStart: 710,
-  runEnd: 800,
-  downloadAppear: 810,
-  downloadClick: 830,
-  endCardStart: 855,
+  runButtonAppear: 790,
+  runClick: 810,
+  runStart: 825,
+  runEnd: 915,
+  downloadAppear: 925,
+  downloadClick: 945,
+  endCardStart: 970,
 };
 
-export const TOTAL_DURATION = 890; // ~29.6s @ 30fps (Faster pacing!)
+export const TOTAL_DURATION = 1005; // ~33.5s @ 30fps
 
 export const NoderiftDemo: React.FC = () => {
   const frame = useCurrentFrame();
 
 
 
-  const chatVisible = frame >= 455 && frame < T.nodesStart;
+  const chatVisible = frame >= 570 && frame < T.nodesStart;
   const chatOpacity = interpolate(
     frame,
-    [455, 475, T.nodesStart - 20, T.nodesStart],
+    [570, 590, T.nodesStart - 20, T.nodesStart],
     [0, 1, 1, 0],
     {extrapolateLeft: 'clamp', extrapolateRight: 'clamp'}
   );

@@ -9,20 +9,20 @@ export const CARD_CENTER_Y = 480;
 export const CARD_WIDTH = 1100;
 
 const CARDS = [
-  {id: 0, text: 'Summarize new Slack messages daily', x: 240, y: 260, phase: 0},
-  {id: 1, text: 'Backup Google Drive files weekly', x: 1450, y: 220, phase: 1.2},
+  {id: 0, text: 'Check Gmail every hour and text me if an email from my boss arrives', x: 340, y: 260, phase: 0},
+  {id: 1, text: 'Scrape a news site every morning and email me the top headlines', x: 1450, y: 220, phase: 1.2},
   {id: 2, text: PROMPT_TEXT, x: CARD_CENTER_X, y: CARD_CENTER_Y, isTarget: true, phase: 2.1},
-  {id: 3, text: 'Post new blog articles to Twitter', x: 280, y: 730, phase: 3.4},
-  {id: 4, text: 'Sync Stripe payments to Notion', x: 1460, y: 710, phase: 4.5},
-  {id: 5, text: 'Alert Slack on new GitHub issue', x: 880, y: 860, phase: 5.2},
+  {id: 3, text: 'Run a Python script on new webhook data and save the results to my database', x: 320, y: 730, phase: 3.4},
+  {id: 4, text: 'Every Friday at 5 PM, query my database for pending orders and email me the list', x: 1460, y: 710, phase: 4.5},
+  {id: 5, text: 'Watch for new webhook events and send an SMS alert when one comes in', x: 880, y: 860, phase: 5.2},
 ];
 
 export const WorkflowGalleryDemo: React.FC<{frame: number}> = ({frame}) => {
   // Extend window by 20 frames to overlap with chat bubble (crossfade)
-  if (frame < 425 || frame > 595) return null;
+  if (frame < 325 || frame > 495) return null;
 
   const {fps} = useVideoConfig();
-  const f = frame - 425;
+  const f = frame - 325;
   const logoUrl = staticFile('noderift-icon.jpg');
 
   // Morph: card glides to exact chat-bubble position (120->150)

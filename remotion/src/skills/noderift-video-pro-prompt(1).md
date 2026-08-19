@@ -49,7 +49,7 @@ const settle = spring({
 - **Add background motion behind the text**: a faint, heavily-dimmed (10–15% opacity) node graph in the back layer, with 2-3 nodes being slowly dragged by a ghost cursor, wires re-routing manually. This visually *shows* the pain point instead of just stating it — and sets up a payoff later when the AI does it instantly.
 - `// SFX: low ambient hum starts`
 
-### Scene 2 — "Meet Noderift" (target: 0:04–0:06)
+### Scene 2 — "Meet Noderift" (target: 0:04–0:05)
 - Keep as-is structurally. Add a subtle scale-in overshoot on the logo icon (currently just a fade) using the `pop` spring above.
 - `// SFX: soft chime on logo pop`
 

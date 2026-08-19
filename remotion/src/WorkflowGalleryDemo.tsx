@@ -19,10 +19,10 @@ const CARDS = [
 
 export const WorkflowGalleryDemo: React.FC<{frame: number}> = ({frame}) => {
   // Extend window by 20 frames to overlap with chat bubble (crossfade)
-  if (frame < 325 || frame > 495) return null;
+  if (frame < 345 || frame > 515) return null;
 
   const {fps} = useVideoConfig();
-  const f = frame - 325;
+  const f = frame - 345;
   const logoUrl = staticFile('noderift-icon.jpg');
 
   // Morph: card glides to exact chat-bubble position (120->150)

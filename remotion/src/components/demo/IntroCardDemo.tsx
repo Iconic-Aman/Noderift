@@ -1,5 +1,8 @@
 import React from 'react';
 import {AbsoluteFill, interpolate, spring, staticFile, useVideoConfig} from 'remotion';
+import {loadFont} from '@remotion/google-fonts/Sora';
+
+const {fontFamily: soraFont} = loadFont('normal', {weights: ['700', '800']});
 
 // SFX: low ambient hum starts
 
@@ -154,6 +157,7 @@ export const IntroCardDemo: React.FC<IntroCardDemoProps> = ({frame}) => {
             style={{
               color: '#F8FAFC',
               fontSize: 72,
+              fontFamily: soraFont,
               fontWeight: 800,
               letterSpacing: '-0.025em',
               whiteSpace: 'nowrap',
@@ -172,6 +176,7 @@ export const IntroCardDemo: React.FC<IntroCardDemoProps> = ({frame}) => {
                 position: 'absolute',
                 color: '#60A5FA',
                 fontSize: 60,
+                fontFamily: soraFont,
                 fontWeight: 800,
                 letterSpacing: '-0.02em',
                 whiteSpace: 'nowrap',

@@ -33,8 +33,8 @@ export const WorkflowGalleryDemo: React.FC<{frame: number}> = ({frame}) => {
   const galleryOut = interpolate(f, [150, 170], [1, 0], {extrapolateLeft: 'clamp', extrapolateRight: 'clamp'});
 
   return (
-    <AbsoluteFill style={{background: '#0B0F19', zIndex: 40, fontFamily: 'Inter, system-ui, sans-serif'}}>
-      <AbsoluteFill style={{backgroundImage: `radial-gradient(rgba(148, 163, 184, 0.15) 1px, transparent 1px)`, backgroundSize: '32px 32px', opacity: 0.7}} />
+    <AbsoluteFill style={{fontFamily: 'Inter, system-ui, sans-serif'}}>
+
 
       {CARDS.map((card, i) => {
         const staggerStart = i * 4;

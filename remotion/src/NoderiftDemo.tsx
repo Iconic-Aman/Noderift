@@ -61,12 +61,13 @@ export const NoderiftDemo: React.FC = () => {
   return (
     <AbsoluteFill style={{background: '#0B0F19', fontFamily: 'Inter, system-ui, sans-serif'}}>
       <IntroCardDemo frame={frame} />
-      <WorkflowGalleryDemo frame={frame} />
 
       <AbsoluteFill style={{backgroundImage: `radial-gradient(rgba(148, 163, 184, 0.15) 1px, transparent 1px)`, backgroundSize: '32px 32px', opacity: 0.7}} />
 
+      <WorkflowGalleryDemo frame={frame} />
       <AIChatPanelDemo chatVisible={chatVisible} chatOpacity={chatOpacity} promptText={PROMPT_TEXT} />
       <ThinkingLogDemo thinkingVisible={thinkingVisible} frame={frame} thinkingStart={T.thinkingStart} thinkingStep={T.thinkingStep} steps={THINKING_STEPS} />
+
 
       <AbsoluteFill style={{opacity: contentFadeOut}}>
         {downloadVisible && (

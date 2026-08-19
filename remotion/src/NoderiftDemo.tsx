@@ -15,19 +15,19 @@ const T = {
   thinkingStep: 25,
   nodesStart: 650,
   nodeGap: 24,
-  connectorsStart: 725,
-  connectorGap: 22,
-  connectorDuration: 18,
-  runButtonAppear: 790,
-  runClick: 810,
-  runStart: 825,
-  runEnd: 915,
-  downloadAppear: 925,
-  downloadClick: 945,
-  endCardStart: 970,
+  connectorsStart: 690,
+  connectorGap: 18,
+  connectorDuration: 16,
+  runButtonAppear: 720,
+  runClick: 725,
+  runStart: 730,
+  runEnd: 770,
+  downloadAppear: 780,
+  downloadClick: 795,
+  endCardStart: 820,
 };
 
-export const TOTAL_DURATION = 1005; // ~33.5s @ 30fps
+export const TOTAL_DURATION = 855;
 
 export const NoderiftDemo: React.FC = () => {
   const frame = useCurrentFrame();

@@ -57,7 +57,6 @@ export function CloudTrialModal({ isOpen, onClose }: CloudTrialModalProps) {
 
           <ul className="space-y-2.5">
             {[
-              "100 Free AI Workflow Generations",
               "1,000 Cloud Node Executions per month",
               "Instant Webhook triggers & live sandbox",
               "No credit card required to start"

@@ -62,7 +62,6 @@ export function LandingModes() {
                 <div className="text-xs font-semibold text-slate-300 mb-2">Key Highlights:</div>
                 <ul className="space-y-2">
                   {[
-                    "Zero network latency on localhost",
                     "Full privacy — keys stay on your machine",
                     "Unlimited local workflow executions",
                     "Docker Compose & macOS/Windows scripts"
@@ -126,7 +125,6 @@ export function LandingModes() {
                 </div>
                 <ul className="space-y-2">
                   {[
-                    "100 Free AI Workflow Generations",
                     "Instant access — no setup required",
                     "Managed webhooks & live execution logs",
                     "Upgrade options available later"

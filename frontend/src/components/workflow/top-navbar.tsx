@@ -59,7 +59,7 @@ export function TopNavbar({
           <span>Back</span>
         </Link>
         <div className="flex items-center gap-2">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-600"><Zap className="h-4 w-4 text-white" /></div>
+          <img src="/noderift-icon.jpg" alt="Noderift" className="h-8 w-8 rounded-lg object-cover shadow-sm" />
           <span className="text-sm font-semibold text-slate-200">Noderift</span>
         </div>
         <div className="h-5 w-px bg-slate-700" />

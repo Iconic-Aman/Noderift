@@ -56,3 +56,14 @@ backend/migrations/versions/*.pyc
 .pytest_cache/
 htmlcov/
 .mypy_cache/
+
+# ── Remotion Build & Dependencies ───────────────────────────────────────────
+remotion/node_modules/
+remotion/.next/
+remotion/out/
+remotion/build/
+remotion/.vercel/
+.qodo/
+Gemini_Generated_Image_*
+
+

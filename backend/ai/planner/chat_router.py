@@ -77,8 +77,16 @@ def _is_obvious_conversation(message: str) -> bool:
 
 def _get_chat_llm():
     from core.config import settings
+    # Prioritize OPENROUTER_MODEL2 if set in .env
+    chat_model = (
+        settings.OPENROUTER_MODEL2.strip()
+        or settings.OPENROUTER_CHAT_MODEL.strip()
+        or "openrouter/free"
+    )
+
+    logger.info(f"[ChatRouter] 🤖 Intent/Chat Model (OpenRouter): '{chat_model}'")
     return ChatOpenAI(
-        model=settings.OPENROUTER_CHAT_MODEL,
+        model=chat_model,
         api_key=settings.OPENROUTER_API_KEY,
         base_url=settings.OPENROUTER_API_URL or "https://openrouter.ai/api/v1",
         temperature=0.7,

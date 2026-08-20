@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { Sparkles, Cloud } from "lucide-react";
 
 export function LandingHero() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -71,6 +72,12 @@ export function LandingHero() {
       <canvas ref={canvasRef} className="absolute inset-0 w-full h-full pointer-events-none" />
 
       <div className="relative z-10 max-w-3xl mx-auto px-6 md:px-8 text-center">
+        {/* Badge */}
+        <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-300 text-xs font-semibold mb-6">
+          <Sparkles className="w-3.5 h-3.5 text-indigo-400" />
+          <span>Open Source & Noderift Cloud</span>
+        </div>
+
         {/* Headline */}
         <h1 className="text-balance text-4xl sm:text-5xl md:text-6xl font-extrabold mb-6 leading-[1.15] text-white">
           <span className="inline-block">
@@ -93,9 +100,10 @@ export function LandingHero() {
         <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
           <button
             onClick={handleCTA}
-            className="w-full sm:w-auto group relative px-8 py-4 rounded-xl bg-blue-600 text-white font-semibold hover:bg-blue-500 hover:shadow-2xl hover:shadow-blue-500/30 transition-all duration-200 hover:scale-[1.03] active:scale-[0.98] whitespace-nowrap cursor-pointer"
+            className="w-full sm:w-auto group relative px-8 py-4 rounded-xl bg-blue-600 text-white font-semibold hover:bg-blue-500 hover:shadow-2xl hover:shadow-blue-500/30 transition-all duration-200 hover:scale-[1.03] active:scale-[0.98] whitespace-nowrap cursor-pointer flex items-center justify-center gap-2"
           >
-            {hasToken ? "Go to Dashboard →" : "Start Building →"}
+            <Cloud className="w-4 h-4" />
+            {hasToken ? "Go to Dashboard →" : "Try Noderift Cloud Free →"}
           </button>
           <a
             href="https://github.com/Iconic-Aman/Noderift"

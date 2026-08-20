@@ -22,6 +22,8 @@
         OPENROUTER_API_KEY: ${OPENROUTER_API_KEY}
         OPENROUTER_MODEL: ${OPENROUTER_MODEL}
         OPENROUTER_API_URL: ${OPENROUTER_API_URL}
+        RESEND_API_KEY: ${RESEND_API_KEY}
+        FEEDBACK_TO_EMAIL: ${FEEDBACK_TO_EMAIL}
       volumes:
         - ./backend:/app
         - ./worker:/app/worker
@@ -67,9 +69,13 @@
         NVIDIA_API_URL: ${NVIDIA_API_URL}
         LLM_MODEL: ${LLM_MODEL}
         EMBEDDING_MODEL: ${EMBEDDING_MODEL}
+        GROQ_API_KEY: ${GROQ_API_KEY}
+        GROQ_MODEL: ${GROQ_MODEL}
         OPENROUTER_API_KEY: ${OPENROUTER_API_KEY}
         OPENROUTER_MODEL: ${OPENROUTER_MODEL}
         OPENROUTER_API_URL: ${OPENROUTER_API_URL}
+        RESEND_API_KEY: ${RESEND_API_KEY}
+        FEEDBACK_TO_EMAIL: ${FEEDBACK_TO_EMAIL}
       volumes:
         - .:/workspace
       working_dir: /workspace

@@ -18,8 +18,8 @@ export function LandingNavbar() {
       {/* Open Left Wing - Logo */}
       <div className="fixed top-7 left-8 z-50 flex items-center gap-3">
         <Link to="/" className="flex items-center gap-2.5 text-white hover:scale-[1.02] transition-transform">
-          <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-blue-600 shadow-[0_0_15px_rgba(59,130,246,0.4)]">
-            <Zap className="h-4.5 w-4.5 text-white" />
+          <div className="flex h-9 w-9 items-center justify-center rounded-xl overflow-hidden shadow-lg shadow-blue-500/20">
+            <img src="/noderift-icon.jpg" alt="Noderift" className="h-full w-full object-cover" />
           </div>
           <span className="font-extrabold text-sm tracking-wider uppercase bg-gradient-to-r from-white via-slate-100 to-slate-400 bg-clip-text text-transparent">
             Noderift

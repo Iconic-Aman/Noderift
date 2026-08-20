@@ -60,7 +60,7 @@ async def send_feedback(
     try:
         resend.api_key = settings.RESEND_API_KEY
         resend.Emails.send({
-            "from": "onboarding@resend.dev",
+            "from": "Noderift Feedback <feedback@noderift.fun>",
             "to": settings.FEEDBACK_TO_EMAIL,
             "subject": f"[Noderift Feedback] from {user.email}" + (f" — {stars}" if stars else ""),
             "html": html_body,

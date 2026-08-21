@@ -2,11 +2,13 @@ import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Github, Menu, X, LayoutDashboard, KeyRound, LogOut } from "lucide-react";
 import { useUser } from "@/hooks/useUser";
+import { useScrollDirection } from "@/hooks/useScrollDirection";
 
 export function LandingNavbar() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [hasToken, setHasToken] = useState(false);
   const { logout } = useUser();
+  const isVisible = useScrollDirection();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -16,7 +18,7 @@ export function LandingNavbar() {
   return (
     <>
       {/* Left - Logo */}
-      <div className="fixed top-7 left-8 z-50 flex items-center gap-3">
+      <div className={`fixed top-7 left-8 z-50 flex items-center gap-3 transition-all duration-300 ${isVisible ? "translate-y-0 opacity-100" : "-translate-y-24 opacity-0 pointer-events-none"}`}>
         <Link to="/" className="flex items-center gap-2.5 text-white hover:scale-[1.02] transition-transform">
           <div className="flex h-9 w-9 items-center justify-center rounded-xl overflow-hidden shadow-lg shadow-blue-500/20">
             <img src="/noderift-icon.jpg" alt="Noderift" className="h-full w-full object-cover" />
@@ -32,7 +34,7 @@ export function LandingNavbar() {
       </div>
 
       {/* Right - Desktop */}
-      <div className="fixed top-7 right-8 z-50 hidden md:flex items-center gap-6 pt-1.5">
+      <div className={`fixed top-7 right-8 z-50 hidden md:flex items-center gap-6 pt-1.5 transition-all duration-300 ${isVisible ? "translate-y-0 opacity-100" : "-translate-y-24 opacity-0 pointer-events-none"}`}>
         <a
           href="https://github.com/Iconic-Aman/Noderift"
           target="_blank"
@@ -81,7 +83,7 @@ export function LandingNavbar() {
       {/* Right - Mobile Trigger */}
       <button
         onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-        className="fixed top-7 right-8 z-50 md:hidden flex h-9 w-9 items-center justify-center bg-slate-900/30 border border-slate-800 hover:border-slate-700 rounded-lg backdrop-blur-sm text-slate-400 hover:text-white cursor-pointer transition-colors"
+        className={`fixed top-7 right-8 z-50 md:hidden flex h-9 w-9 items-center justify-center bg-slate-900/30 border border-slate-800 hover:border-slate-700 rounded-lg backdrop-blur-sm text-slate-400 hover:text-white cursor-pointer transition-all duration-300 ${isVisible ? "translate-y-0 opacity-100" : "-translate-y-24 opacity-0 pointer-events-none"}`}
       >
         {mobileMenuOpen ? <X size={18} /> : <Menu size={18} />}
       </button>

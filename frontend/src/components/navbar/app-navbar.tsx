@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { ArrowLeft, Home, LayoutDashboard, KeyRound, LogOut, Menu, X } from "lucide-react";
 import { useUser } from "@/hooks/useUser";
+import { useScrollDirection } from "@/hooks/useScrollDirection";
 
 interface AppNavbarProps {
   title: string;
@@ -16,6 +17,7 @@ export function AppNavbar({ title, subtitle, showBack, backTo, children }: AppNa
   const navigate = useNavigate();
   const location = useLocation();
   const { logout } = useUser();
+  const isVisible = useScrollDirection();
 
   const handleBack = () => {
     if (backTo) {
@@ -33,7 +35,7 @@ export function AppNavbar({ title, subtitle, showBack, backTo, children }: AppNa
   return (
     <>
       {/* Left - Logo & Title (exact same position as Home) */}
-      <div className="fixed top-7 left-8 z-50 flex items-center gap-3">
+      <div className={`fixed top-7 left-8 z-50 flex items-center gap-3 transition-all duration-300 ${isVisible ? "translate-y-0 opacity-100" : "-translate-y-24 opacity-0 pointer-events-none"}`}>
         {showBack && (
           <button
             onClick={handleBack}
@@ -62,7 +64,7 @@ export function AppNavbar({ title, subtitle, showBack, backTo, children }: AppNa
       </div>
 
       {/* Right - Desktop (exact same position as Home) */}
-      <div className="fixed top-7 right-8 z-50 hidden md:flex items-center gap-6 pt-1.5">
+      <div className={`fixed top-7 right-8 z-50 hidden md:flex items-center gap-6 pt-1.5 transition-all duration-300 ${isVisible ? "translate-y-0 opacity-100" : "-translate-y-24 opacity-0 pointer-events-none"}`}>
         {children}
 
         <Link
@@ -107,7 +109,7 @@ export function AppNavbar({ title, subtitle, showBack, backTo, children }: AppNa
       {/* Right - Mobile Trigger */}
       <button
         onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-        className="fixed top-7 right-8 z-50 md:hidden flex h-9 w-9 items-center justify-center bg-slate-900/30 border border-slate-800 hover:border-slate-700 rounded-lg backdrop-blur-sm text-slate-400 hover:text-white cursor-pointer transition-colors"
+        className={`fixed top-7 right-8 z-50 md:hidden flex h-9 w-9 items-center justify-center bg-slate-900/30 border border-slate-800 hover:border-slate-700 rounded-lg backdrop-blur-sm text-slate-400 hover:text-white cursor-pointer transition-all duration-300 ${isVisible ? "translate-y-0 opacity-100" : "-translate-y-24 opacity-0 pointer-events-none"}`}
       >
         {mobileMenuOpen ? <X size={18} /> : <Menu size={18} />}
       </button>

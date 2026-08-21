@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
-import { ArrowLeft, Clock, CheckCircle2, AlertTriangle, Play, Calendar, Terminal } from "lucide-react";
+import { ArrowLeft, Clock, CheckCircle2, AlertTriangle, Calendar, Terminal, Github, Home, LayoutDashboard, KeyRound, LogOut } from "lucide-react";
 import { useExecution, ExecutionState } from "../hooks/useExecution";
 import { apiFetch } from "../lib/api";
+import { useUser } from "@/hooks/useUser";
 
 export default function History() {
   const { id } = useParams();
@@ -11,6 +12,7 @@ export default function History() {
   const [history, setHistory] = useState<ExecutionState[]>([]);
   const [selectedRun, setSelectedRun] = useState<any | null>(null);
   const [workflowName, setWorkflowName] = useState("Workflow");
+  const { logout } = useUser();
 
   useEffect(() => {
     if (!id) return;
@@ -30,15 +32,56 @@ export default function History() {
   return (
     <div className="flex h-screen w-full flex-col bg-slate-950 text-slate-200">
       {/* Header */}
-      <div className="flex h-14 items-center justify-between border-b border-slate-800 bg-slate-900 px-6">
+      <div className="flex h-14 items-center justify-between border-b border-slate-800 bg-slate-900/90 px-6 md:px-8 backdrop-blur-sm">
         <div className="flex items-center gap-3">
-          <Link to={`/editor/${id}`} className="rounded p-1.5 hover:bg-slate-800 text-slate-400 hover:text-white">
-            <ArrowLeft className="h-4 w-4" />
+          <Link
+            to={`/editor/${id}`}
+            className="flex h-8 items-center gap-1.5 rounded-lg border border-slate-800 bg-slate-950 px-2.5 py-1.5 text-xs text-slate-400 hover:bg-slate-800 hover:text-white transition-all shadow-sm cursor-pointer"
+          >
+            <ArrowLeft className="h-3.5 w-3.5" />
+            <span>Editor</span>
           </Link>
+          <Link to="/" className="flex items-center gap-2 hover:opacity-90 transition-opacity">
+            <img src="/noderift-icon.jpg" alt="Noderift" className="h-8 w-8 rounded-lg object-cover shadow-sm" />
+            <span className="text-sm font-semibold text-slate-200">Noderift</span>
+          </Link>
+          <div className="h-5 w-px bg-slate-700" />
           <div className="flex flex-col">
-            <span className="text-xs text-slate-500">Execution History</span>
-            <span className="text-sm font-semibold">{workflowName}</span>
+            <span className="text-xs font-semibold text-slate-200">{workflowName}</span>
+            <span className="text-[10px] text-slate-500">Execution History</span>
           </div>
+        </div>
+
+        <div className="flex items-center gap-5 pt-1">
+          <Link
+            to="/"
+            className="relative py-1 text-slate-400 hover:text-white transition-colors duration-300 text-xs font-semibold flex items-center gap-1.5 after:absolute after:bottom-0 after:left-0 after:h-[1.5px] after:w-0 hover:after:w-full after:bg-blue-500 after:transition-all after:duration-300"
+          >
+            <Home size={13} />
+            Home
+          </Link>
+          <button
+            onClick={() => navigate("/dashboard")}
+            className="relative py-1 text-slate-400 hover:text-white transition-colors duration-300 text-xs font-semibold flex items-center gap-1.5 after:absolute after:bottom-0 after:left-0 after:h-[1.5px] after:w-0 hover:after:w-full after:bg-blue-500 after:transition-all after:duration-300 cursor-pointer"
+          >
+            <LayoutDashboard size={13} />
+            Dashboard
+          </button>
+          <button
+            onClick={() => navigate("/credentials", { state: { from: `/history/${id}` } })}
+            className="relative py-1 text-slate-400 hover:text-white transition-colors duration-300 text-xs font-semibold flex items-center gap-1.5 after:absolute after:bottom-0 after:left-0 after:h-[1.5px] after:w-0 hover:after:w-full after:bg-blue-500 after:transition-all after:duration-300 cursor-pointer"
+          >
+            <KeyRound size={13} />
+            Credentials
+          </button>
+          <div className="h-4 w-[1px] bg-slate-800" />
+          <button
+            onClick={logout}
+            className="relative py-1 text-slate-400 hover:text-red-400 transition-colors duration-300 text-xs font-semibold flex items-center gap-1.5 after:absolute after:bottom-0 after:left-0 after:h-[1.5px] after:w-0 hover:after:w-full after:bg-red-500 after:transition-all after:duration-300 cursor-pointer"
+          >
+            <LogOut size={13} />
+            Sign Out
+          </button>
         </div>
       </div>
 
@@ -98,7 +141,7 @@ export default function History() {
                 <Terminal className="h-4 w-4 text-blue-400" />
                 Run Details
               </h3>
-              <button onClick={() => setSelectedRun(null)} className="text-slate-500 hover:text-white text-xs">
+              <button onClick={() => setSelectedRun(null)} className="text-slate-500 hover:text-white text-xs cursor-pointer">
                 Close
               </button>
             </div>

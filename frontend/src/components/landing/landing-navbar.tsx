@@ -27,10 +27,6 @@ export function LandingNavbar() {
             Noderift
           </span>
         </Link>
-        <div className="h-3.5 w-[1px] bg-slate-800" />
-        <span className="text-[10px] font-mono text-blue-500 uppercase tracking-widest font-bold animate-pulse">
-          OS v1.0
-        </span>
       </div>
 
       {/* Right - Desktop */}

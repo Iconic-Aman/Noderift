@@ -24,18 +24,18 @@ router = APIRouter(
 
 @router.get("/google/login")
 async def google_login():
-    logger.info("[STEP 1] /auth/google/login called")
+    logger.info("[AUTH] /auth/google/login called")
     if not settings.GOOGLE_CLIENT_ID:
-        logger.error("[STEP 1] GOOGLE_CLIENT_ID is empty — OAuth will fail")
+        logger.error("[AUTH] GOOGLE_CLIENT_ID is empty — OAuth will fail")
         raise HTTPException(status_code=500, detail="Google OAuth not configured")
 
     url = f"{settings.GOOGLE_AUTH_URL}?response_type=code&client_id={settings.GOOGLE_CLIENT_ID}&redirect_uri={settings.GOOGLE_REDIRECT_URI}&scope=openid%20email%20profile&access_type=offline&prompt=consent"
-    logger.info(f"[STEP 1] Redirecting to Google: {url}")
+    logger.info(f"[AUTH] Redirecting to Google: {url}")
     return RedirectResponse(url)
 
 @router.get("/google/callback")
 async def google_callback(code: str, state: str = None, db: Session = Depends(get_db)):
-    logger.info("[STEP 2] /auth/google/callback called")
+    logger.info("[AUTH] /auth/google/callback received")
     async with httpx.AsyncClient() as client:
         token_res = await client.post(
             settings.GOOGLE_TOKEN_URL,
@@ -49,7 +49,7 @@ async def google_callback(code: str, state: str = None, db: Session = Depends(ge
         )
 
     if token_res.status_code != 200:
-        logger.error(f"[STEP 2] Token exchange failed: {token_res.text}")
+        logger.error(f"[AUTH] Token exchange failed: {token_res.text}")
         raise HTTPException(status_code=400, detail="Failed to fetch token")
 
     tokens = token_res.json()
@@ -60,7 +60,7 @@ async def google_callback(code: str, state: str = None, db: Session = Depends(ge
     if state:
         target_user = db.query(User).filter(User.id == str(state)).first()
         if not target_user:
-            raise HTTPException(status_code=404, detail=f"User '{state}' not found in database. Please log in first.")
+            raise HTTPException(status_code=404, detail=f"User '{state}' not found in database.")
         user = target_user
         email = user.email
     else:
@@ -70,19 +70,22 @@ async def google_callback(code: str, state: str = None, db: Session = Depends(ge
                 headers={"Authorization": f"Bearer {access_token}"}
             )
         if user_res.status_code != 200:
-            logger.error(f"[STEP 2] Userinfo failed: {user_res.text}")
+            logger.error(f"[AUTH] Userinfo failed: {user_res.text}")
             raise HTTPException(status_code=400, detail="Failed to fetch user info from Google")
         google_user = user_res.json()
+        logger.info(f"[AUTH] Google userinfo raw response: {google_user}")
+
         email = google_user.get("email", "")
-        name = google_user.get("name", "")
+        name = google_user.get("name", "") or google_user.get("given_name", "")
         picture = google_user.get("picture", "")
 
         user = db.query(User).filter(User.email == email).first()
         if user:
-            user.name = name
-            user.picture = picture
+            user.name = name or user.name
+            user.picture = picture or user.picture
             db.commit()
             db.refresh(user)
+            logger.info(f"[AUTH] Updated existing user: id={user.id}, email={user.email}, name={user.name}")
         else:
             user = User(
                 id=str(uuid4()),
@@ -94,6 +97,7 @@ async def google_callback(code: str, state: str = None, db: Session = Depends(ge
             db.add(user)
             db.commit()
             db.refresh(user)
+            logger.info(f"[AUTH] Created new user: id={user.id}, email={user.email}, name={user.name}")
 
     granted_scope = tokens.get("scope", "")
     if refresh_token and ("gmail" in granted_scope or state):
@@ -128,12 +132,13 @@ async def google_callback(code: str, state: str = None, db: Session = Depends(ge
         redirect_url = f"{settings.FRONTEND_URL}/oauth-success?provider=gmail"
     else:
         redirect_url = f"{settings.FRONTEND_URL}/login?token={user.id}"
+    logger.info(f"[AUTH] Redirecting to: {redirect_url}")
     return RedirectResponse(url=redirect_url)
 
 @router.get("/me", dependencies=[Depends(bearer_scheme)])
 async def get_me(user: User = Depends(get_current_user)):
-    logger.info(f"[STEP 3] /auth/me called for user: {user.email}")
-    first_name = user.name.split()[0] if user.name else user.email.split("@")[0]
+    first_name = (user.name.split()[0] if user.name else user.email.split("@")[0]) if (user.name or user.email) else "User"
+    logger.info(f"[AUTH /auth/me] user_id={user.id}, email={user.email}, name={user.name}, first_name={first_name}")
     return {
         "id": user.id,
         "email": user.email,
@@ -145,6 +150,6 @@ async def get_me(user: User = Depends(get_current_user)):
 
 @router.post("/logout")
 async def logout(response: Response):
-    logger.info("[STEP 4] /auth/logout called — clearing access_token cookie")
+    logger.info("[AUTH] /auth/logout called")
     response.delete_cookie("access_token")
     return {"status": "success"}

@@ -16,6 +16,8 @@ export function useUser() {
 
   const fetchUser = useCallback(async () => {
     const token = localStorage.getItem("noderift_token");
+    console.log("[useUser] LocalStorage noderift_token:", token);
+
     if (!token) {
       setUser(null);
       setLoading(false);
@@ -25,9 +27,10 @@ export function useUser() {
     try {
       setLoading(true);
       const data = await apiFetch("/auth/me");
+      console.log("[useUser] /auth/me response data:", data);
       setUser(data);
     } catch (err) {
-      console.error("Failed to fetch user profile", err);
+      console.error("[useUser] Failed to fetch /auth/me:", err);
       setUser(null);
     } finally {
       setLoading(false);

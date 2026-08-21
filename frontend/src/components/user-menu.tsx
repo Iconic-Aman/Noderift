@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { User, LayoutDashboard, KeyRound, LogOut, ChevronDown } from "lucide-react";
+import { User, LayoutDashboard, KeyRound, LogOut, ChevronDown, Home } from "lucide-react";
 import { useUser } from "@/hooks/useUser";
 
 export function UserMenu() {
@@ -24,6 +24,10 @@ export function UserMenu() {
     setOpen(false);
     navigate(path, { state: { from: location.pathname } });
   };
+
+  const isHome = location.pathname === "/";
+  const isDashboard = location.pathname === "/dashboard";
+  const isCredentials = location.pathname === "/credentials";
 
   return (
     <div className="relative" ref={menuRef}>
@@ -49,21 +53,35 @@ export function UserMenu() {
             <p className="text-[11px] text-slate-400 truncate">{user?.email}</p>
           </div>
 
-          <button
-            onClick={() => goTo("/dashboard")}
-            className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium text-slate-300 hover:text-white hover:bg-slate-800/80 transition-colors cursor-pointer"
-          >
-            <LayoutDashboard size={14} className="text-blue-400" />
-            Dashboard
-          </button>
+          {!isHome && (
+            <button
+              onClick={() => goTo("/")}
+              className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium text-slate-300 hover:text-white hover:bg-slate-800/80 transition-colors cursor-pointer"
+            >
+              <Home size={14} className="text-blue-400" />
+              Home
+            </button>
+          )}
 
-          <button
-            onClick={() => goTo("/credentials")}
-            className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium text-slate-300 hover:text-white hover:bg-slate-800/80 transition-colors cursor-pointer"
-          >
-            <KeyRound size={14} className="text-slate-400" />
-            Credentials
-          </button>
+          {!isDashboard && (
+            <button
+              onClick={() => goTo("/dashboard")}
+              className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium text-slate-300 hover:text-white hover:bg-slate-800/80 transition-colors cursor-pointer"
+            >
+              <LayoutDashboard size={14} className="text-indigo-400" />
+              Dashboard
+            </button>
+          )}
+
+          {!isCredentials && (
+            <button
+              onClick={() => goTo("/credentials")}
+              className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium text-slate-300 hover:text-white hover:bg-slate-800/80 transition-colors cursor-pointer"
+            >
+              <KeyRound size={14} className="text-amber-400" />
+              Credentials
+            </button>
+          )}
 
           <div className="my-1 h-[1px] bg-slate-800/80" />
 

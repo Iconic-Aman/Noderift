@@ -1,28 +1,28 @@
 import { useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Zap } from "lucide-react";
+import { API_URL } from "@/lib/api";
 
 export function Login() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
 
   useEffect(() => {
-    const token = localStorage.getItem("noderift_token");
-    if (token) {
+    const urlToken = searchParams.get("token");
+    if (urlToken) {
+      localStorage.setItem("noderift_token", urlToken);
       navigate("/dashboard");
+      return;
     }
-  }, [navigate]);
 
-  useEffect(() => {
-    const token = searchParams.get("token");
-    if (token) {
-      localStorage.setItem("noderift_token", token);
+    const existingToken = localStorage.getItem("noderift_token");
+    if (existingToken && existingToken !== "test_token" && existingToken !== "test") {
       navigate("/dashboard");
     }
   }, [searchParams, navigate]);
 
   const handleGoogleLogin = () => {
-    window.location.href = `${import.meta.env.VITE_API_URL}/auth/google/login`;
+    window.location.href = `${API_URL}/auth/google/login`;
   };
 
   return (
@@ -39,7 +39,7 @@ export function Login() {
         <button
           id="google-login-btn"
           onClick={handleGoogleLogin}
-          className="flex w-full items-center justify-center gap-3 rounded-lg border border-slate-700 bg-slate-800 py-3 text-sm font-medium text-white transition-colors hover:bg-slate-700"
+          className="flex w-full items-center justify-center gap-3 rounded-lg border border-slate-700 bg-slate-800 py-3 text-sm font-medium text-white transition-colors hover:bg-slate-700 cursor-pointer"
         >
           <svg className="h-5 w-5" viewBox="0 0 24 24">
             <path

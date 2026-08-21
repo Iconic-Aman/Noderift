@@ -67,7 +67,7 @@ export function TopNavbar({
           <input ref={inputRef} value={editValue} onChange={e => setEditValue(e.target.value)} onBlur={handleSubmit}
             onKeyDown={e => e.key === 'Enter' && handleSubmit()} className="bg-slate-800 text-sm px-2 py-1 rounded outline-none" />
         ) : (
-          <button onClick={() => setIsEditing(true)} className="text-sm font-medium text-slate-300 hover:text-white">{workflowName}</button>
+          <button onClick={() => setIsEditing(true)} className="text-sm font-medium text-slate-300 hover:text-white cursor-pointer">{workflowName}</button>
         )}
       </div>
 
@@ -131,7 +131,7 @@ export function TopNavbar({
           <Download className="h-4 w-4" />
         </button>
 
-        <button onClick={handleSave} disabled={saveState === "saving"} className="flex items-center gap-2 rounded-lg border border-slate-700 bg-slate-800 px-3 py-1.5 text-sm hover:bg-slate-700 disabled:opacity-50">
+        <button onClick={handleSave} disabled={saveState === "saving"} className="flex items-center gap-2 rounded-lg border border-slate-700 bg-slate-800 px-3 py-1.5 text-sm hover:bg-slate-700 disabled:opacity-50 cursor-pointer">
           {saveState === "saving" ? <Loader2 className="h-4 w-4 animate-spin" /> : saveState === "saved" ? <Check className="h-4 w-4 text-green-400" /> : <Save className="h-4 w-4" />}
           {saveState === "saving" ? "Saving..." : saveState === "saved" ? "Saved!" : "Save"}
         </button>
@@ -165,12 +165,8 @@ export function TopNavbar({
             </>
           )}
         </button>
-        <button onClick={onRun} disabled={status === "running"} className="flex items-center gap-2 rounded-lg bg-blue-600 px-3 py-1.5 text-sm text-white hover:bg-blue-500 disabled:opacity-50"><Play className="h-4 w-4" />Run</button>
+        <button onClick={onRun} disabled={status === "running"} className="flex items-center gap-2 rounded-lg bg-blue-600 px-3 py-1.5 text-sm text-white hover:bg-blue-500 disabled:opacity-50 cursor-pointer"><Play className="h-4 w-4" />Run</button>
       </div>
     </div>
   );
-}
-
-function Zap(props: any) {
-  return <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>;
 }

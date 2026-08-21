@@ -51,7 +51,7 @@ export function LandingTerminal() {
   };
 
   return (
-    <section className="relative py-16 md:py-24 px-6 md:px-8 bg-slate-950 border-t border-slate-900">
+    <section id="self-host-section" className="relative py-16 md:py-24 px-6 md:px-8 bg-slate-950 border-t border-slate-900 scroll-mt-12">
       <div className="max-w-5xl mx-auto">
         <div className="text-center mb-12">
           <h2 className="text-3xl font-extrabold text-white mb-4 flex items-center justify-center gap-2">

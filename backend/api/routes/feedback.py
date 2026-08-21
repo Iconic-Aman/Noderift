@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 from core.config import settings
 from core.database import get_db
 from models.user import User
-from api.deps import get_current_user, get_optional_current_user
+from api.deps import get_current_user
 
 logger = logging.getLogger(__name__)
 
@@ -20,10 +20,9 @@ class FeedbackRequest(BaseModel):
 
 
 class VulnerabilityReportRequest(BaseModel):
-    email: str | None = None
-    title: str | None = None
-    severity: str = "Medium"
     description: str
+    title: str | None = None
+    severity: str | None = "Medium"
     steps_to_reproduce: str | None = None
 
 
@@ -85,16 +84,15 @@ async def send_feedback(
 @router.post("/vulnerability")
 async def report_vulnerability(
     body: VulnerabilityReportRequest,
-    user: User | None = Depends(get_optional_current_user),
+    user: User = Depends(get_current_user),
 ):
     if not body.description.strip():
         raise HTTPException(status_code=400, detail="Vulnerability description cannot be empty.")
 
-    sender_email = user.email if user else (body.email.strip() if body.email and body.email.strip() else "Anonymous Researcher")
     severity_label = (body.severity or "Medium").upper()
     title_label = body.title.strip() if body.title and body.title.strip() else "Security Vulnerability Report"
 
-    logger.info(f"[SECURITY] Vulnerability reported by {sender_email} [{severity_label}]: {title_label}")
+    logger.info(f"[SECURITY] Vulnerability reported by {user.email} [{severity_label}]: {title_label}")
 
     poc_html = ""
     if body.steps_to_reproduce and body.steps_to_reproduce.strip():
@@ -116,10 +114,7 @@ async def report_vulnerability(
       <h2 style="font-size: 18px; font-weight: 700; color: #ffffff; margin-bottom: 16px;">{title_label}</h2>
 
       <p style="font-size: 13px; color: #94a3b8; margin-bottom: 4px;">Reporter</p>
-      <p style="font-size: 15px; font-weight: 600; color: #e2e8f0; margin-bottom: 16px;">{sender_email}</p>
-
-      <p style="font-size: 13px; color: #94a3b8; margin-bottom: 4px;">Severity</p>
-      <p style="font-size: 14px; font-weight: 700; color: #f87171; margin-bottom: 16px;">{severity_label}</p>
+      <p style="font-size: 15px; font-weight: 600; color: #e2e8f0; margin-bottom: 16px;">{user.email}</p>
 
       <p style="font-size: 13px; color: #94a3b8; margin-bottom: 4px;">Vulnerability Details</p>
       <div style="background: #1e293b; border-radius: 8px; padding: 16px; font-size: 14px; line-height: 1.6; color: #e2e8f0; white-space: pre-wrap;">
@@ -138,12 +133,11 @@ async def report_vulnerability(
             resend.Emails.send({
                 "from": "Noderift Security <feedback@noderift.fun>",
                 "to": settings.FEEDBACK_TO_EMAIL,
-                "subject": f"[Noderift Security] [{severity_label}] {title_label} - from {sender_email}",
+                "subject": f"[Noderift Security] [{severity_label}] {title_label} - from {user.email}",
                 "html": html_body,
             })
         except Exception as e:
             logger.error(f"Failed to send email via Resend: {e}")
-            # Still return success so reporter doesn't lose data, or log error
             pass
 
     return {

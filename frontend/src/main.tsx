@@ -22,8 +22,8 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
       <Routes>
         <Route path="/login" element={<Login />} />
         <Route path="/" element={<Landing />} />
-        <Route path="/report-vulnerability" element={<ReportVulnerability />} />
-        <Route path="/vulnerability" element={<ReportVulnerability />} />
+        <Route path="/report-vulnerability" element={<PrivateRoute><ReportVulnerability /></PrivateRoute>} />
+        <Route path="/vulnerability" element={<PrivateRoute><ReportVulnerability /></PrivateRoute>} />
         <Route path="/dashboard" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
         <Route path="/credentials" element={<PrivateRoute><Credentials /></PrivateRoute>} />
         <Route path="/editor/:id" element={<PrivateRoute><Editor /></PrivateRoute>} />

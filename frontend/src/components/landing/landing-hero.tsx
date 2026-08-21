@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Sparkles, Cloud } from "lucide-react";
+import { Sparkles, Cloud, Terminal } from "lucide-react";
 
 export function LandingHero() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -106,12 +106,11 @@ export function LandingHero() {
             {hasToken ? "Go to Dashboard →" : "Try Noderift Cloud Free →"}
           </button>
           <a
-            href="https://github.com/Iconic-Aman/Noderift"
-            target="_blank"
-            rel="noreferrer"
-            className="w-full sm:w-auto text-center px-8 py-4 rounded-xl border border-slate-800 text-slate-300 font-semibold hover:bg-slate-900/60 hover:text-white transition-all duration-200 whitespace-nowrap"
+            href="#self-host-section"
+            className="w-full sm:w-auto text-center px-8 py-4 rounded-xl border border-slate-800 text-slate-300 font-semibold hover:bg-slate-900/60 hover:text-white transition-all duration-200 whitespace-nowrap flex items-center justify-center gap-2 cursor-pointer"
           >
-            View on GitHub
+            <Terminal className="w-4 h-4 text-blue-400" />
+            Self-Host with Docker ↓
           </a>
         </div>
       </div>

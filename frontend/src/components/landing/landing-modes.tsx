@@ -1,19 +1,17 @@
 import { useState } from "react";
-import { Download, Cloud, Sparkles, ArrowRight, Check, HardDrive } from "lucide-react";
-import { DownloadModal } from "./download-modal";
+import { Cloud, Sparkles, ArrowRight, Check, HardDrive, Terminal } from "lucide-react";
 import { CloudTrialModal } from "./cloud-trial-modal";
+import { useNavigate } from "react-router-dom";
 
 export function LandingModes() {
-  const [showDownloadModal, setShowDownloadModal] = useState(false);
   const [showCloudModal, setShowCloudModal] = useState(false);
+  const navigate = useNavigate();
 
   return (
     <section className="relative py-20 md:py-28 px-6 md:px-8 bg-slate-950 overflow-hidden">
-      {/* Subtle divider glow */}
       <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-slate-800 to-transparent" />
 
       <div className="max-w-5xl mx-auto">
-        {/* Section label */}
         <div className="text-center mb-14">
           <span className="inline-flex items-center gap-2 rounded-full border border-slate-800 bg-slate-900/60 px-4 py-1.5 text-xs font-semibold text-slate-400 tracking-widest uppercase mb-4">
             Deployment Options
@@ -26,12 +24,10 @@ export function LandingModes() {
           </p>
         </div>
 
-        {/* Cards Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
 
-          {/* Option 1: Open Source (Localhost) */}
+          {/* Option 1: Self-Hosted */}
           <div className="group relative rounded-2xl border border-slate-800 bg-slate-900/40 p-8 hover:border-blue-500/40 transition-all duration-300 hover:-translate-y-1 flex flex-col justify-between overflow-hidden">
-            {/* Hover glow */}
             <div
               className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"
               style={{ background: "radial-gradient(circle 140px at 50% 0px, rgba(59,130,246,0.1), transparent)" }}
@@ -55,7 +51,7 @@ export function LandingModes() {
               </div>
 
               <p className="text-sm text-slate-400 leading-relaxed mb-6">
-                Download Noderift and run it locally on your computer using Docker or native scripts. Keep complete ownership of your data and API keys.
+                Run Noderift locally on your computer using Docker. Keep complete ownership of your data and API keys.
               </p>
 
               <div className="bg-slate-950/60 rounded-xl p-4 border border-slate-800/80 mb-6">
@@ -64,7 +60,7 @@ export function LandingModes() {
                   {[
                     "Full privacy — keys stay on your machine",
                     "Unlimited local workflow executions",
-                    "Docker Compose & macOS/Windows scripts"
+                    "One Docker command to get started",
                   ].map((item) => (
                     <li key={item} className="flex items-center gap-2 text-xs text-slate-400">
                       <Check className="h-3.5 w-3.5 text-blue-400 flex-shrink-0" />
@@ -75,17 +71,16 @@ export function LandingModes() {
               </div>
             </div>
 
-            <button
-              onClick={() => setShowDownloadModal(true)}
+            <a
+              href="#self-host-section"
               className="relative z-10 w-full py-3.5 px-6 rounded-xl border border-blue-500/30 hover:border-blue-500 bg-blue-500/10 hover:bg-blue-600 text-blue-300 hover:text-white font-semibold text-sm transition-all duration-200 flex items-center justify-center gap-2 cursor-pointer"
             >
-              <Download size={16} /> Download & Run Localhost
-            </button>
+              <Terminal size={16} /> Self-Host with Docker ↓
+            </a>
           </div>
 
-          {/* Option 2: Noderift Cloud (Limited Free Trial) */}
+          {/* Option 2: Noderift Cloud */}
           <div className="group relative rounded-2xl border border-indigo-500/30 bg-slate-900/40 p-8 hover:border-indigo-500/60 transition-all duration-300 hover:-translate-y-1 flex flex-col justify-between overflow-hidden shadow-xl shadow-indigo-500/5">
-            {/* Ambient background glow */}
             <div
               className="absolute inset-0 pointer-events-none"
               style={{ background: "radial-gradient(circle 160px at 50% 0px, rgba(99,102,241,0.12), transparent)" }}
@@ -112,7 +107,6 @@ export function LandingModes() {
                 Start instantly in your browser without installing anything. Managed AI infrastructure, live cloud webhooks, and automatic updates.
               </p>
 
-              {/* Free Trial Window Highlight Box */}
               <div className="bg-gradient-to-br from-indigo-950/40 to-slate-950 rounded-xl p-4 border border-indigo-500/30 mb-6">
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-xs font-bold text-indigo-300 flex items-center gap-1.5">
@@ -127,7 +121,7 @@ export function LandingModes() {
                   {[
                     "Instant access — no setup required",
                     "Managed webhooks & live execution logs",
-                    "Upgrade options available later"
+                    "Upgrade options available later",
                   ].map((item) => (
                     <li key={item} className="flex items-center gap-2 text-xs text-slate-300">
                       <Check className="h-3.5 w-3.5 text-indigo-400 flex-shrink-0" />
@@ -151,8 +145,6 @@ export function LandingModes() {
 
       <div className="absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-slate-800 to-transparent" />
 
-      {/* Modals */}
-      <DownloadModal isOpen={showDownloadModal} onClose={() => setShowDownloadModal(false)} />
       <CloudTrialModal isOpen={showCloudModal} onClose={() => setShowCloudModal(false)} />
     </section>
   );

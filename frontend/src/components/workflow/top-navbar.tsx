@@ -1,8 +1,8 @@
 import { useState, useRef, useEffect } from "react";
-import { Save, Play, Check, Loader2, Clock, Undo, Power, ArrowLeft, Download, MousePointer, Sparkles } from "lucide-react";
+import { Save, Play, Check, Loader2, Clock, Undo, Power, ArrowLeft, Download, MousePointer, Sparkles, Home, KeyRound, LogOut } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { Link } from "react-router-dom";
-import { UserMenu } from "@/components/user-menu";
+import { Link, useNavigate, useLocation } from "react-router-dom";
+import { useUser } from "@/hooks/useUser";
 
 export function TopNavbar({
   workflowName,
@@ -23,6 +23,9 @@ export function TopNavbar({
   const [editValue, setEditValue] = useState(workflowName);
   const [saveState, setSaveState] = useState<"idle" | "saving" | "saved">("idle");
   const inputRef = useRef<HTMLInputElement>(null);
+  const { logout } = useUser();
+  const navigate = useNavigate();
+  const location = useLocation();
 
   useEffect(() => {
     if (isEditing) inputRef.current?.focus();
@@ -55,9 +58,10 @@ export function TopNavbar({
         <Link
           to="/dashboard"
           className="flex h-8 items-center gap-1.5 rounded-lg border border-slate-800 bg-slate-950 px-2.5 py-1.5 text-xs text-slate-400 hover:bg-slate-800 hover:text-white transition-all shadow-sm active:scale-95 cursor-pointer"
+          title="Back to Dashboard"
         >
           <ArrowLeft className="h-3.5 w-3.5" />
-          <span>Back</span>
+          <span>Dashboard</span>
         </Link>
         <Link to="/" className="flex items-center gap-2 hover:opacity-90 transition-opacity">
           <img src="/noderift-icon.jpg" alt="Noderift" className="h-8 w-8 rounded-lg object-cover shadow-sm" />
@@ -68,7 +72,7 @@ export function TopNavbar({
           <input ref={inputRef} value={editValue} onChange={e => setEditValue(e.target.value)} onBlur={handleSubmit}
             onKeyDown={e => e.key === 'Enter' && handleSubmit()} className="bg-slate-800 text-sm px-2 py-1 rounded outline-none" />
         ) : (
-          <button onClick={() => setIsEditing(true)} className="text-sm font-medium text-slate-300 hover:text-white">{workflowName}</button>
+          <button onClick={() => setIsEditing(true)} className="text-sm font-medium text-slate-300 hover:text-white cursor-pointer">{workflowName}</button>
         )}
       </div>
 
@@ -96,7 +100,7 @@ export function TopNavbar({
         </button>
       </div>
 
-      <div className="flex items-center gap-2.5">
+      <div className="flex items-center gap-3 pt-1">
         <div className={cn("flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium", cfg.cls)}>
           <cfg.icon className={cn("h-3 w-3", cfg.spin && "animate-spin")} />
           <span>{cfg.label}</span>
@@ -142,12 +146,36 @@ export function TopNavbar({
           <span>{isActive ? "Deployed" : "Deploy"}</span>
         </button>
 
-        <button onClick={onRun} disabled={status === "running"} className="flex items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-500 disabled:opacity-50 cursor-pointer">
+        <button onClick={onRun} disabled={status === "running"} className="flex items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-500 disabled:opacity-50 cursor-pointer mr-1">
           <Play className="h-3.5 w-3.5" /> Run
         </button>
 
-        <div className="h-4 w-px bg-slate-800 mx-0.5" />
-        <UserMenu />
+        <div className="h-4 w-px bg-slate-800" />
+
+        <Link
+          to="/"
+          className="relative py-1 text-slate-400 hover:text-white transition-colors duration-300 text-xs font-semibold flex items-center gap-1 after:absolute after:bottom-0 after:left-0 after:h-[1.5px] after:w-0 hover:after:w-full after:bg-blue-500 after:transition-all after:duration-300"
+        >
+          <Home size={13} />
+          <span>Home</span>
+        </Link>
+
+        <button
+          onClick={() => navigate("/credentials", { state: { from: location.pathname } })}
+          className="relative py-1 text-slate-400 hover:text-white transition-colors duration-300 text-xs font-semibold flex items-center gap-1 after:absolute after:bottom-0 after:left-0 after:h-[1.5px] after:w-0 hover:after:w-full after:bg-blue-500 after:transition-all after:duration-300 cursor-pointer"
+        >
+          <KeyRound size={13} />
+          <span>Credentials</span>
+        </button>
+
+        <button
+          onClick={logout}
+          className="relative py-1 text-slate-400 hover:text-red-400 transition-colors duration-300 text-xs font-semibold flex items-center gap-1 after:absolute after:bottom-0 after:left-0 after:h-[1.5px] after:w-0 hover:after:w-full after:bg-red-500 after:transition-all after:duration-300 cursor-pointer"
+          title="Sign Out"
+        >
+          <LogOut size={13} />
+          <span>Sign Out</span>
+        </button>
       </div>
     </div>
   );

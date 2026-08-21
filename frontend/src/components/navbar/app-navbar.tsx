@@ -1,6 +1,6 @@
 import { Link, useNavigate, useLocation } from "react-router-dom";
-import { ArrowLeft } from "lucide-react";
-import { UserMenu } from "@/components/user-menu";
+import { ArrowLeft, Github, Home, LayoutDashboard, KeyRound, LogOut } from "lucide-react";
+import { useUser } from "@/hooks/useUser";
 
 interface AppNavbarProps {
   title: string;
@@ -13,6 +13,7 @@ interface AppNavbarProps {
 export function AppNavbar({ title, subtitle, showBack, backTo, children }: AppNavbarProps) {
   const navigate = useNavigate();
   const location = useLocation();
+  const { logout } = useUser();
 
   const handleBack = () => {
     if (backTo) {
@@ -24,9 +25,12 @@ export function AppNavbar({ title, subtitle, showBack, backTo, children }: AppNa
     }
   };
 
+  const isDashboard = location.pathname === "/dashboard";
+  const isCredentials = location.pathname === "/credentials";
+
   return (
     <header className="h-16 border-b border-slate-800/80 bg-slate-950/80 px-6 backdrop-blur-md sticky top-0 z-40 flex items-center justify-between">
-      {/* Left section: Logo & Title */}
+      {/* Left: Logo & Page Title */}
       <div className="flex items-center gap-3">
         {showBack && (
           <button
@@ -55,10 +59,57 @@ export function AppNavbar({ title, subtitle, showBack, backTo, children }: AppNa
         </div>
       </div>
 
-      {/* Right section: Action Buttons & User Menu */}
-      <div className="flex items-center gap-3">
+      {/* Right: Individual Action Buttons */}
+      <div className="flex items-center gap-5 pt-1">
         {children}
-        <UserMenu />
+
+        <a
+          href="https://github.com/Iconic-Aman/Noderift"
+          target="_blank"
+          rel="noreferrer"
+          className="relative py-1 text-slate-400 hover:text-white transition-colors duration-300 text-xs font-semibold flex items-center gap-1.5 after:absolute after:bottom-0 after:left-0 after:h-[1.5px] after:w-0 hover:after:w-full after:bg-blue-500 after:transition-all after:duration-300"
+        >
+          <Github size={13} />
+          GitHub
+        </a>
+
+        <Link
+          to="/"
+          className="relative py-1 text-slate-400 hover:text-white transition-colors duration-300 text-xs font-semibold flex items-center gap-1.5 after:absolute after:bottom-0 after:left-0 after:h-[1.5px] after:w-0 hover:after:w-full after:bg-blue-500 after:transition-all after:duration-300"
+        >
+          <Home size={13} />
+          Home
+        </Link>
+
+        {!isDashboard && (
+          <button
+            onClick={() => navigate("/dashboard")}
+            className="relative py-1 text-slate-400 hover:text-white transition-colors duration-300 text-xs font-semibold flex items-center gap-1.5 after:absolute after:bottom-0 after:left-0 after:h-[1.5px] after:w-0 hover:after:w-full after:bg-blue-500 after:transition-all after:duration-300 cursor-pointer"
+          >
+            <LayoutDashboard size={13} />
+            Dashboard
+          </button>
+        )}
+
+        {!isCredentials && (
+          <button
+            onClick={() => navigate("/credentials", { state: { from: location.pathname } })}
+            className="relative py-1 text-slate-400 hover:text-white transition-colors duration-300 text-xs font-semibold flex items-center gap-1.5 after:absolute after:bottom-0 after:left-0 after:h-[1.5px] after:w-0 hover:after:w-full after:bg-blue-500 after:transition-all after:duration-300 cursor-pointer"
+          >
+            <KeyRound size={13} />
+            Credentials
+          </button>
+        )}
+
+        <div className="h-4 w-[1px] bg-slate-800" />
+
+        <button
+          onClick={logout}
+          className="relative py-1 text-slate-400 hover:text-red-400 transition-colors duration-300 text-xs font-semibold flex items-center gap-1.5 after:absolute after:bottom-0 after:left-0 after:h-[1.5px] after:w-0 hover:after:w-full after:bg-red-500 after:transition-all after:duration-300 cursor-pointer"
+        >
+          <LogOut size={13} />
+          Sign Out
+        </button>
       </div>
     </header>
   );

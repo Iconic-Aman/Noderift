@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
-import { ArrowLeft, Clock, CheckCircle2, AlertTriangle, Calendar, Terminal } from "lucide-react";
+import { ArrowLeft, Clock, CheckCircle2, AlertTriangle, Calendar, Terminal, Github, Home, LayoutDashboard, KeyRound, LogOut } from "lucide-react";
 import { useExecution, ExecutionState } from "../hooks/useExecution";
 import { apiFetch } from "../lib/api";
-import { UserMenu } from "@/components/user-menu";
+import { useUser } from "@/hooks/useUser";
 
 export default function History() {
   const { id } = useParams();
@@ -12,6 +12,7 @@ export default function History() {
   const [history, setHistory] = useState<ExecutionState[]>([]);
   const [selectedRun, setSelectedRun] = useState<any | null>(null);
   const [workflowName, setWorkflowName] = useState("Workflow");
+  const { logout } = useUser();
 
   useEffect(() => {
     if (!id) return;
@@ -51,7 +52,46 @@ export default function History() {
           </div>
         </div>
 
-        <UserMenu />
+        <div className="flex items-center gap-5 pt-1">
+          <a
+            href="https://github.com/Iconic-Aman/Noderift"
+            target="_blank"
+            rel="noreferrer"
+            className="relative py-1 text-slate-400 hover:text-white transition-colors duration-300 text-xs font-semibold flex items-center gap-1.5 after:absolute after:bottom-0 after:left-0 after:h-[1.5px] after:w-0 hover:after:w-full after:bg-blue-500 after:transition-all after:duration-300"
+          >
+            <Github size={13} />
+            GitHub
+          </a>
+          <Link
+            to="/"
+            className="relative py-1 text-slate-400 hover:text-white transition-colors duration-300 text-xs font-semibold flex items-center gap-1.5 after:absolute after:bottom-0 after:left-0 after:h-[1.5px] after:w-0 hover:after:w-full after:bg-blue-500 after:transition-all after:duration-300"
+          >
+            <Home size={13} />
+            Home
+          </Link>
+          <button
+            onClick={() => navigate("/dashboard")}
+            className="relative py-1 text-slate-400 hover:text-white transition-colors duration-300 text-xs font-semibold flex items-center gap-1.5 after:absolute after:bottom-0 after:left-0 after:h-[1.5px] after:w-0 hover:after:w-full after:bg-blue-500 after:transition-all after:duration-300 cursor-pointer"
+          >
+            <LayoutDashboard size={13} />
+            Dashboard
+          </button>
+          <button
+            onClick={() => navigate("/credentials", { state: { from: `/history/${id}` } })}
+            className="relative py-1 text-slate-400 hover:text-white transition-colors duration-300 text-xs font-semibold flex items-center gap-1.5 after:absolute after:bottom-0 after:left-0 after:h-[1.5px] after:w-0 hover:after:w-full after:bg-blue-500 after:transition-all after:duration-300 cursor-pointer"
+          >
+            <KeyRound size={13} />
+            Credentials
+          </button>
+          <div className="h-4 w-[1px] bg-slate-800" />
+          <button
+            onClick={logout}
+            className="relative py-1 text-slate-400 hover:text-red-400 transition-colors duration-300 text-xs font-semibold flex items-center gap-1.5 after:absolute after:bottom-0 after:left-0 after:h-[1.5px] after:w-0 hover:after:w-full after:bg-red-500 after:transition-all after:duration-300 cursor-pointer"
+          >
+            <LogOut size={13} />
+            Sign Out
+          </button>
+        </div>
       </div>
 
       <div className="flex flex-1 overflow-hidden">

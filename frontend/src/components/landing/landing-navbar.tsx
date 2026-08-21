@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Github, Menu, X, LayoutDashboard, KeyRound, LogOut } from "lucide-react";
-import { UserMenu } from "@/components/user-menu";
 import { useUser } from "@/hooks/useUser";
 
 export function LandingNavbar() {
@@ -33,24 +32,46 @@ export function LandingNavbar() {
       </div>
 
       {/* Right - Desktop */}
-      <div className="fixed top-7 right-8 z-50 hidden md:flex items-center gap-6">
+      <div className="fixed top-7 right-8 z-50 hidden md:flex items-center gap-6 pt-1.5">
         <a
           href="https://github.com/Iconic-Aman/Noderift"
           target="_blank"
           rel="noreferrer"
-          className="relative py-1 text-slate-400 hover:text-white transition-colors duration-300 text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 after:absolute after:bottom-0 after:left-0 after:h-[1.5px] after:w-0 hover:after:w-full after:bg-blue-500 after:transition-all after:duration-300"
+          className="relative py-1 text-slate-400 hover:text-white transition-colors duration-300 text-xs font-semibold flex items-center gap-1.5 after:absolute after:bottom-0 after:left-0 after:h-[1.5px] after:w-0 hover:after:w-full after:bg-blue-500 after:transition-all after:duration-300"
         >
           <Github size={13} />
           GitHub
         </a>
-        <div className="h-4 w-[1px] bg-slate-800" />
 
         {hasToken ? (
-          <UserMenu />
+          <>
+            <button
+              onClick={() => navigate("/dashboard")}
+              className="relative py-1 text-slate-400 hover:text-white transition-colors duration-300 text-xs font-semibold flex items-center gap-1.5 after:absolute after:bottom-0 after:left-0 after:h-[1.5px] after:w-0 hover:after:w-full after:bg-blue-500 after:transition-all after:duration-300 cursor-pointer"
+            >
+              <LayoutDashboard size={13} />
+              Dashboard
+            </button>
+            <button
+              onClick={() => navigate("/credentials")}
+              className="relative py-1 text-slate-400 hover:text-white transition-colors duration-300 text-xs font-semibold flex items-center gap-1.5 after:absolute after:bottom-0 after:left-0 after:h-[1.5px] after:w-0 hover:after:w-full after:bg-blue-500 after:transition-all after:duration-300 cursor-pointer"
+            >
+              <KeyRound size={13} />
+              Credentials
+            </button>
+            <div className="h-4 w-[1px] bg-slate-800" />
+            <button
+              onClick={logout}
+              className="relative py-1 text-slate-400 hover:text-red-400 transition-colors duration-300 text-xs font-semibold flex items-center gap-1.5 after:absolute after:bottom-0 after:left-0 after:h-[1.5px] after:w-0 hover:after:w-full after:bg-red-500 after:transition-all after:duration-300 cursor-pointer"
+            >
+              <LogOut size={13} />
+              Sign Out
+            </button>
+          </>
         ) : (
           <button
             onClick={() => navigate("/login")}
-            className="px-5 py-2.5 rounded-full border border-slate-800 hover:border-slate-700 bg-slate-950/20 hover:bg-slate-900/40 text-slate-300 hover:text-white hover:scale-[1.02] active:scale-[0.98] transition-all text-xs font-extrabold uppercase tracking-wider cursor-pointer"
+            className="px-5 py-2.5 rounded-full border border-slate-800 hover:border-slate-700 bg-slate-950/20 hover:bg-slate-900/40 text-slate-300 hover:text-white hover:scale-[1.02] active:scale-[0.98] transition-all text-xs font-semibold cursor-pointer"
           >
             Login / Sign Up
           </button>
@@ -67,19 +88,19 @@ export function LandingNavbar() {
 
       {/* Mobile Menu Drawer */}
       {mobileMenuOpen && (
-        <div className="fixed top-20 right-8 left-8 z-40 md:hidden bg-slate-950/95 border border-slate-900 rounded-2xl p-5 backdrop-blur-md flex flex-col gap-4 shadow-2xl">
+        <div className="fixed top-20 right-8 left-8 z-40 md:hidden bg-slate-950/95 border border-slate-900 rounded-2xl p-5 backdrop-blur-md flex flex-col gap-3 shadow-2xl">
           <a
             href="https://github.com/Iconic-Aman/Noderift"
             target="_blank"
             rel="noreferrer"
-            className="text-slate-300 hover:text-white text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 py-1"
+            className="text-slate-300 hover:text-white text-xs font-semibold flex items-center gap-1.5 py-1"
           >
             <Github size={14} />
             GitHub
           </a>
           <div className="h-[1px] bg-slate-800 w-full" />
           {hasToken ? (
-            <div className="flex flex-col gap-1">
+            <div className="flex flex-col gap-2">
               <button
                 onClick={() => {
                   setMobileMenuOpen(false);
@@ -117,7 +138,7 @@ export function LandingNavbar() {
                 setMobileMenuOpen(false);
                 navigate("/login");
               }}
-              className="w-full text-center py-2.5 rounded-full border border-slate-800 text-slate-300 text-xs font-bold uppercase tracking-wider cursor-pointer"
+              className="w-full text-center py-2.5 rounded-full border border-slate-800 text-slate-300 text-xs font-semibold cursor-pointer"
             >
               Login / Sign Up
             </button>

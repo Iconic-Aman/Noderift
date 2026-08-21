@@ -1,11 +1,10 @@
 from multiprocessing.spawn import import_main_path
-from fastapi import APIRouter, Request, Response, HTTPException
+from fastapi import APIRouter, Request, Response, HTTPException, Depends
 from fastapi.responses import RedirectResponse
 import httpx
 from core.config import settings
 from dotenv import load_dotenv
 load_dotenv()
-from fastapi import Depends
 import os
 import logging
 from core.database import get_db
@@ -14,6 +13,7 @@ from models.user import User
 from datetime import datetime, timezone
 from uuid import uuid4
 from core.security import bearer_scheme
+from api.deps import get_current_user
 
 logger = logging.getLogger(__name__)
 
@@ -25,10 +25,6 @@ router = APIRouter(
 @router.get("/google/login")
 async def google_login():
     logger.info("[STEP 1] /auth/google/login called")
-    logger.info(f"[STEP 1] GOOGLE_CLIENT_ID={repr(settings.GOOGLE_CLIENT_ID)}")
-    logger.info(f"[STEP 1] GOOGLE_REDIRECT_URI={repr(settings.GOOGLE_REDIRECT_URI)}")
-    logger.info(f"[STEP 1] GOOGLE_AUTH_URL={repr(settings.GOOGLE_AUTH_URL)}")
-
     if not settings.GOOGLE_CLIENT_ID:
         logger.error("[STEP 1] GOOGLE_CLIENT_ID is empty — OAuth will fail")
         raise HTTPException(status_code=500, detail="Google OAuth not configured")
@@ -40,9 +36,6 @@ async def google_login():
 @router.get("/google/callback")
 async def google_callback(code: str, state: str = None, db: Session = Depends(get_db)):
     logger.info("[STEP 2] /auth/google/callback called")
-    logger.info(f"[STEP 2] code received (first 20 chars): {repr(code[:20])}, state={state}")
-
-    # Exchange code for tokens
     async with httpx.AsyncClient() as client:
         token_res = await client.post(
             settings.GOOGLE_TOKEN_URL,
@@ -55,7 +48,6 @@ async def google_callback(code: str, state: str = None, db: Session = Depends(ge
             },
         )
 
-    logger.info(f"[STEP 2] Token exchange status: {token_res.status_code}")
     if token_res.status_code != 200:
         logger.error(f"[STEP 2] Token exchange failed: {token_res.text}")
         raise HTTPException(status_code=400, detail="Failed to fetch token")
@@ -63,19 +55,15 @@ async def google_callback(code: str, state: str = None, db: Session = Depends(ge
     tokens = token_res.json()
     access_token = tokens.get("access_token")
     refresh_token = tokens.get("refresh_token")
-    logger.info(f"[STEP 2] Access token: {'obtained' if access_token else 'MISSING'}")
 
-    # If state contains user_id (from Gmail OAuth flow)
     target_user = None
     if state:
         target_user = db.query(User).filter(User.id == str(state)).first()
-        logger.info(f"[STEP 2] Gmail OAuth state={repr(state)}, found target_user={target_user}")
         if not target_user:
             raise HTTPException(status_code=404, detail=f"User '{state}' not found in database. Please log in first.")
         user = target_user
         email = user.email
     else:
-        # Fetch user info from Google (login flow)
         async with httpx.AsyncClient() as client:
             user_res = await client.get(
                 settings.GOOGLE_USERINFO_URL,
@@ -107,10 +95,7 @@ async def google_callback(code: str, state: str = None, db: Session = Depends(ge
             db.commit()
             db.refresh(user)
 
-    # Store encrypted Gmail credential if refresh_token was returned and Gmail scope was granted
     granted_scope = tokens.get("scope", "")
-    logger.info(f"[STEP 2] Granted scope from Google: {repr(granted_scope)}")
-
     if refresh_token and ("gmail" in granted_scope or state):
         from models.credential import Credential
         from cryptography.fernet import Fernet
@@ -146,49 +131,16 @@ async def google_callback(code: str, state: str = None, db: Session = Depends(ge
     return RedirectResponse(url=redirect_url)
 
 @router.get("/me", dependencies=[Depends(bearer_scheme)])
-async def get_me(request: Request):
-    logger.info("[STEP 3] /auth/me called")
-    token = request.state.token
-    logger.info(f"[STEP 3] token from state: {repr(token)}")
-
-    if not token:
-        logger.warning("[STEP 3] No token found — returning 401")
-        raise HTTPException(status_code=401, detail="Not authenticated")
-        
-    auth_key = os.getenv("AUTH_KEY")
-    if token != auth_key:
-        logger.info("[STEP 3] Token != AUTH_KEY, returning mock user")
-        return {
-            "id": "test",
-            "email": "[EMAIL_ADDRESS]",
-            "name": "Test User",
-            "created_at": "2025-05-03T08:30:00Z"
-        }
-        
-    logger.info(f"[STEP 3] Fetching user info from {settings.GOOGLE_USERINFO_URL}")
-    if not settings.GOOGLE_USERINFO_URL:
-        logger.error("[STEP 3] GOOGLE_USERINFO_URL is empty")
-        raise HTTPException(status_code=401, detail="Incorrect auth value")
-    
-    async with httpx.AsyncClient() as client:
-        user_res = await client.get(
-            settings.GOOGLE_USERINFO_URL,
-            headers={"Authorization": f"Bearer {token}"}
-        )
-    
-    logger.info(f"[STEP 3] Userinfo response status: {user_res.status_code}")
-    if user_res.status_code != 200:
-        logger.error(f"[STEP 3] Userinfo failed: {user_res.text}")
-        raise HTTPException(status_code=401, detail="Invalid token")
-        
-    user_data = user_res.json()
-    logger.info(f"[STEP 3] User fetched: email={user_data.get('email')}")
+async def get_me(user: User = Depends(get_current_user)):
+    logger.info(f"[STEP 3] /auth/me called for user: {user.email}")
+    first_name = user.name.split()[0] if user.name else user.email.split("@")[0]
     return {
-        "id": user_data.get("id"),
-        "email": user_data.get("email"),
-        "name": user_data.get("name"),
-        "picture": user_data.get("picture"),
-        "created_at": "2025-05-03T08:30:00Z"
+        "id": user.id,
+        "email": user.email,
+        "name": user.name or user.email.split("@")[0],
+        "first_name": first_name,
+        "picture": getattr(user, "picture", None),
+        "created_at": user.created_at.isoformat() if user.created_at else None
     }
 
 @router.post("/logout")

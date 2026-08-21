@@ -1,34 +1,18 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Github, Menu, X, User, LayoutDashboard, KeyRound, LogOut, ChevronDown } from "lucide-react";
+import { Github, Menu, X, LayoutDashboard, KeyRound, LogOut } from "lucide-react";
+import { UserMenu } from "@/components/user-menu";
+import { useUser } from "@/hooks/useUser";
 
 export function LandingNavbar() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [hasToken, setHasToken] = useState(false);
-  const userMenuRef = useRef<HTMLDivElement>(null);
+  const { logout } = useUser();
   const navigate = useNavigate();
 
   useEffect(() => {
     setHasToken(!!localStorage.getItem("noderift_token"));
   }, []);
-
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) {
-        setUserMenuOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
-
-  const handleSignOut = () => {
-    localStorage.removeItem("noderift_token");
-    setHasToken(false);
-    setUserMenuOpen(false);
-    navigate("/");
-  };
 
   return (
     <>
@@ -62,51 +46,7 @@ export function LandingNavbar() {
         <div className="h-4 w-[1px] bg-slate-800" />
 
         {hasToken ? (
-          <div className="relative" ref={userMenuRef}>
-            <button
-              onClick={() => setUserMenuOpen((prev) => !prev)}
-              className="flex items-center gap-2 px-3 py-1.5 rounded-full border border-slate-800 bg-slate-900/90 hover:border-slate-700 hover:bg-slate-800/80 text-slate-200 text-xs font-semibold transition-all cursor-pointer shadow-lg shadow-black/20"
-            >
-              <div className="flex h-6 w-6 items-center justify-center rounded-full bg-blue-600/20 text-blue-400 border border-blue-500/30">
-                <User size={13} />
-              </div>
-              <span>Account</span>
-              <ChevronDown size={12} className={`text-slate-400 transition-transform duration-200 ${userMenuOpen ? "rotate-180" : ""}`} />
-            </button>
-
-            {userMenuOpen && (
-              <div className="absolute right-0 mt-2 w-44 rounded-xl border border-slate-800 bg-slate-950/95 p-1.5 shadow-2xl backdrop-blur-md animate-in fade-in zoom-in-95 duration-150 z-50">
-                <button
-                  onClick={() => {
-                    setUserMenuOpen(false);
-                    navigate("/dashboard");
-                  }}
-                  className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium text-slate-300 hover:text-white hover:bg-slate-800/80 transition-colors cursor-pointer"
-                >
-                  <LayoutDashboard size={14} className="text-blue-400" />
-                  Dashboard
-                </button>
-                <button
-                  onClick={() => {
-                    setUserMenuOpen(false);
-                    navigate("/credentials");
-                  }}
-                  className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium text-slate-300 hover:text-white hover:bg-slate-800/80 transition-colors cursor-pointer"
-                >
-                  <KeyRound size={14} className="text-slate-400" />
-                  Credentials
-                </button>
-                <div className="my-1 h-[1px] bg-slate-800/80" />
-                <button
-                  onClick={handleSignOut}
-                  className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium text-red-400 hover:text-red-300 hover:bg-red-950/40 transition-colors cursor-pointer"
-                >
-                  <LogOut size={14} />
-                  Sign Out
-                </button>
-              </div>
-            )}
-          </div>
+          <UserMenu />
         ) : (
           <button
             onClick={() => navigate("/login")}
@@ -163,7 +103,7 @@ export function LandingNavbar() {
               <button
                 onClick={() => {
                   setMobileMenuOpen(false);
-                  handleSignOut();
+                  logout();
                 }}
                 className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium text-red-400 hover:text-red-300 hover:bg-red-950/30 cursor-pointer"
               >

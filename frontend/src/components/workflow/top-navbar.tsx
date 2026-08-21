@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { Save, Play, Check, Loader2, Clock, Undo, Power, ArrowLeft, Download, MousePointer, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Link } from "react-router-dom";
+import { UserMenu } from "@/components/user-menu";
 
 export function TopNavbar({
   workflowName,
@@ -58,10 +59,10 @@ export function TopNavbar({
           <ArrowLeft className="h-3.5 w-3.5" />
           <span>Back</span>
         </Link>
-        <div className="flex items-center gap-2">
+        <Link to="/" className="flex items-center gap-2 hover:opacity-90 transition-opacity">
           <img src="/noderift-icon.jpg" alt="Noderift" className="h-8 w-8 rounded-lg object-cover shadow-sm" />
           <span className="text-sm font-semibold text-slate-200">Noderift</span>
-        </div>
+        </Link>
         <div className="h-5 w-px bg-slate-700" />
         {isEditing ? (
           <input ref={inputRef} value={editValue} onChange={e => setEditValue(e.target.value)} onBlur={handleSubmit}
@@ -77,9 +78,7 @@ export function TopNavbar({
           onClick={() => onModeChange("manual")}
           className={cn(
             "flex items-center gap-1.5 rounded-md px-3 py-1 text-xs font-medium transition-all cursor-pointer",
-            mode === "manual"
-              ? "bg-slate-800 text-slate-100 shadow-sm"
-              : "text-slate-400 hover:text-slate-200"
+            mode === "manual" ? "bg-slate-800 text-slate-100 shadow-sm" : "text-slate-400 hover:text-slate-200"
           )}
         >
           <MousePointer className="h-3 w-3" />
@@ -89,9 +88,7 @@ export function TopNavbar({
           onClick={() => onModeChange("automatic")}
           className={cn(
             "flex items-center gap-1.5 rounded-md px-3 py-1 text-xs font-medium transition-all cursor-pointer",
-            mode === "automatic"
-              ? "bg-gradient-to-r from-violet-600 to-indigo-600 text-white shadow-md shadow-indigo-950/40"
-              : "text-slate-400 hover:text-slate-200"
+            mode === "automatic" ? "bg-gradient-to-r from-violet-600 to-indigo-600 text-white shadow-md shadow-indigo-950/40" : "text-slate-400 hover:text-slate-200"
           )}
         >
           <Sparkles className="h-3 w-3" />
@@ -99,78 +96,59 @@ export function TopNavbar({
         </button>
       </div>
 
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-2.5">
         <div className={cn("flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium", cfg.cls)}>
           <cfg.icon className={cn("h-3 w-3", cfg.spin && "animate-spin")} />
           <span>{cfg.label}</span>
         </div>
 
         {onHistory && (
-          <button
-            onClick={onHistory}
-            title="History"
-            className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-700 bg-slate-800 hover:bg-slate-700 text-slate-300 cursor-pointer shadow-md active:scale-95 transition-all"
-          >
+          <button onClick={onHistory} title="History" className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-700 bg-slate-800 hover:bg-slate-700 text-slate-300 cursor-pointer shadow-md active:scale-95 transition-all">
             <Clock className="h-4 w-4" />
           </button>
         )}
 
-        <button
-          onClick={onUndo}
-          title="Undo (Ctrl + Z)"
-          className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-700 bg-slate-800 hover:bg-slate-700 text-slate-300 cursor-pointer shadow-md active:scale-95 transition-all"
-        >
+        <button onClick={onUndo} title="Undo (Ctrl + Z)" className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-700 bg-slate-800 hover:bg-slate-700 text-slate-300 cursor-pointer shadow-md active:scale-95 transition-all">
           <Undo className="h-4 w-4" />
         </button>
 
-        <button
-          onClick={onDownload}
-          title="Export Workflow as JSON"
-          className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-700 bg-slate-800 hover:bg-slate-700 text-slate-300 cursor-pointer shadow-md active:scale-95 transition-all"
-        >
+        <button onClick={onDownload} title="Export Workflow as JSON" className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-700 bg-slate-800 hover:bg-slate-700 text-slate-300 cursor-pointer shadow-md active:scale-95 transition-all">
           <Download className="h-4 w-4" />
         </button>
 
-        <button onClick={handleSave} disabled={saveState === "saving"} className="flex items-center gap-2 rounded-lg border border-slate-700 bg-slate-800 px-3 py-1.5 text-sm hover:bg-slate-700 disabled:opacity-50">
-          {saveState === "saving" ? <Loader2 className="h-4 w-4 animate-spin" /> : saveState === "saved" ? <Check className="h-4 w-4 text-green-400" /> : <Save className="h-4 w-4" />}
+        <button onClick={handleSave} disabled={saveState === "saving"} className="flex items-center gap-2 rounded-lg border border-slate-700 bg-slate-800 px-3 py-1.5 text-xs font-medium hover:bg-slate-700 disabled:opacity-50 cursor-pointer">
+          {saveState === "saving" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : saveState === "saved" ? <Check className="h-3.5 w-3.5 text-green-400" /> : <Save className="h-3.5 w-3.5" />}
           {saveState === "saving" ? "Saving..." : saveState === "saved" ? "Saved!" : "Save"}
         </button>
+
         <button
           onClick={onToggleActive}
           disabled={isDeploying}
           className={cn(
-            "flex items-center gap-2 rounded-lg border px-3 py-1.5 text-sm font-medium transition-all shadow-md active:scale-95 cursor-pointer disabled:opacity-50",
-            isActive
-              ? "bg-emerald-500/15 border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/20 shadow-emerald-950/20"
-              : "bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-700/80"
+            "flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition-all shadow-md active:scale-95 cursor-pointer disabled:opacity-50",
+            isActive ? "bg-emerald-500/15 border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/20" : "bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-700/80"
           )}
         >
           {isDeploying ? (
-            <>
-              <Loader2 className="h-4 w-4 animate-spin text-slate-400" />
-              <span>Deploying...</span>
-            </>
+            <Loader2 className="h-3.5 w-3.5 animate-spin text-slate-400" />
           ) : isActive ? (
-            <>
-              <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-              </span>
-              <span>Deployed</span>
-            </>
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+            </span>
           ) : (
-            <>
-              <Power className="h-4 w-4 text-slate-400" />
-              <span>Deploy</span>
-            </>
+            <Power className="h-3.5 w-3.5 text-slate-400" />
           )}
+          <span>{isActive ? "Deployed" : "Deploy"}</span>
         </button>
-        <button onClick={onRun} disabled={status === "running"} className="flex items-center gap-2 rounded-lg bg-blue-600 px-3 py-1.5 text-sm text-white hover:bg-blue-500 disabled:opacity-50"><Play className="h-4 w-4" />Run</button>
+
+        <button onClick={onRun} disabled={status === "running"} className="flex items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-500 disabled:opacity-50 cursor-pointer">
+          <Play className="h-3.5 w-3.5" /> Run
+        </button>
+
+        <div className="h-4 w-px bg-slate-800 mx-0.5" />
+        <UserMenu />
       </div>
     </div>
   );
-}
-
-function Zap(props: any) {
-  return <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>;
 }

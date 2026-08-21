@@ -8,7 +8,7 @@ import { Credentials } from './pages/credentials'
 import { Landing } from './pages/landing'
 import { OAuthSuccess } from './pages/oauth-success'
 import History from './pages/history'
-import { FeedbackButton } from './components/feedback-button'
+import { ReportVulnerability } from './pages/report-vulnerability'
 import './index.css'
 
 const PrivateRoute = ({ children }: { children: React.ReactNode }) => {
@@ -22,6 +22,8 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
       <Routes>
         <Route path="/login" element={<Login />} />
         <Route path="/" element={<Landing />} />
+        <Route path="/report-vulnerability" element={<ReportVulnerability />} />
+        <Route path="/vulnerability" element={<ReportVulnerability />} />
         <Route path="/dashboard" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
         <Route path="/credentials" element={<PrivateRoute><Credentials /></PrivateRoute>} />
         <Route path="/editor/:id" element={<PrivateRoute><Editor /></PrivateRoute>} />
@@ -32,4 +34,3 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
     </BrowserRouter>
   </React.StrictMode>,
 )
-

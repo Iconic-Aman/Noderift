@@ -86,7 +86,7 @@ export function Credentials() {
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-200 flex flex-col">
-      <AppNavbar title="Credentials" subtitle="Encrypted Integration Keys" showBack={true} />
+      <AppNavbar showBack={true} />
 
       <main className="flex-1 max-w-5xl mx-auto w-full px-6 md:px-8 pt-28 pb-12">
         <div>

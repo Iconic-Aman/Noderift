@@ -55,67 +55,74 @@ export function AppNavbar({ title, subtitle, showBack, backTo, children }: AppNa
           </span>
         </Link>
 
-        <div className="h-3.5 w-[1px] bg-slate-800" />
+        {title && (
+          <>
+            <div className="h-3.5 w-[1px] bg-slate-800" />
+            <div className="flex flex-col">
+              <span className="text-xs font-semibold text-slate-200">{title}</span>
+              {subtitle && <span className="text-[10px] text-slate-500">{subtitle}</span>}
+            </div>
+          </>
+        )}
+      </div>
 
-        <div className="flex flex-col">
-          <span className="text-xs font-semibold text-slate-200">{title}</span>
-          {subtitle && <span className="text-[10px] text-slate-500">{subtitle}</span>}
+      {/* Right - Desktop (hidden on Credentials page) */}
+      {!isCredentials && (
+        <div className={`fixed top-7 right-8 z-50 hidden md:flex items-center gap-6 pt-1.5 transition-all duration-300 ${isVisible ? "translate-y-0 opacity-100" : "-translate-y-24 opacity-0 pointer-events-none"}`}>
+          {children}
+
+          <Link
+            to="/"
+            className="relative py-1 text-slate-400 hover:text-white transition-colors duration-300 text-xs font-semibold flex items-center gap-1.5 after:absolute after:bottom-0 after:left-0 after:h-[1.5px] after:w-0 hover:after:w-full after:bg-blue-500 after:transition-all after:duration-300"
+          >
+            <Home size={13} />
+            Home
+          </Link>
+
+          {!isDashboard && (
+            <button
+              onClick={() => navigate("/dashboard")}
+              className="relative py-1 text-slate-400 hover:text-white transition-colors duration-300 text-xs font-semibold flex items-center gap-1.5 after:absolute after:bottom-0 after:left-0 after:h-[1.5px] after:w-0 hover:after:w-full after:bg-blue-500 after:transition-all after:duration-300 cursor-pointer"
+            >
+              <LayoutDashboard size={13} />
+              Dashboard
+            </button>
+          )}
+
+          {!isCredentials && (
+            <button
+              onClick={() => navigate("/credentials", { state: { from: location.pathname } })}
+              className="relative py-1 text-slate-400 hover:text-white transition-colors duration-300 text-xs font-semibold flex items-center gap-1.5 after:absolute after:bottom-0 after:left-0 after:h-[1.5px] after:w-0 hover:after:w-full after:bg-blue-500 after:transition-all after:duration-300 cursor-pointer"
+            >
+              <KeyRound size={13} />
+              Credentials
+            </button>
+          )}
+
+          <div className="h-4 w-[1px] bg-slate-800" />
+
+          <button
+            onClick={logout}
+            className="relative py-1 text-slate-400 hover:text-red-400 transition-colors duration-300 text-xs font-semibold flex items-center gap-1.5 after:absolute after:bottom-0 after:left-0 after:h-[1.5px] after:w-0 hover:after:w-full after:bg-red-500 after:transition-all after:duration-300 cursor-pointer"
+          >
+            <LogOut size={13} />
+            Sign Out
+          </button>
         </div>
-      </div>
-
-      {/* Right - Desktop (exact same position as Home) */}
-      <div className={`fixed top-7 right-8 z-50 hidden md:flex items-center gap-6 pt-1.5 transition-all duration-300 ${isVisible ? "translate-y-0 opacity-100" : "-translate-y-24 opacity-0 pointer-events-none"}`}>
-        {children}
-
-        <Link
-          to="/"
-          className="relative py-1 text-slate-400 hover:text-white transition-colors duration-300 text-xs font-semibold flex items-center gap-1.5 after:absolute after:bottom-0 after:left-0 after:h-[1.5px] after:w-0 hover:after:w-full after:bg-blue-500 after:transition-all after:duration-300"
-        >
-          <Home size={13} />
-          Home
-        </Link>
-
-        {!isDashboard && (
-          <button
-            onClick={() => navigate("/dashboard")}
-            className="relative py-1 text-slate-400 hover:text-white transition-colors duration-300 text-xs font-semibold flex items-center gap-1.5 after:absolute after:bottom-0 after:left-0 after:h-[1.5px] after:w-0 hover:after:w-full after:bg-blue-500 after:transition-all after:duration-300 cursor-pointer"
-          >
-            <LayoutDashboard size={13} />
-            Dashboard
-          </button>
-        )}
-
-        {!isCredentials && (
-          <button
-            onClick={() => navigate("/credentials", { state: { from: location.pathname } })}
-            className="relative py-1 text-slate-400 hover:text-white transition-colors duration-300 text-xs font-semibold flex items-center gap-1.5 after:absolute after:bottom-0 after:left-0 after:h-[1.5px] after:w-0 hover:after:w-full after:bg-blue-500 after:transition-all after:duration-300 cursor-pointer"
-          >
-            <KeyRound size={13} />
-            Credentials
-          </button>
-        )}
-
-        <div className="h-4 w-[1px] bg-slate-800" />
-
-        <button
-          onClick={logout}
-          className="relative py-1 text-slate-400 hover:text-red-400 transition-colors duration-300 text-xs font-semibold flex items-center gap-1.5 after:absolute after:bottom-0 after:left-0 after:h-[1.5px] after:w-0 hover:after:w-full after:bg-red-500 after:transition-all after:duration-300 cursor-pointer"
-        >
-          <LogOut size={13} />
-          Sign Out
-        </button>
-      </div>
+      )}
 
       {/* Right - Mobile Trigger */}
-      <button
-        onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-        className={`fixed top-7 right-8 z-50 md:hidden flex h-9 w-9 items-center justify-center bg-slate-900/30 border border-slate-800 hover:border-slate-700 rounded-lg backdrop-blur-sm text-slate-400 hover:text-white cursor-pointer transition-all duration-300 ${isVisible ? "translate-y-0 opacity-100" : "-translate-y-24 opacity-0 pointer-events-none"}`}
-      >
-        {mobileMenuOpen ? <X size={18} /> : <Menu size={18} />}
-      </button>
+      {!isCredentials && (
+        <button
+          onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+          className={`fixed top-7 right-8 z-50 md:hidden flex h-9 w-9 items-center justify-center bg-slate-900/30 border border-slate-800 hover:border-slate-700 rounded-lg backdrop-blur-sm text-slate-400 hover:text-white cursor-pointer transition-all duration-300 ${isVisible ? "translate-y-0 opacity-100" : "-translate-y-24 opacity-0 pointer-events-none"}`}
+        >
+          {mobileMenuOpen ? <X size={18} /> : <Menu size={18} />}
+        </button>
+      )}
 
       {/* Mobile Menu Drawer */}
-      {mobileMenuOpen && (
+      {!isCredentials && mobileMenuOpen && (
         <div className="fixed top-20 right-8 left-8 z-40 md:hidden bg-slate-950/95 border border-slate-900 rounded-2xl p-5 backdrop-blur-md flex flex-col gap-3 shadow-2xl">
           <Link
             to="/"
@@ -137,18 +144,6 @@ export function AppNavbar({ title, subtitle, showBack, backTo, children }: AppNa
               >
                 <LayoutDashboard size={14} className="text-blue-400" />
                 Dashboard
-              </button>
-            )}
-            {!isCredentials && (
-              <button
-                onClick={() => {
-                  setMobileMenuOpen(false);
-                  navigate("/credentials");
-                }}
-                className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium text-slate-300 hover:text-white hover:bg-slate-900 cursor-pointer"
-              >
-                <KeyRound size={14} className="text-slate-400" />
-                Credentials
               </button>
             )}
             <button

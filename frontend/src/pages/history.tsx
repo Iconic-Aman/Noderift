@@ -32,7 +32,7 @@ export default function History() {
   return (
     <div className="flex h-screen w-full flex-col bg-slate-950 text-slate-200">
       {/* Header */}
-      <div className="flex h-14 items-center justify-between border-b border-slate-800 bg-slate-900/90 px-4 backdrop-blur-sm">
+      <div className="flex h-14 items-center justify-between border-b border-slate-800 bg-slate-900/90 px-6 md:px-8 backdrop-blur-sm">
         <div className="flex items-center gap-3">
           <Link
             to={`/editor/${id}`}
@@ -53,15 +53,6 @@ export default function History() {
         </div>
 
         <div className="flex items-center gap-5 pt-1">
-          <a
-            href="https://github.com/Iconic-Aman/Noderift"
-            target="_blank"
-            rel="noreferrer"
-            className="relative py-1 text-slate-400 hover:text-white transition-colors duration-300 text-xs font-semibold flex items-center gap-1.5 after:absolute after:bottom-0 after:left-0 after:h-[1.5px] after:w-0 hover:after:w-full after:bg-blue-500 after:transition-all after:duration-300"
-          >
-            <Github size={13} />
-            GitHub
-          </a>
           <Link
             to="/"
             className="relative py-1 text-slate-400 hover:text-white transition-colors duration-300 text-xs font-semibold flex items-center gap-1.5 after:absolute after:bottom-0 after:left-0 after:h-[1.5px] after:w-0 hover:after:w-full after:bg-blue-500 after:transition-all after:duration-300"

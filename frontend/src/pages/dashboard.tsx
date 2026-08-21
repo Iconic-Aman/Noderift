@@ -103,8 +103,8 @@ export function Dashboard() {
         </div>
       )}
 
-      <main className="flex-1 px-8 py-8">
-        <div className="mx-auto max-w-5xl">
+      <main className="flex-1 max-w-5xl mx-auto w-full px-6 md:px-8 pt-28 pb-12">
+        <div>
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
             {workflows.map((wf) => (
               <div

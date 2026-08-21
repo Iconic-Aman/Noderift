@@ -88,8 +88,8 @@ export function Credentials() {
     <div className="min-h-screen bg-slate-950 text-slate-200 flex flex-col">
       <AppNavbar title="Credentials" subtitle="Encrypted Integration Keys" showBack={true} />
 
-      <main className="flex-1 px-6 py-8">
-        <div className="mx-auto max-w-5xl">
+      <main className="flex-1 max-w-5xl mx-auto w-full px-6 md:px-8 pt-28 pb-12">
+        <div>
           <div className="grid gap-6 lg:grid-cols-[380px_1fr]">
             <form onSubmit={createCredential} className="rounded-xl border border-slate-800 bg-slate-900/60 p-5 h-fit">
               <div className="mb-5 flex items-center gap-3">

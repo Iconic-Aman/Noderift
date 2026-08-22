@@ -14,11 +14,10 @@ export const PROMPT_TEXT =
   'Every day at 8:00 AM, get all mail from xyz@gmail.com and save it into an excel sheet.';
 
 export const THINKING_STEPS = [
-  'Understanding your request…',
-  'Plan: schedule trigger → Gmail → save to Excel',
-  'get_available_nodes()',
-  'add_node(), add_node(), add_node()',
-  'connect_nodes()…',
+  'Understanding workflow request…',
+  'Configuring Gmail & schedule triggers',
+  'Building Excel data logic',
+  'Connecting workflow nodes…',
 ];
 
 export type IconKey = 'clock' | 'mail' | 'code';

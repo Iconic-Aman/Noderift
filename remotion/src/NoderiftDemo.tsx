@@ -1,52 +1,43 @@
 import React from 'react';
 import {AbsoluteFill, useCurrentFrame, interpolate} from 'remotion';
-import {PROMPT_TEXT, THINKING_STEPS, NODES} from './constants';
+import {THINKING_STEPS, NODES} from './constants';
 import {NodeCard, Connector, PulseDot, clampProgress} from './components';
 
 import {EndCardDemo} from './components/demo/EndCardDemo';
 import {IntroCardDemo} from './components/demo/IntroCardDemo';
 import {WorkflowGalleryDemo} from './WorkflowGalleryDemo';
-import {AIChatPanelDemo} from './AIChatPanelDemo';
 import {ThinkingLogDemo} from './ThinkingLogDemo';
 
 const T = {
   logoIn: [345, 365] as const,
-  thinkingStart: 495,
-  thinkingStep: 25,
-  nodesStart: 570,
+  thinkingStart: 435,
+  thinkingStep: 18,
+  nodesStart: 525,
   nodeGap: 24,
-  connectorsStart: 610,
+  connectorsStart: 565,
   connectorGap: 18,
   connectorDuration: 16,
-  runButtonAppear: 640,
-  runClick: 645,
-  runStart: 650,
-  runEnd: 690,
-  downloadAppear: 700,
-  downloadClick: 715,
-  endCardStart: 740,
+  runButtonAppear: 595,
+  runClick: 600,
+  runStart: 605,
+  runEnd: 645,
+  downloadAppear: 655,
+  downloadClick: 670,
+  endCardStart: 700,
 };
 
-export const TOTAL_DURATION = 775;
+export const TOTAL_DURATION = 740;
 
 export const NoderiftDemo: React.FC = () => {
   const frame = useCurrentFrame();
 
-
-
-  const chatVisible = frame >= 490 && frame < T.nodesStart;
-  const chatOpacity = interpolate(
+  const thinkingVisible = frame >= T.thinkingStart && frame < T.nodesStart;
+  const zoomScale = interpolate(
     frame,
-    [490, 510, T.nodesStart - 20, T.nodesStart],
-    [0, 1, 1, 0],
+    [430, 460, T.nodesStart - 10, T.nodesStart + 15],
+    [1, 1.22, 1.22, 1],
     {extrapolateLeft: 'clamp', extrapolateRight: 'clamp'}
   );
-
-
-  const thinkingVisible = frame >= T.thinkingStart && frame < T.nodesStart;
-
-
-
 
   const downloadVisible = frame >= T.downloadAppear;
   const downloadOpacity = clampProgress(frame, T.downloadAppear, T.downloadAppear + 10);
@@ -64,10 +55,17 @@ export const NoderiftDemo: React.FC = () => {
 
       <AbsoluteFill style={{backgroundImage: `radial-gradient(rgba(148, 163, 184, 0.15) 1px, transparent 1px)`, backgroundSize: '32px 32px', opacity: 0.7}} />
 
-      <WorkflowGalleryDemo frame={frame} />
-      <AIChatPanelDemo chatVisible={chatVisible} chatOpacity={chatOpacity} promptText={PROMPT_TEXT} />
-      <ThinkingLogDemo thinkingVisible={thinkingVisible} frame={frame} thinkingStart={T.thinkingStart} thinkingStep={T.thinkingStep} steps={THINKING_STEPS} />
-
+      <div
+        style={{
+          position: 'absolute',
+          inset: 0,
+          transform: `scale(${zoomScale})`,
+          transformOrigin: '960px 520px',
+        }}
+      >
+        <WorkflowGalleryDemo frame={frame} nodesStart={T.nodesStart} />
+        <ThinkingLogDemo thinkingVisible={thinkingVisible} frame={frame} thinkingStart={T.thinkingStart} thinkingStep={T.thinkingStep} steps={THINKING_STEPS} />
+      </div>
 
       <AbsoluteFill style={{opacity: contentFadeOut}}>
         {downloadVisible && (
@@ -75,7 +73,6 @@ export const NoderiftDemo: React.FC = () => {
             {downloadClicked ? '✓ Downloaded Excel File' : '⬇ Download Excel Output'}
           </div>
         )}
-
 
         {NODES.map((node, i) => (
           <NodeCard key={node.title} frame={frame} appearFrame={T.nodesStart + i * T.nodeGap} node={node} runFrame={arrivalFrames[i]} doneFrame={arrivalFrames[i] + 20} />

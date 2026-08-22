@@ -5,7 +5,7 @@ import { useUser } from "@/hooks/useUser";
 import { useScrollDirection } from "@/hooks/useScrollDirection";
 
 interface AppNavbarProps {
-  title: string;
+  title?: string;
   subtitle?: string;
   showBack?: boolean;
   backTo?: string;

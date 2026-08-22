@@ -61,7 +61,7 @@ export const ThinkingLogDemo: React.FC<{
               key={step}
               style={{
                 opacity: Math.min(1, stepSpring),
-                color: '#94A3B8',
+                color: done ? '#F1F5F9' : '#94A3B8',
                 fontSize: 16,
                 fontWeight: 500,
                 display: 'flex',
@@ -71,7 +71,7 @@ export const ThinkingLogDemo: React.FC<{
                 clipPath: `inset(0 ${(1 - stepSpring) * 100}% 0 0)`,
               }}
             >
-              <span style={{color: done ? '#22C55E' : '#3B82F6'}}>{done ? '✓' : '●'}</span>
+              <span style={{color: done ? '#22C55E' : '#3B82F6', fontWeight: 700}}>{done ? '✓' : '●'}</span>
               {step}
             </div>
           );

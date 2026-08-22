@@ -1,86 +1,59 @@
-  services:
-    backend:
-      build: ./backend
-      environment:
-        DATABASE_URL: ${DATABASE_URL}
-        ENVIRONMENT: ${ENVIRONMENT:-development}
-        SECRET_KEY: ${SECRET_KEY}
-        REDIS_URL: ${REDIS_URL:-redis://localhost:6379/0}
-        GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
-        GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
-        GOOGLE_REDIRECT_URI: ${GOOGLE_REDIRECT_URI}
-        FRONTEND_URL: ${FRONTEND_URL}
-        GOOGLE_AUTH_URL: ${GOOGLE_AUTH_URL}
-        GOOGLE_TOKEN_URL: ${GOOGLE_TOKEN_URL}
-        GOOGLE_USERINFO_URL: ${GOOGLE_USERINFO_URL}
-        NVIDIA_API_KEY: ${NVIDIA_API_KEY}
-        NVIDIA_API_URL: ${NVIDIA_API_URL}
-        LLM_MODEL: ${LLM_MODEL}
-        EMBEDDING_MODEL: ${EMBEDDING_MODEL}
-        GROQ_API_KEY: ${GROQ_API_KEY}
-        GROQ_MODEL: ${GROQ_MODEL}
-        OPENROUTER_API_KEY: ${OPENROUTER_API_KEY}
-        OPENROUTER_MODEL: ${OPENROUTER_MODEL}
-        OPENROUTER_API_URL: ${OPENROUTER_API_URL}
-        RESEND_API_KEY: ${RESEND_API_KEY}
-        FEEDBACK_TO_EMAIL: ${FEEDBACK_TO_EMAIL}
-      volumes:
-        - ./backend:/app
-        - ./worker:/app/worker
-      command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
-      network_mode: host  
-      ports:
-        - "8000:8000"
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-noderift}
+      POSTGRES_USER: ${POSTGRES_USER:-noderift}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-noderift}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - noderift_pg_data:/var/lib/postgresql/data
 
-    frontend:
-      image: node:20-slim
-      working_dir: /app
-      volumes:
-        - ./frontend:/app
-      environment:
-        - VITE_API_URL=${VITE_API_URL:-http://localhost:8000/api}
-        - ALLOWED_HOST=${ALLOWED_HOST:-localhost}
-      command: sh -c "npm install && npm run dev -- --host 0.0.0.0 --port 3000"
-      ports:
-        - "3000:3000"
-      depends_on:
-        - backend
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - noderift_redis_data:/data
 
-    redis:
-      image: redis:7-alpine
-      ports:
-        - "6379:6379"
+  noderift:
+    image: ${DOCKER_IMAGE:-amandoc/noderift:latest}
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: ${DATABASE_URL:-postgresql://noderift:noderift@postgres:5432/noderift}
+      REDIS_URL: redis://redis:6379/0
+      ENVIRONMENT: ${ENVIRONMENT:-production}
+      SECRET_KEY: ${SECRET_KEY:-insecure_default_secret_key_change_me}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+      GOOGLE_REDIRECT_URI: ${GOOGLE_REDIRECT_URI:-}
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3000}
+      GOOGLE_AUTH_URL: ${GOOGLE_AUTH_URL:-}
+      GOOGLE_TOKEN_URL: ${GOOGLE_TOKEN_URL:-}
+      GOOGLE_USERINFO_URL: ${GOOGLE_USERINFO_URL:-}
+      NVIDIA_API_KEY: ${NVIDIA_API_KEY:-}
+      NVIDIA_API_URL: ${NVIDIA_API_URL:-}
+      LLM_MODEL: ${LLM_MODEL:-}
+      EMBEDDING_MODEL: ${EMBEDDING_MODEL:-}
+      GROQ_API_KEY: ${GROQ_API_KEY:-}
+      GROQ_MODEL: ${GROQ_MODEL:-}
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
+      OPENROUTER_MODEL: ${OPENROUTER_MODEL:-}
+      OPENROUTER_API_URL: ${OPENROUTER_API_URL:-}
+      RESEND_API_KEY: ${RESEND_API_KEY:-}
+      FEEDBACK_TO_EMAIL: ${FEEDBACK_TO_EMAIL:-}
+    ports:
+      - "${PORT:-3000}:8000"
+    depends_on:
+      - postgres
+      - redis
 
-    worker:
-      build: ./backend
-      environment:
-        DATABASE_URL: ${DATABASE_URL}
-        ENVIRONMENT: ${ENVIRONMENT:-development}
-        SECRET_KEY: ${SECRET_KEY}
-        REDIS_URL: ${REDIS_URL:-redis://localhost:6379/0}
-        GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
-        GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
-        GOOGLE_REDIRECT_URI: ${GOOGLE_REDIRECT_URI}
-        FRONTEND_URL: ${FRONTEND_URL}
-        GOOGLE_AUTH_URL: ${GOOGLE_AUTH_URL}
-        GOOGLE_TOKEN_URL: ${GOOGLE_TOKEN_URL}
-        GOOGLE_USERINFO_URL: ${GOOGLE_USERINFO_URL}
-        NVIDIA_API_KEY: ${NVIDIA_API_KEY}
-        NVIDIA_API_URL: ${NVIDIA_API_URL}
-        LLM_MODEL: ${LLM_MODEL}
-        EMBEDDING_MODEL: ${EMBEDDING_MODEL}
-        GROQ_API_KEY: ${GROQ_API_KEY}
-        GROQ_MODEL: ${GROQ_MODEL}
-        OPENROUTER_API_KEY: ${OPENROUTER_API_KEY}
-        OPENROUTER_MODEL: ${OPENROUTER_MODEL}
-        OPENROUTER_API_URL: ${OPENROUTER_API_URL}
-        RESEND_API_KEY: ${RESEND_API_KEY}
-        FEEDBACK_TO_EMAIL: ${FEEDBACK_TO_EMAIL}
-      volumes:
-        - .:/workspace
-      working_dir: /workspace
-      network_mode: host
-      command: celery -A worker.worker.celery_app worker --loglevel=info
-      depends_on:
-        - redis
-        - backend
+volumes:
+  noderift_pg_data:
+  noderift_redis_data:

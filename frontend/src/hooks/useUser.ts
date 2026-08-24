@@ -3,9 +3,10 @@ import { apiFetch } from "@/lib/api";
 
 export interface UserProfile {
   id: string;
-  email: string;
-  name: string;
-  first_name: string;
+  username?: string;
+  email?: string;
+  name?: string;
+  first_name?: string;
   picture?: string;
   created_at?: string;
 }
@@ -47,7 +48,13 @@ export function useUser() {
     window.location.href = "/";
   }, []);
 
-  const firstName = user?.first_name || (user?.name ? user.name.split(" ")[0] : (user?.email ? user.email.split("@")[0] : "User"));
+  const firstName =
+    user?.first_name ||
+    (user?.name ? user.name.split(" ")[0] : null) ||
+    user?.username ||
+    (user?.email ? user.email.split("@")[0] : null) ||
+    "User";
 
   return { user, firstName, loading, logout, refreshUser: fetchUser };
 }
+

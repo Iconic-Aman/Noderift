@@ -9,7 +9,9 @@ class User(Base):
     __tablename__ = "users"
 
     id = Column(String, primary_key=True, index=True, default=lambda: str(uuid.uuid4()))
-    email = Column(String, unique=True, index=True, nullable=False)
+    username = Column(String, unique=True, index=True, nullable=True)
+    email = Column(String, unique=True, index=True, nullable=True)
+    password_hash = Column(String, nullable=True)
     name = Column(String, nullable=True)
     picture = Column(String, nullable=True)
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
@@ -17,3 +19,4 @@ class User(Base):
     # Relationships
     workflows = relationship("Workflow", back_populates="user", cascade="all, delete-orphan")
     credentials = relationship("Credential", back_populates="user", cascade="all, delete-orphan")
+

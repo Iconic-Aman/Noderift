@@ -52,9 +52,28 @@ app.include_router(feedback.router, prefix="/api", tags=["feedback"])
 def startup_event():
     # Automatically create missing database tables on first boot
     from core.database import Base, engine
+    from sqlalchemy import text
     import models
     logger.info("Initializing database tables...")
     Base.metadata.create_all(bind=engine)
+
+    # Safe column migration for existing databases
+    try:
+        with engine.begin() as conn:
+            if engine.dialect.name == "postgresql":
+                conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS username VARCHAR;"))
+                conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS password_hash VARCHAR;"))
+                conn.execute(text("CREATE UNIQUE INDEX IF NOT EXISTS ix_users_username ON users (username);"))
+                conn.execute(text("ALTER TABLE users ALTER COLUMN email DROP NOT NULL;"))
+            elif engine.dialect.name == "sqlite":
+                cols = [row[1] for row in conn.execute(text("PRAGMA table_info(users)")).fetchall()]
+                if "username" not in cols:
+                    conn.execute(text("ALTER TABLE users ADD COLUMN username VARCHAR;"))
+                if "password_hash" not in cols:
+                    conn.execute(text("ALTER TABLE users ADD COLUMN password_hash VARCHAR;"))
+    except Exception as e:
+        logger.warning(f"Schema migration check: {e}")
+
 
     logger.info("Starting background scheduler...")
     scheduler_manager.start()

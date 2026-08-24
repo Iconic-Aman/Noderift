@@ -13,7 +13,7 @@ const DEPLOYMENT_OPTIONS = [
     icon: HardDrive,
     highlights: ["Full privacy — keys stay on your machine", "Unlimited local workflow executions", "One Docker command to get started"],
     extraHighlight: "Zero telemetry & full control of execution environment",
-    codeSnippet: "docker run -d -p 3000:3000 -p 8000:8000 ghcr.io/iconic-aman/noderift:latest",
+    codeSnippet: "curl -O https://raw.githubusercontent.com/Iconic-Aman/Noderift/main/docker-compose.yml && docker compose up -d",
     ctaText: "Self-Host with Docker ↓",
     ctaIcon: Terminal,
   },

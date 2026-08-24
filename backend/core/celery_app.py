@@ -1,11 +1,14 @@
+import os
 from celery import Celery
 from core.config import settings
+
+_redis_url = os.getenv("REDIS_URL") or settings.REDIS_URL or "redis://localhost:6379/0"
 
 # Initialize Celery app
 celery_app = Celery(
     "noderift",
-    broker=settings.REDIS_URL,
-    backend=settings.REDIS_URL,
+    broker=_redis_url,
+    backend=_redis_url,
 )
 
 # Optional Celery configuration

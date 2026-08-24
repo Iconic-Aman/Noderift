@@ -9,6 +9,8 @@ interface Step {
   output: string;
 }
 
+const COMPOSE_URL = "https://raw.githubusercontent.com/Iconic-Aman/Noderift/main/docker-compose.yml";
+
 const steps: Step[] = [
   {
     num: 1,
@@ -19,17 +21,17 @@ const steps: Step[] = [
   },
   {
     num: 2,
-    title: "Pull Docker Image",
-    desc: "Fetch the official open source Noderift container image.",
-    command: "docker pull iconicaman/noderift:latest",
-    output: "latest: Pulling from iconicaman/noderift\nae43cf21: Pull complete\n3b23c21a: Pull complete\nDigest: sha256:4d7c2a71f08e4... \nStatus: Downloaded newer image for iconicaman/noderift:latest",
+    title: "Download Compose File",
+    desc: "Fetch the official docker-compose.yml from GitHub.",
+    command: `curl -O ${COMPOSE_URL}`,
+    output: "  % Total    % Received\n100   3428  100   3428\n[SUCCESS] docker-compose.yml downloaded!",
   },
   {
     num: 3,
-    title: "Run local Container",
-    desc: "Launch the local instance on port 3000.",
-    command: "docker run -d -p 3000:3000 --name noderift iconicaman/noderift:latest",
-    output: "f8d3c2b1a0e9d8c7b6a5f4e3d2c1b0a9f8e7d6c5\n[SUCCESS] Noderift container started successfully on port 3000!",
+    title: "Start All Services",
+    desc: "Pulls images and starts Noderift, Postgres & Redis.",
+    command: "docker compose up -d",
+    output: "✔ Container noderift_postgres_1  Started\n✔ Container noderift_redis_1     Started\n✔ Container noderift_noderift_1  Started\n[SUCCESS] Noderift running on port 3000!",
   },
   {
     num: 4,

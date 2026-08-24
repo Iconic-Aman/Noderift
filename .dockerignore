@@ -1,55 +1,28 @@
-# Git
-.git
-.gitignore
-
-# Python
-__pycache__/
-*.py[cod]
-*$py.class
-*.so
-.Python
-env/
-build/
-develop-eggs/
-dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-*.egg-info/
-.installed.cfg
-*.egg
-
-# Virtual Environment
-venv/
-.venv/
-ENV/
+﻿# Python
+backend/noderift-venv/
+backend/__pycache__/
+**/__pycache__/
+**/*.pyc
+**/*.pyo
+**/*.pyd
+backend/.env
 
 # Node
-node_modules/
-npm-debug.log
-yarn-error.log
-dist/
-build/
+frontend/node_modules/
+frontend/dist/
+remotion/node_modules/
+workflow-automation-canvas/
+remotion/
 
-# Environment Variables
-.env
-.env.local
-.env.*
-
-# IDEs and Editors
+# Git / IDE
+.git/
+.gitignore
 .vscode/
-.idea/
-*.swp
-*.swo
+.agents/
+.qodo/
+.github/
+LEARNING/
 
-# MacOS
-.DS_Store
-
-# Logs
-logs/
-*.log
+# Misc
+**/*.log
+**/.DS_Store

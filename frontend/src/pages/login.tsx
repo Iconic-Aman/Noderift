@@ -1,11 +1,20 @@
-import { useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { Zap } from "lucide-react";
+import { Lock, User, Mail, AlertCircle, Loader2 } from "lucide-react";
 import { API_URL } from "@/lib/api";
 
 export function Login() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+
+  const [mode, setMode] = useState<"login" | "register">("login");
+  const [username, setUsername] = useState("");
+  const [email, setEmail] = useState("");
+  const [name, setName] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     const urlToken = searchParams.get("token");
@@ -21,51 +30,250 @@ export function Login() {
     }
   }, [searchParams, navigate]);
 
-  const handleGoogleLogin = () => {
-    window.location.href = `${API_URL}/auth/google/login`;
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+
+    if (mode === "register") {
+      if (!username.trim()) {
+        setError("Username is required");
+        return;
+      }
+      if (username.trim().length < 3) {
+        setError("Username must be at least 3 characters");
+        return;
+      }
+      if (password.length < 6) {
+        setError("Password must be at least 6 characters");
+        return;
+      }
+      if (password !== confirmPassword) {
+        setError("Passwords do not match");
+        return;
+      }
+
+      setLoading(true);
+      try {
+        const res = await fetch(`${API_URL}/auth/register`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            username: username.trim(),
+            email: email.trim() || undefined,
+            name: name.trim() || undefined,
+            password,
+          }),
+        });
+
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          throw new Error(data.detail || data.message || "Failed to register");
+        }
+
+        if (data.token) {
+          localStorage.setItem("noderift_token", data.token);
+          navigate("/dashboard");
+        }
+      } catch (err: unknown) {
+        setError(err instanceof Error ? err.message : "Failed to register");
+      } finally {
+        setLoading(false);
+      }
+    } else {
+      if (!username.trim()) {
+        setError("Username or email is required");
+        return;
+      }
+      if (!password) {
+        setError("Password is required");
+        return;
+      }
+
+      setLoading(true);
+      try {
+        const res = await fetch(`${API_URL}/auth/login`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            username: username.trim(),
+            password,
+          }),
+        });
+
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          throw new Error(data.detail || data.message || "Invalid credentials");
+        }
+
+        if (data.token) {
+          localStorage.setItem("noderift_token", data.token);
+          navigate("/dashboard");
+        }
+      } catch (err: unknown) {
+        setError(err instanceof Error ? err.message : "Failed to log in");
+      } finally {
+        setLoading(false);
+      }
+    }
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-slate-950 px-4 text-slate-200">
-      <div className="w-full max-w-sm rounded-2xl border border-slate-800 bg-slate-900/50 p-8 shadow-xl backdrop-blur-sm">
-        <div className="mb-8 flex flex-col items-center gap-3">
-          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-blue-600 shadow-lg shadow-blue-500/20">
-            <Zap className="h-6 w-6 text-white" />
+    <div className="flex min-h-screen items-center justify-center bg-slate-950 px-4 py-8 text-slate-200">
+      <div className="w-full max-w-md rounded-2xl border border-slate-800 bg-slate-900/60 p-6 sm:p-8 shadow-2xl backdrop-blur-md">
+        <div className="mb-6 flex flex-col items-center gap-2">
+          <div className="flex h-12 w-12 items-center justify-center rounded-xl overflow-hidden shadow-lg shadow-blue-500/20">
+            <img src="/noderift-icon.jpg" alt="Noderift" className="h-full w-full object-cover" />
           </div>
-          <h2 className="text-xl font-bold text-white">Welcome to Noderift</h2>
-          <p className="text-sm text-slate-400 text-center">Sign in to access your workflows</p>
+          <h2 className="text-xl sm:text-2xl font-bold text-white tracking-tight">
+            {mode === "login" ? "Welcome back" : "Create your account"}
+          </h2>
+          <p className="text-xs sm:text-sm text-slate-400 text-center">
+            {mode === "login" ? "Sign in to access your local workflows" : "Set up your credentials to get started"}
+          </p>
         </div>
 
-        <button
-          id="google-login-btn"
-          onClick={handleGoogleLogin}
-          className="flex w-full items-center justify-center gap-3 rounded-lg border border-slate-700 bg-slate-800 py-3 text-sm font-medium text-white transition-colors hover:bg-slate-700 cursor-pointer"
-        >
-          <svg className="h-5 w-5" viewBox="0 0 24 24">
-            <path
-              d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
-              fill="#4285F4"
-            />
-            <path
-              d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-              fill="#34A853"
-            />
-            <path
-              d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
-              fill="#FBBC05"
-            />
-            <path
-              d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
-              fill="#EA4335"
-            />
-          </svg>
-          Continue with Google
-        </button>
+        {/* Tab switch */}
+        <div className="mb-6 flex rounded-xl bg-slate-950/80 p-1 border border-slate-800">
+          <button
+            type="button"
+            onClick={() => {
+              setMode("login");
+              setError(null);
+            }}
+            className={`flex-1 rounded-lg py-2 text-xs font-semibold transition-all cursor-pointer ${
+              mode === "login"
+                ? "bg-blue-600 text-white shadow-sm"
+                : "text-slate-400 hover:text-slate-200 hover:bg-slate-900/50"
+            }`}
+          >
+            Sign In
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setMode("register");
+              setError(null);
+            }}
+            className={`flex-1 rounded-lg py-2 text-xs font-semibold transition-all cursor-pointer ${
+              mode === "register"
+                ? "bg-blue-600 text-white shadow-sm"
+                : "text-slate-400 hover:text-slate-200 hover:bg-slate-900/50"
+            }`}
+          >
+            Sign Up
+          </button>
+        </div>
 
-        <p className="mt-6 text-center text-xs text-slate-500">
-          By signing in, you agree to our terms of service.
+        {error && (
+          <div className="mb-4 flex items-center gap-2 rounded-lg border border-red-500/30 bg-red-500/10 p-3 text-xs text-red-400">
+            <AlertCircle size={14} className="shrink-0" />
+            <span>{error}</span>
+          </div>
+        )}
+
+        {/* Form */}
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="mb-1.5 block text-xs font-medium text-slate-300">
+              {mode === "login" ? "Username or Email" : "Username *"}
+            </label>
+            <div className="relative">
+              <User className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
+              <input
+                type="text"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                placeholder={mode === "login" ? "admin or user@example.com" : "admin"}
+                required
+                className="w-full rounded-xl border border-slate-700/80 bg-slate-950/70 py-2.5 pl-9 pr-3 text-sm text-slate-100 placeholder-slate-500 outline-none transition focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+              />
+            </div>
+          </div>
+
+          {mode === "register" && (
+            <>
+              <div>
+                <label className="mb-1.5 block text-xs font-medium text-slate-300">
+                  Email <span className="text-slate-500">(optional)</span>
+                </label>
+                <div className="relative">
+                  <Mail className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
+                  <input
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="user@example.com"
+                    className="w-full rounded-xl border border-slate-700/80 bg-slate-950/70 py-2.5 pl-9 pr-3 text-sm text-slate-100 placeholder-slate-500 outline-none transition focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="mb-1.5 block text-xs font-medium text-slate-300">
+                  Full Name <span className="text-slate-500">(optional)</span>
+                </label>
+                <div className="relative">
+                  <User className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
+                  <input
+                    type="text"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    placeholder="John Doe"
+                    className="w-full rounded-xl border border-slate-700/80 bg-slate-950/70 py-2.5 pl-9 pr-3 text-sm text-slate-100 placeholder-slate-500 outline-none transition focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                  />
+                </div>
+              </div>
+            </>
+          )}
+
+          <div>
+            <label className="mb-1.5 block text-xs font-medium text-slate-300">Password *</label>
+            <div className="relative">
+              <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="••••••••"
+                required
+                className="w-full rounded-xl border border-slate-700/80 bg-slate-950/70 py-2.5 pl-9 pr-3 text-sm text-slate-100 placeholder-slate-500 outline-none transition focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+              />
+            </div>
+          </div>
+
+          {mode === "register" && (
+            <div>
+              <label className="mb-1.5 block text-xs font-medium text-slate-300">Confirm Password *</label>
+              <div className="relative">
+                <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
+                <input
+                  type="password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  placeholder="••••••••"
+                  required
+                  className="w-full rounded-xl border border-slate-700/80 bg-slate-950/70 py-2.5 pl-9 pr-3 text-sm text-slate-100 placeholder-slate-500 outline-none transition focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                />
+              </div>
+            </div>
+          )}
+
+          <button
+            type="submit"
+            disabled={loading}
+            className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 py-3 text-sm font-semibold text-white shadow-lg shadow-blue-500/20 transition hover:bg-blue-500 active:scale-[0.99] disabled:opacity-50 cursor-pointer"
+          >
+            {loading && <Loader2 size={16} className="animate-spin" />}
+            {mode === "login" ? "Sign In" : "Create Account"}
+          </button>
+        </form>
+
+        <p className="mt-6 text-center text-[11px] text-slate-500">
+          Credentials are encrypted and stored in your local PostgreSQL database.
         </p>
       </div>
     </div>
   );
 }
+
+

@@ -20,8 +20,9 @@ services:
       - noderift_redis_data:/data
 
   noderift:
-    image: ${DOCKER_IMAGE:-amandoc/noderift:latest}
+    image: ${DOCKER_IMAGE:-amandoc/noderift:oss-1.0.0}
     build:
+
       context: .
       dockerfile: Dockerfile
     restart: unless-stopped

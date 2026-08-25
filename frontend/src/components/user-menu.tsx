@@ -50,7 +50,8 @@ export function UserMenu() {
         <div className="absolute right-0 mt-2 w-52 rounded-xl border border-slate-800 bg-slate-950/95 p-1.5 shadow-2xl backdrop-blur-md animate-in fade-in zoom-in-95 duration-150 z-50">
           <div className="px-3 py-2 border-b border-slate-800/80 mb-1">
             <p className="text-xs font-semibold text-white truncate">{user?.name || firstName}</p>
-            <p className="text-[11px] text-slate-400 truncate">{user?.email}</p>
+            <p className="text-[11px] text-slate-400 truncate">{user?.email || (user?.username ? `@${user.username}` : "")}</p>
+
           </div>
 
           {!isHome && (

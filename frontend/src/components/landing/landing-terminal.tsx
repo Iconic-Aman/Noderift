@@ -14,24 +14,24 @@ const COMPOSE_URL = "https://raw.githubusercontent.com/Iconic-Aman/Noderift/main
 const steps: Step[] = [
   {
     num: 1,
-    title: "Start Docker Desktop",
-    desc: "Make sure Docker Desktop is active on your machine.",
-    command: "docker --version",
-    output: "Docker version 24.0.7, build afdd53b\n[SUCCESS] Docker environment active & running!",
-  },
-  {
-    num: 2,
     title: "Download Compose File",
     desc: "Fetch the official docker-compose.yml from GitHub.",
     command: `curl -O ${COMPOSE_URL}`,
     output: "  % Total    % Received\n100   3428  100   3428\n[SUCCESS] docker-compose.yml downloaded!",
   },
   {
+    num: 2,
+    title: "Configure LLM API Key",
+    desc: "Create .env and add your OpenRouter or Groq API key.",
+    command: 'echo "OPENROUTER_API_KEY=your_api_key_here" > .env',
+    output: "[SUCCESS] .env configured with API key!",
+  },
+  {
     num: 3,
     title: "Start All Services",
     desc: "Pulls images and starts Noderift, Postgres & Redis.",
     command: "docker compose up -d",
-    output: "✔ Container noderift_postgres_1  Started\n✔ Container noderift_redis_1     Started\n✔ Container noderift_noderift_1  Started\n[SUCCESS] Noderift running on port 3000!",
+    output: "✔ Container noderift-postgres-1  Started\n✔ Container noderift-redis-1     Started\n✔ Container noderift-noderift-1  Started\n[SUCCESS] Noderift running on port 3000!",
   },
   {
     num: 4,
@@ -41,6 +41,7 @@ const steps: Step[] = [
     output: "[INFO] Access local visual workflow editor at:\n----> http://localhost:3000",
   },
 ];
+
 
 export function LandingTerminal() {
   const [activeStep, setActiveStep] = useState(0);

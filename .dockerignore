@@ -1,11 +1,16 @@
-﻿# Python
+# Python
 backend/noderift-venv/
 backend/__pycache__/
 **/__pycache__/
 **/*.pyc
 **/*.pyo
 **/*.pyd
+# Environment & Keys
+.env
+.env.*
+*.env
 backend/.env
+
 
 # Node
 frontend/node_modules/

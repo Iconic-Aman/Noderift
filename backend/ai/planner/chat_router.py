@@ -75,32 +75,24 @@ def _is_obvious_conversation(message: str) -> bool:
     return any(lower.startswith(pat) or lower == pat for pat in _CONVERSATION_PATTERNS)
 
 
-def _get_chat_llm():
-    from core.config import settings
-    # Prioritize OPENROUTER_MODEL2 if set in .env
-    chat_model = (
-        settings.OPENROUTER_MODEL2.strip()
-        or settings.OPENROUTER_CHAT_MODEL.strip()
-        or "openrouter/free"
-    )
-
-    logger.info(f"[ChatRouter] 🤖 Intent/Chat Model (OpenRouter): '{chat_model}'")
+def _get_chat_llm(api_key: str, base_url: str, model: str):
+    logger.info(f"[ChatRouter] 🤖 Intent/Chat Model: '{model}'")
     return ChatOpenAI(
-        model=chat_model,
-        api_key=settings.OPENROUTER_API_KEY,
-        base_url=settings.OPENROUTER_API_URL or "https://openrouter.ai/api/v1",
+        model=model,
+        api_key=api_key,
+        base_url=base_url,
         temperature=0.7,
     )
 
 
-async def classify_intent(user_message: str) -> str:
+async def classify_intent(user_message: str, api_key: str, base_url: str, model: str) -> str:
     """Returns 'BUILD_REQUEST' or 'CONVERSATION'."""
     # Fast-path: skip LLM for obvious conversations
     if _is_obvious_conversation(user_message):
         logger.info(f"[ChatRouter] Fast-path CONVERSATION for: '{user_message[:60]}'")
         return "CONVERSATION"
     try:
-        llm = _get_chat_llm()
+        llm = _get_chat_llm(api_key, base_url, model)
         result = await llm.ainvoke([
             SystemMessage(content=INTENT_SYSTEM_PROMPT),
             HumanMessage(content=user_message),
@@ -115,10 +107,10 @@ async def classify_intent(user_message: str) -> str:
         return "BUILD_REQUEST"
 
 
-async def handle_conversation(user_message: str, history: list) -> str:
-    """Handle casual conversation using the lightweight 8B model."""
+async def handle_conversation(user_message: str, history: list, api_key: str, base_url: str, model: str) -> str:
+    """Handle casual conversation using the lightweight model."""
     try:
-        llm = _get_chat_llm()
+        llm = _get_chat_llm(api_key, base_url, model)
 
         # Build message history for context (last 6 messages max)
         messages = [SystemMessage(content=CHAT_SYSTEM_PROMPT)]
@@ -132,41 +124,41 @@ async def handle_conversation(user_message: str, history: list) -> str:
 
         result = await llm.ainvoke(messages)
         reply = result.content.strip()
-        logger.info(f"[ChatRouter] Conversation handled by 8B model. Reply length: {len(reply)}")
+        logger.info(f"[ChatRouter] Conversation handled. Reply length: {len(reply)}")
         return reply
     except Exception as e:
         logger.error(f"[ChatRouter] Conversation handler failed: {e}")
         return "Hey! I'm here to help you build automations. What would you like to automate?"
 
 
-async def route_message(user_message: str, history: list) -> tuple[str, bool]:
+async def route_message(user_message: str, history: list, api_key: str, base_url: str, model: str) -> tuple[str, bool]:
     """
     Route a user message through the dual-model system.
 
     Returns:
         (reply_text, should_build)
         - If should_build=True  → caller must run the heavy agent loop
-        - If should_build=False → reply_text is the final response from 8B model
+        - If should_build=False → reply_text is the final response from model
     """
-    from core.config import settings
     logger.info(f"[ChatRouter] ── route_message() called ──")
-    logger.info(f"[ChatRouter] Chat model: '{settings.OPENROUTER_CHAT_MODEL}'")
-    logger.info(f"[ChatRouter] API URL: '{settings.OPENROUTER_API_URL}'")
-    logger.info(f"[ChatRouter] API Key present: {bool(settings.OPENROUTER_API_KEY)}")
+    logger.info(f"[ChatRouter] Model: '{model}'")
+    logger.info(f"[ChatRouter] API URL: '{base_url}'")
+    logger.info(f"[ChatRouter] API Key present: {bool(api_key)}")
 
-    intent = await classify_intent(user_message)
+    intent = await classify_intent(user_message, api_key, base_url, model)
     logger.info(f"[ChatRouter] Final intent decision: {intent}")
 
     if intent == "CONVERSATION":
-        logger.info(f"[ChatRouter] → Handling as CONVERSATION with 8B model")
-        reply = await handle_conversation(user_message, history)
-        logger.info(f"[ChatRouter] → 8B reply: '{reply[:100]}'")
-        # If 8B model itself decided it's ready to build
+        logger.info(f"[ChatRouter] → Handling as CONVERSATION")
+        reply = await handle_conversation(user_message, history, api_key, base_url, model)
+        logger.info(f"[ChatRouter] → reply: '{reply[:100]}'")
+        # If model itself decided it's ready to build
         if "READY_TO_BUILD" in reply:
-            logger.info(f"[ChatRouter] → 8B said READY_TO_BUILD — escalating to heavy model")
+            logger.info(f"[ChatRouter] → READY_TO_BUILD — escalating to heavy model")
             return "", True
         return reply, False
 
     # BUILD_REQUEST — pass to heavy model
     logger.info(f"[ChatRouter] → BUILD_REQUEST — heavy model will take over")
     return "", True
+

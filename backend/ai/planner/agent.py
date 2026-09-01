@@ -91,32 +91,26 @@ STRICT RULES FOR VARIABLE INTERPOLATION (PLACEHOLDERS):
 """
 
 def get_planner_agent(api_key: str = "", base_url: str = "", model_name: str = "", temperature: float = 0.2):
-    """Factory to create a ReAct planner agent using OpenRouter or Groq."""
-    from core.config import settings
-
+    """Factory to create a ReAct planner agent using the provided API key and base URL."""
     import logging
     logger = logging.getLogger("uvicorn")
 
-    target_model = model_name or settings.OPENROUTER_MODEL
-    key_len = len(settings.OPENROUTER_API_KEY) if settings.OPENROUTER_API_KEY else 0
-    key_preview = f"{settings.OPENROUTER_API_KEY[:8]}...{settings.OPENROUTER_API_KEY[-4:]}" if key_len > 12 else "EMPTY/MISSING"
+    if not api_key:
+        raise ValueError("LLM API key is required. Please configure your LLM key in AI Mode settings.")
+
+    resolved_base_url = base_url or "https://openrouter.ai/api/v1"
+    target_model = model_name or "cohere/north-mini-code:free"
 
     logger.info("🤖 [AI PLANNER DIAGNOSTICS]")
     logger.info(f"   -> Model: '{target_model}'")
-    logger.info(f"   -> API Base: '{settings.OPENROUTER_API_URL}'")
-    logger.info(f"   -> API Key Length: {key_len} ({key_preview})")
-
-    if not settings.OPENROUTER_API_KEY:
-        logger.error("❌ [AI PLANNER ERROR] OPENROUTER_API_KEY is EMPTY in settings!")
+    logger.info(f"   -> API Base: '{resolved_base_url}'")
+    logger.info(f"   -> API Key Length: {len(api_key)}")
 
     from langchain_openai import ChatOpenAI
 
-    resolved_base_url = settings.OPENROUTER_API_URL or "https://openrouter.ai/api/v1"
-    logger.info(f"   -> Resolved base_url: '{resolved_base_url}'")
-
     llm = ChatOpenAI(
         model=target_model,
-        api_key=settings.OPENROUTER_API_KEY,
+        api_key=api_key,
         base_url=resolved_base_url,
         temperature=temperature,
     )

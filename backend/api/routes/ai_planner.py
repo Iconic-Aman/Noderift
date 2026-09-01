@@ -1,15 +1,18 @@
 import asyncio
+import json
 import logging
 from fastapi import APIRouter, Depends, HTTPException, WebSocket, WebSocketDisconnect
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
 import redis.asyncio as aioredis
+from cryptography.fernet import Fernet
 
 from api.deps import get_current_user
 from core.config import settings
 from core.database import get_db
 from models.user import User
 from models.workflow import Workflow
+from models.credential import Credential
 from ai.planner.agent import get_planner_agent
 from ai.planner.loop import run_agent_loop
 from ai.planner.session import get_session_messages, save_session_messages
@@ -18,6 +21,32 @@ from core.security import bearer_scheme
 
 router = APIRouter(prefix="/ai", tags=["AI Planner"])
 logger = logging.getLogger("uvicorn")
+
+_fernet = Fernet(settings.SECRET_KEY.encode())
+
+# Provider defaults
+_PROVIDER_DEFAULTS = {
+    "openrouter": {
+        "base_url": "https://openrouter.ai/api/v1",
+        "model": "cohere/north-mini-code:free",
+    },
+    "groq": {
+        "base_url": "https://api.groq.com/openai/v1",
+        "model": "llama-3.1-8b-instant",
+    },
+}
+
+def _get_llm_credential(db: Session, user_id: str) -> dict | None:
+    """Fetch and decrypt the user's saved LLM API key from DB."""
+    cred = db.query(Credential).filter(
+        Credential.user_id == user_id,
+        Credential.name == "llm_key",
+        Credential.type == "api_key",
+    ).first()
+    if not cred:
+        return None
+    return json.loads(_fernet.decrypt(cred.encrypted_data.encode()).decode())
+
 
 class PlanRequest(BaseModel):
     message: str
@@ -28,12 +57,29 @@ class PlanResponse(BaseModel):
     session_id: str
     is_build: bool = False
 
+@router.get("/llm-key-status", dependencies=[Depends(bearer_scheme)])
+def llm_key_status(db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    """Check if the current user has a saved LLM API key."""
+    cred_data = _get_llm_credential(db, user.id)
+    return {"configured": cred_data is not None}
+
 @router.post("/plan", response_model=PlanResponse, dependencies=[Depends(bearer_scheme)])
 async def plan_workflow(req: PlanRequest, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
-    """Run the AI Planner — routes through 8B chat model first, 70B builder only if needed."""
+    """Run the AI Planner — reads LLM key from local DB credentials."""
     workflow = db.query(Workflow).filter(Workflow.id == req.session_id, Workflow.user_id == user.id).first()
     if not workflow:
         raise HTTPException(status_code=404, detail="Workflow not found")
+
+    # Resolve LLM key from local DB
+    cred_data = _get_llm_credential(db, user.id)
+    if not cred_data or not cred_data.get("api_key"):
+        raise HTTPException(status_code=428, detail="no_llm_key")
+
+    provider = cred_data.get("provider", "openrouter")
+    defaults = _PROVIDER_DEFAULTS.get(provider, _PROVIDER_DEFAULTS["openrouter"])
+    api_key = cred_data["api_key"]
+    base_url = cred_data.get("base_url") or defaults["base_url"]
+    model = cred_data.get("model") or defaults["model"]
 
     raw_history = await get_session_messages(req.session_id)
     history = [
@@ -43,25 +89,23 @@ async def plan_workflow(req: PlanRequest, db: Session = Depends(get_db), user: U
     ]
 
     logger.info(f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
-    logger.info(f"[AI PLANNER] New request from user: '{user.email}'")
+    logger.info(f"[AI PLANNER] New request from user: '{user.email or user.username}'")
     logger.info(f"[AI PLANNER] Message: '{req.message[:120]}'")
     logger.info(f"[AI PLANNER] Session: {req.session_id}")
-    logger.info(f"[AI PLANNER] History messages loaded from Redis: {len(raw_history)} raw → {len(history)} filtered")
-    logger.info(f"[AI PLANNER] CHAT model (8B): '{settings.OPENROUTER_CHAT_MODEL}'")
-    logger.info(f"[AI PLANNER] BUILD model (70B): '{settings.OPENROUTER_MODEL}'")
+    logger.info(f"[AI PLANNER] Provider: '{provider}' | Model: '{model}'")
+    logger.info(f"[AI PLANNER] History: {len(raw_history)} raw → {len(history)} filtered")
     logger.info(f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
 
     try:
         from langchain_core.messages import HumanMessage, AIMessage
 
-        # Step 1: Route through lightweight 8B model
-        logger.info(f"[AI PLANNER] STEP 1 → Calling chat_router.route_message() with 8B model...")
-        chat_reply, should_build = await route_message(req.message, history)
+        # Step 1: Route through chat model
+        logger.info(f"[AI PLANNER] STEP 1 → Calling chat_router.route_message()...")
+        chat_reply, should_build = await route_message(req.message, history, api_key, base_url, model)
         logger.info(f"[AI PLANNER] STEP 1 RESULT → should_build={should_build}, reply_preview='{chat_reply[:80] if chat_reply else 'N/A'}'")
 
         if not should_build:
-            # 8B handled it — save and return directly, no heavy model needed
-            logger.info(f"[AI PLANNER] ✅ CONVERSATION — 8B model ({settings.OPENROUTER_CHAT_MODEL}) handled reply. 70B NOT called.")
+            logger.info(f"[AI PLANNER] ✅ CONVERSATION — chat model handled reply.")
             clean_history = list(history) + [
                 HumanMessage(content=req.message),
                 AIMessage(content=chat_reply),
@@ -69,11 +113,9 @@ async def plan_workflow(req: PlanRequest, db: Session = Depends(get_db), user: U
             await save_session_messages(req.session_id, clean_history)
             return PlanResponse(reply=chat_reply, session_id=req.session_id, is_build=False)
 
-        # Step 2: BUILD_REQUEST — reset stale history, run heavy 70B agent loop
-        # IMPORTANT: Pass EMPTY history so old build prompts don't contaminate new build
-        logger.info(f"[AI PLANNER] 🔨 BUILD REQUEST — calling 70B model ({settings.OPENROUTER_MODEL})")
-        logger.info(f"[AI PLANNER] STEP 2 → Resetting history to avoid stale build context from previous sessions")
-        agent = get_planner_agent()
+        # Step 2: BUILD_REQUEST — run agent loop
+        logger.info(f"[AI PLANNER] 🔨 BUILD REQUEST — calling planner agent with model '{model}'")
+        agent = get_planner_agent(api_key=api_key, base_url=base_url, model_name=model)
         reply, final_messages = await run_agent_loop(
             agent=agent,
             user_prompt=req.message,
@@ -82,7 +124,6 @@ async def plan_workflow(req: PlanRequest, db: Session = Depends(get_db), user: U
             db=db,
         )
         logger.info(f"[AI PLANNER] ✅ BUILD COMPLETE — reply: '{reply[:120]}'")
-        # Save only this clean turn to history
         clean_history = [
             HumanMessage(content=req.message),
             AIMessage(content=reply),
@@ -93,6 +134,7 @@ async def plan_workflow(req: PlanRequest, db: Session = Depends(get_db), user: U
     except Exception as e:
         logger.error(f"[AI PLANNER] ❌ EXCEPTION: {type(e).__name__}: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
 
 @router.get("/plan/{session_id}/messages", dependencies=[Depends(bearer_scheme)])
 async def get_messages(session_id: str, db: Session = Depends(get_db), user: User = Depends(get_current_user)):

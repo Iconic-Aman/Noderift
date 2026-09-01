@@ -7,6 +7,7 @@ import { NodeConfigPanel } from "@/components/workflow/node-config-panel";
 import { TopNavbar } from "@/components/workflow/top-navbar";
 import { WorkflowNode } from "@/components/workflow/workflow-node";
 import { AIChatPanel } from "@/components/workflow/ai-chat-panel";
+import { LlmKeyModal } from "@/components/workflow/llm-key-modal";
 import { NodeData } from "@/types/workflow";
 import { ExecutionPanel } from "@/components/workflow/execution-panel";
 import { ChevronLeft, ChevronRight, Terminal, Sparkles, Settings, AlertTriangle, X } from "lucide-react";
@@ -14,6 +15,7 @@ import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { ButtonEdge } from "@/components/workflow/custom-edge";
 import { useEditorLogic } from "@/hooks/useEditorLogic";
+import { apiFetch } from "@/lib/api";
 
 const nodeTypes = {
   workflowNode: WorkflowNode,
@@ -78,6 +80,7 @@ export default function Editor() {
   } = useEditorLogic();
 
   const [showUndeployWarning, setShowUndeployWarning] = useState(false);
+  const [showLlmModal, setShowLlmModal] = useState(false);
 
   const handleDeployClick = () => {
     if (isActive) {
@@ -90,6 +93,23 @@ export default function Editor() {
   const confirmUndeploy = () => {
     setShowUndeployWarning(false);
     onToggleActive();
+  };
+
+  // Intercept AI Mode — check if user has LLM key saved
+  const handleModeChange = async (newMode: "manual" | "automatic") => {
+    if (newMode === "automatic") {
+      try {
+        const res = await apiFetch("/ai/llm-key-status");
+        if (!res?.configured) {
+          setShowLlmModal(true);
+          return;
+        }
+      } catch {
+        setShowLlmModal(true);
+        return;
+      }
+    }
+    setMode(newMode);
   };
 
   return (
@@ -141,7 +161,7 @@ export default function Editor() {
         onToggleActive={handleDeployClick}
         onDownload={handleDownload}
         mode={mode}
-        onModeChange={setMode}
+        onModeChange={handleModeChange}
       />
       <div className="flex flex-1 overflow-hidden">
         {/* Left Sliding Sidebar - Manual Mode only */}
@@ -333,6 +353,16 @@ export default function Editor() {
         onMouseDownResize={startPanelResize}
         isResizing={isResizingPanel}
       />
+
+      {showLlmModal && (
+        <LlmKeyModal
+          onClose={() => setShowLlmModal(false)}
+          onSuccess={() => {
+            setShowLlmModal(false);
+            setMode("automatic");
+          }}
+        />
+      )}
     </div>
   );
 }

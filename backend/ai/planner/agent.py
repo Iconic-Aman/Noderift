@@ -99,7 +99,7 @@ def get_planner_agent(api_key: str = "", base_url: str = "", model_name: str = "
         raise ValueError("LLM API key is required. Please configure your LLM key in AI Mode settings.")
 
     resolved_base_url = base_url or "https://openrouter.ai/api/v1"
-    target_model = model_name or "cohere/north-mini-code:free"
+    target_model = model_name or "meta-llama/llama-3.3-70b-instruct"
 
     logger.info("🤖 [AI PLANNER DIAGNOSTICS]")
     logger.info(f"   -> Model: '{target_model}'")

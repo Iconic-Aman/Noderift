@@ -28,7 +28,7 @@ _fernet = Fernet(settings.SECRET_KEY.encode())
 _PROVIDER_DEFAULTS = {
     "openrouter": {
         "base_url": "https://openrouter.ai/api/v1",
-        "model": "cohere/north-mini-code:free",
+        "model": "meta-llama/llama-3.3-70b-instruct",
     },
     "groq": {
         "base_url": "https://api.groq.com/openai/v1",

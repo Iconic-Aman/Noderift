@@ -11,7 +11,7 @@ import { LlmKeyModal } from "@/components/workflow/llm-key-modal";
 import { NodeData } from "@/types/workflow";
 import { ExecutionPanel } from "@/components/workflow/execution-panel";
 import { ChevronLeft, ChevronRight, Terminal, Sparkles, Settings, AlertTriangle, X } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { ButtonEdge } from "@/components/workflow/custom-edge";
 import { useEditorLogic } from "@/hooks/useEditorLogic";
@@ -111,6 +111,23 @@ export default function Editor() {
     }
     setMode(newMode);
   };
+
+  // If page opens in automatic mode, verify credentials exist
+  useEffect(() => {
+    if (mode === "automatic") {
+      apiFetch("/ai/llm-key-status")
+        .then((res) => {
+          if (!res?.configured) {
+            setMode("manual");
+            setShowLlmModal(true);
+          }
+        })
+        .catch(() => {
+          setMode("manual");
+          setShowLlmModal(true);
+        });
+    }
+  }, []);
 
   return (
     <div className={cn(

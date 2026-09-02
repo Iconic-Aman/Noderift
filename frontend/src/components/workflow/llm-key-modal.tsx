@@ -13,9 +13,9 @@ const PROVIDERS = [
     label: "OpenRouter",
     url: "https://openrouter.ai/keys",
     base_url: "https://openrouter.ai/api/v1",
-    model: "cohere/north-mini-code:free",
+    model: "meta-llama/llama-3.3-70b-instruct",
     placeholder: "sk-or-v1-...",
-    hint: "Free models available. Get key at openrouter.ai/keys",
+    hint: "Get key at openrouter.ai/keys",
   },
   {
     id: "groq",

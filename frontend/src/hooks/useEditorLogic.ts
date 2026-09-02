@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef, DragEvent, useEffect } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { ReactFlowInstance, Node, Edge } from "@xyflow/react";
 import { NodeData } from "@/types/workflow";
 import { apiFetch } from "@/lib/api";
@@ -11,6 +11,7 @@ import { getNodeTemplate } from "@/lib/node-templates";
 export function useEditorLogic() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
   const {
     nodes, edges, selectedNode,
@@ -27,13 +28,14 @@ export function useEditorLogic() {
   const [isLeftOpen, setIsLeftOpen] = useState(true);
   const [isRightOpen, setIsRightOpen] = useState(true);
 
-  // Mode and active right panel tab state (persisted in localStorage)
+  // Mode: read from ?mode= query param if present, default to "manual"
   const [mode, setModeState] = useState<"manual" | "automatic">(() => {
-    return (localStorage.getItem("noderift_editor_mode") as "manual" | "automatic") || "manual";
+    const urlMode = searchParams.get("mode");
+    if (urlMode === "automatic" || urlMode === "manual") return urlMode;
+    return "manual";
   });
   const setMode = useCallback((newMode: "manual" | "automatic") => {
     setModeState(newMode);
-    localStorage.setItem("noderift_editor_mode", newMode);
   }, []);
 
   const [activeRightTab, setActiveRightTab] = useState<"chat" | "config">("chat");

@@ -1,8 +1,9 @@
-import { useEffect, useState } from "react";
+﻿import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Plus, Play, Trash2, AlertTriangle, X } from "lucide-react";
+import { Plus, Play, Trash2, AlertTriangle, X, MousePointer, Sparkles } from "lucide-react";
 import { apiFetch } from "@/lib/api";
 import { AppNavbar } from "@/components/navbar/app-navbar";
+import { LlmKeyModal } from "@/components/workflow/llm-key-modal";
 
 type ConfirmModal = { type: "delete" | "undeploy"; workflowId: string; workflowName: string } | null;
 
@@ -10,6 +11,12 @@ export function Dashboard() {
   const [workflows, setWorkflows] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [confirm, setConfirm] = useState<ConfirmModal>(null);
+
+  // Mode picker state
+  const [showModePicker, setShowModePicker] = useState(false);
+  const [pendingWorkflowId, setPendingWorkflowId] = useState<string | null>(null);
+  const [showLlmModal, setShowLlmModal] = useState(false);
+
   const navigate = useNavigate();
 
   useEffect(() => { loadWorkflows(); }, []);
@@ -31,8 +38,37 @@ export function Dashboard() {
         method: "POST",
         body: JSON.stringify({ name: "New Workflow", description: "", is_active: false, graph: { nodes: [], edges: [] } }),
       });
-      navigate(`/editor/${nw.id}`);
+      // Show mode picker before going to editor
+      setPendingWorkflowId(nw.id);
+      setShowModePicker(true);
     } catch (e) { console.error(e); }
+  };
+
+  const openWorkflow = (id: string) => {
+    setPendingWorkflowId(id);
+    setShowModePicker(true);
+  };
+
+  const handleSelectManual = () => {
+    setShowModePicker(false);
+    navigate(`/editor/${pendingWorkflowId}?mode=manual`);
+  };
+
+  const handleSelectAI = async () => {
+    try {
+      const res = await apiFetch("/ai/llm-key-status");
+      if (!res?.configured) {
+        setShowModePicker(false);
+        setShowLlmModal(true);
+        return;
+      }
+    } catch {
+      setShowModePicker(false);
+      setShowLlmModal(true);
+      return;
+    }
+    setShowModePicker(false);
+    navigate(`/editor/${pendingWorkflowId}?mode=automatic`);
   };
 
   const handleDeleteClick = (wf: any, e: React.MouseEvent) => {
@@ -64,7 +100,7 @@ export function Dashboard() {
         </button>
       </AppNavbar>
 
-      {/* Confirmation Modal */}
+      {/* Delete/Undeploy Confirmation Modal */}
       {confirm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
           <div className="w-[420px] rounded-xl border border-amber-500/30 bg-slate-900 p-6 shadow-2xl">
@@ -103,13 +139,74 @@ export function Dashboard() {
         </div>
       )}
 
+      {/* Mode Picker Modal */}
+      {showModePicker && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm">
+          <div className="w-full max-w-lg rounded-2xl border border-slate-800 bg-slate-950 shadow-2xl p-8">
+            <div className="text-center mb-8">
+              <img src="/noderift-icon.jpg" alt="Noderift" className="h-10 w-10 rounded-xl object-cover mx-auto mb-3" />
+              <h2 className="text-xl font-bold text-white mb-1">How do you want to build?</h2>
+              <p className="text-sm text-slate-400">Choose your workflow editing mode</p>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              {/* Manual Mode */}
+              <button
+                onClick={handleSelectManual}
+                className="group flex flex-col items-center gap-4 rounded-xl border border-slate-800 bg-slate-900 p-6 text-left hover:border-slate-600 hover:bg-slate-800/80 transition-all cursor-pointer"
+              >
+                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-slate-800 group-hover:bg-slate-700 transition-colors">
+                  <MousePointer className="h-6 w-6 text-slate-300" />
+                </div>
+                <div className="text-center">
+                  <p className="font-semibold text-white mb-1">Manual Mode</p>
+                  <p className="text-xs text-slate-500 leading-relaxed">Drag & drop nodes to build your workflow visually</p>
+                </div>
+              </button>
+
+              {/* AI Mode */}
+              <button
+                onClick={handleSelectAI}
+                className="group flex flex-col items-center gap-4 rounded-xl border border-violet-500/30 bg-violet-500/5 p-6 text-left hover:border-violet-500/60 hover:bg-violet-500/10 transition-all cursor-pointer"
+              >
+                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-violet-600 to-indigo-600 shadow-lg shadow-violet-950/50">
+                  <Sparkles className="h-6 w-6 text-white" />
+                </div>
+                <div className="text-center">
+                  <p className="font-semibold text-white mb-1">AI Mode</p>
+                  <p className="text-xs text-slate-500 leading-relaxed">Describe what you want â€” AI builds the workflow for you</p>
+                </div>
+              </button>
+            </div>
+
+            <button
+              onClick={() => setShowModePicker(false)}
+              className="mt-5 w-full rounded-lg py-2 text-xs text-slate-600 hover:text-slate-400 transition-colors cursor-pointer"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* LLM Key Modal */}
+      {showLlmModal && (
+        <LlmKeyModal
+          onClose={() => setShowLlmModal(false)}
+          onSuccess={() => {
+            setShowLlmModal(false);
+            navigate(`/editor/${pendingWorkflowId}?mode=automatic`);
+          }}
+        />
+      )}
+
       <main className="flex-1 max-w-5xl mx-auto w-full px-6 md:px-8 pt-28 pb-12">
         <div>
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
             {workflows.map((wf) => (
               <div
                 key={wf.id}
-                onClick={() => navigate(`/editor/${wf.id}`)}
+                onClick={() => openWorkflow(wf.id)}
                 className="group cursor-pointer rounded-xl border border-slate-800 bg-slate-900/50 p-5 transition-all hover:border-slate-700 hover:bg-slate-800/50"
               >
                 <div className="mb-4 flex items-start justify-between">
@@ -142,3 +239,4 @@ export function Dashboard() {
     </div>
   );
 }
+

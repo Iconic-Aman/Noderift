@@ -86,6 +86,13 @@ class Settings(BaseSettings):
     GOOGLE_TOKEN_URL: str = ""
     GOOGLE_USERINFO_URL: str = ""
 
+    # Slack OAuth Config
+    SLACK_CLIENT_ID: str = ""
+    SLACK_CLIENT_SECRET: str = ""
+    SLACK_REDIRECT_URI: str = ""
+    SLACK_AUTH_URL: str = "https://slack.com/oauth/v2/authorize"
+    SLACK_TOKEN_URL: str = "https://slack.com/api/oauth.v2.access"
+
     model_config = SettingsConfigDict(
         env_file=find_dotenv() or ".env",
         env_file_encoding="utf-8",

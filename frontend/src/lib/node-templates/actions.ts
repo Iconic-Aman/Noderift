@@ -6,10 +6,11 @@ export const actionTemplates: NodeTemplate[] = [
     label: "Slack",
     icon: "slack",
     category: "actions",
-    color: "#3b82f6",
-    description: "Send message to Slack",
+    color: "#4A154B",
+    description: "Send message to a Slack channel",
     configFields: [
-      { name: "channel", label: "Channel", type: "text", placeholder: "#general" },
+      { name: "credential_id", label: "Slack Account", type: "credential" },
+      { name: "channel", label: "Channel", type: "text", placeholder: "#general or C1234567890" },
       { name: "message", label: "Message", type: "textarea", placeholder: "Enter message..." },
     ],
   },
@@ -32,25 +33,14 @@ export const actionTemplates: NodeTemplate[] = [
     icon: "whatsapp",
     category: "actions",
     color: "#25D366",
-    description: "Send WhatsApp message (Original Green)",
+    description: "Send WhatsApp message",
     configFields: [
       { name: "phone", label: "Phone Number", type: "text", placeholder: "919876543210" },
       { name: "message", label: "Message", type: "textarea", placeholder: "Enter message..." },
       { name: "credential_id", label: "Credential", type: "credential" },
     ],
   },
-  {
-    id: "whatsapp-blue",
-    label: "WhatsApp (Blue)",
-    icon: "whatsapp",
-    category: "actions",
-    color: "#3b82f6",
-    description: "Send WhatsApp message (Blue)",
-    configFields: [
-      { name: "phone", label: "Phone Number", type: "text", placeholder: "+1234567890" },
-      { name: "message", label: "Message", type: "textarea", placeholder: "Enter message..." },
-    ],
-  },
+
 
   {
     id: "http",

@@ -31,3 +31,4 @@ from nodes.resend_node import ResendNode
 from nodes.database_node import DatabaseNode
 from nodes.logic_nodes import FilterNode, MergeNode, LoopNode, SetVariableNode
 from nodes.gmail_node import GmailNode
+from nodes.slack_node import SlackNode

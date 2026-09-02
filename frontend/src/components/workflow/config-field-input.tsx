@@ -90,16 +90,60 @@ export function ConfigFieldInput({ field, value, onChange, parentNodes = [] }: P
       );
     case "credential": {
       const [creds, setCreds] = useState<{id: string; name: string}[]>([]);
-      useEffect(() => {
+      const isSlack = field.label?.toLowerCase().includes("slack") || field.name === "slack_credential";
+      const isGmail = field.label?.toLowerCase().includes("gmail");
+
+      const loadCreds = () => {
         import("@/lib/api").then(({ apiFetch }) =>
-          apiFetch("/credentials/").then((data: any[]) => setCreds(data)).catch(() => setCreds([]))
+          apiFetch("/credentials/").then((data: any[]) => setCreds(data || [])).catch(() => setCreds([]))
         );
+      };
+
+      useEffect(() => {
+        loadCreds();
       }, []);
+
+      const handleConnectOAuth = (provider: "slack" | "gmail") => {
+        const userJson = localStorage.getItem("noderift_user");
+        let userId = "";
+        try {
+          if (userJson) userId = JSON.parse(userJson).id;
+        } catch {}
+        const baseUrl = import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL.replace(/\/api$/, "") : "";
+        const popup = window.open(`${baseUrl}/api/oauth/${provider}/start?user_id=${userId}`, "_blank", "width=600,height=700");
+        const timer = setInterval(() => {
+          if (popup?.closed) {
+            clearInterval(timer);
+            loadCreds();
+          }
+        }, 1000);
+      };
+
       return (
-        <select value={value || ""} onChange={e => onChange(e.target.value)} onKeyDown={handleKeyDown} className={baseCls}>
-          <option value="">No credential</option>
-          {creds.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-        </select>
+        <div className="space-y-2">
+          <select value={value || ""} onChange={e => onChange(e.target.value)} onKeyDown={handleKeyDown} className={baseCls}>
+            <option value="">No credential</option>
+            {creds.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+          </select>
+          {isSlack && (
+            <button
+              type="button"
+              onClick={() => handleConnectOAuth("slack")}
+              className="w-full flex items-center justify-center gap-1.5 rounded-lg border border-[#4A154B]/50 bg-[#4A154B]/20 px-3 py-1.5 text-xs font-medium text-pink-300 hover:bg-[#4A154B]/40 transition-colors cursor-pointer"
+            >
+              + Connect New Slack Account
+            </button>
+          )}
+          {isGmail && (
+            <button
+              type="button"
+              onClick={() => handleConnectOAuth("gmail")}
+              className="w-full flex items-center justify-center gap-1.5 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-1.5 text-xs font-medium text-red-300 hover:bg-red-500/20 transition-colors cursor-pointer"
+            >
+              + Connect New Gmail Account
+            </button>
+          )}
+        </div>
       );
     }
     default:

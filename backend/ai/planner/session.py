@@ -103,33 +103,56 @@ async def patch_graph(db: Session, session_id: str, action: str, payload: dict):
     await emit_canvas_patch(session_id, event, payload)
 
 from langchain_core.messages import messages_to_dict, messages_from_dict
+from sqlalchemy.orm.attributes import flag_modified
 
-async def get_session_messages(session_id: str) -> list:
-    """Retrieve message history for this session from Redis."""
-    if not settings.REDIS_URL:
-        return []
-    try:
-        async with redis.from_url(settings.REDIS_URL) as r:
-            data = await r.get(f"ai_session_messages:{session_id}")
-            if not data:
-                return []
-            raw_msgs = json.loads(data)
-            return messages_from_dict(raw_msgs)
-    except Exception:
-        return []
+async def get_session_messages(session_id: str, db: Session = None) -> list:
+    """Retrieve message history for this session from Redis or PostgreSQL."""
+    if settings.REDIS_URL:
+        try:
+            async with redis.from_url(settings.REDIS_URL) as r:
+                data = await r.get(f"ai_session_messages:{session_id}")
+                if data:
+                    raw_msgs = json.loads(data)
+                    return messages_from_dict(raw_msgs)
+        except Exception:
+            pass
 
-async def save_session_messages(session_id: str, messages: list):
-    """Save message history for this session to Redis."""
-    if not settings.REDIS_URL:
-        return
+    # Fallback to DB
+    if db:
+        try:
+            workflow = db.query(Workflow).filter(Workflow.id == session_id).first()
+            if workflow and workflow.chat_history:
+                return messages_from_dict(workflow.chat_history)
+        except Exception:
+            pass
+
+    return []
+
+async def save_session_messages(session_id: str, messages: list, db: Session = None):
+    """Save message history for this session to Redis and PostgreSQL."""
     try:
         serializable = messages_to_dict(messages)
-        async with redis.from_url(settings.REDIS_URL) as r:
-            await r.setex(
-                f"ai_session_messages:{session_id}",
-                86400,
-                json.dumps(serializable)
-            )
     except Exception:
-        pass
+        serializable = []
+
+    if settings.REDIS_URL and serializable:
+        try:
+            async with redis.from_url(settings.REDIS_URL) as r:
+                await r.setex(
+                    f"ai_session_messages:{session_id}",
+                    86400 * 7,  # 7 days
+                    json.dumps(serializable)
+                )
+        except Exception:
+            pass
+
+    if db and serializable:
+        try:
+            workflow = db.query(Workflow).filter(Workflow.id == session_id).first()
+            if workflow:
+                workflow.chat_history = serializable
+                flag_modified(workflow, "chat_history")
+                db.commit()
+        except Exception:
+            db.rollback()
 

@@ -61,6 +61,17 @@ def startup_event():
     scheduler_manager.start()
     db = SessionLocal()
     try:
+        from sqlalchemy import text
+        try:
+            db.execute(text("ALTER TABLE workflows ADD COLUMN IF NOT EXISTS chat_history JSONB;"))
+            db.commit()
+        except Exception:
+            db.rollback()
+            try:
+                db.execute(text("ALTER TABLE workflows ADD COLUMN chat_history JSON;"))
+                db.commit()
+            except Exception:
+                db.rollback()
         scheduler_manager.sync_triggers(db)
     finally:
         db.close()

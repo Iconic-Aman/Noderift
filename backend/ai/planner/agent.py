@@ -22,7 +22,7 @@ Allowed node types:
 - code: Execute custom Python code. Config: {code}
 - resend: Send an email via Resend. Config: {from, to, subject, html}
 - whatsapp: Send a WhatsApp message. Config: {to, message}
-- ai_agent: Run an AI agent. Config: {prompt, model}
+- ai_agent: Run an AI agent step. Config: {prompt, model, system_prompt}
 - filter: Filter data based on a condition. Config: {condition}
 - merge: Merge outputs from multiple nodes. Config: {}
 - loop: Loop over an array. Config: {array_key}
@@ -31,6 +31,7 @@ Allowed node types:
 - composio: Use a Composio action. Config: {action, params}
 - database: Query Postgres/MySQL/MongoDB databases. Config: {db_type, connection_type, connection_string, host, port, username, password, database_name, query, mongodb_collection, mongodb_operation, mongodb_query}
 - gmail_trigger: Fetch emails from user's Gmail. Config: {sender_email}. Output: emails (array of {id,subject,from,date,snippet,body}), count (number)
+- slack: Send a message to a Slack channel. Config: {channel, message}
 
 STRICT RULES FOR TOOL CALLS:
 1. First batch: call ALL add_node calls. Note the EXACT node_id returned by each.

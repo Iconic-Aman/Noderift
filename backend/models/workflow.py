@@ -23,6 +23,7 @@ class Workflow(Base):
     name = Column(String, nullable=False)
     description = Column(Text, nullable=True)
     graph = Column(JSON, nullable=False, default=lambda: {"nodes": [], "edges": []})
+    chat_history = Column(JSON, nullable=True, default=list)
     is_active = Column(Boolean, default=False, nullable=False)
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
     updated_at = Column(

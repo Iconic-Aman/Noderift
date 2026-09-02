@@ -241,6 +241,32 @@ class DAGRunner:
                 resolved_config["user_id"] = user_id
                 resolved_config["_db"] = db
 
+            # JIT Slack auth check — stop if user hasn't connected Slack
+            if node_type == "slack":
+                from services.slack_service import get_user_slack_credential
+                user_id = workflow.user_id
+                credential_id = resolved_config.get("credential_id")
+                if not user_id or not get_user_slack_credential(db, user_id, credential_id=credential_id):
+                    if node_log:
+                        node_log.status = "failed"
+                        node_log.error = "Slack account not connected"
+                        node_log.finished_at = datetime.now(timezone.utc)
+                    await self.publish_log("needs_auth", {
+                        "provider": "slack",
+                        "node_id": node_id,
+                        "node_name": node_name,
+                        "error": "Slack account not connected",
+                        "connect_url": f"/api/oauth/slack/start?user_id={user_id}",
+                    })
+                    execution.status = "needs_auth"
+                    execution.error = "Slack not connected"
+                    execution.finished_at = datetime.now(timezone.utc)
+                    db.commit()
+                    db.close()
+                    return
+                resolved_config["user_id"] = user_id
+                resolved_config["_db"] = db
+
             input_data["_upstream"] = upstream_data
             node_input = NodeInput(data=input_data)
 

@@ -106,6 +106,10 @@ async def plan_workflow(req: PlanRequest, db: Session = Depends(get_db), user: U
     try:
         from langchain_core.messages import HumanMessage, AIMessage
 
+        # Immediately record user prompt so it never disappears on refresh
+        history_with_user = list(history) + [HumanMessage(content=req.message)]
+        await save_session_messages(req.session_id, history_with_user, db=db)
+
         # Step 1: Route through lightweight model
         chat_reply, should_build = await route_message(req.message, history, api_key, base_url, model)
 
@@ -135,6 +139,15 @@ async def plan_workflow(req: PlanRequest, db: Session = Depends(get_db), user: U
 
     except Exception as e:
         logger.error(f"[AI PLANNER] ❌ EXCEPTION: {type(e).__name__}: {e}")
+        try:
+            from langchain_core.messages import HumanMessage, AIMessage
+            clean_history = list(history) + [
+                HumanMessage(content=req.message),
+                AIMessage(content=f"Error: {str(e)}"),
+            ]
+            await save_session_messages(req.session_id, clean_history, db=db)
+        except Exception:
+            pass
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/plan/{session_id}/messages", dependencies=[Depends(bearer_scheme)])

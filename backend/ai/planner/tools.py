@@ -28,6 +28,7 @@ def get_available_nodes() -> List[dict]:
         "composio": {"result": "object"},
         "database": {"results": "array (for select/find)", "row_count": "number", "status": "string"},
         "gmail_trigger": {"emails": "array [{id,subject,from,date,snippet,body}]", "count": "number"},
+        "slack": {"status": "string", "channel": "string", "ts": "string", "message": "string"},
     }
     return [
         {
@@ -91,6 +92,8 @@ async def add_node(node_type: str, label: str, node_config: Any, config: Runnabl
         "loop": "loop",
         "set_variable": "set_variable",
         "database": "database",
+        "gmail_trigger": "gmail_trigger",
+        "slack": "slack",
     }
     id_prefix = prefix_map.get(node_type, node_type)
     node_id = f"{id_prefix}-{uuid.uuid4().hex[:8]}"
@@ -110,7 +113,7 @@ async def add_node(node_type: str, label: str, node_config: Any, config: Runnabl
 
     await patch_graph(db, session_id, "add_node", node_payload)
     from ai.planner.session import emit_canvas_patch
-    await emit_canvas_patch(session_id, "agent_step", {"text": f"Added node: {label} ({node_type})"})
+    await emit_canvas_patch(session_id, "agent_step", {"text": f"Created node: '{label}' [{node_type}]"})
     return {"node_id": node_id, "status": "added"}
 
 @tool
@@ -134,7 +137,7 @@ async def connect_nodes(source_id: str, target_id: str, config: RunnableConfig) 
 
     await patch_graph(db, session_id, "add_edge", edge_payload)
     from ai.planner.session import emit_canvas_patch
-    await emit_canvas_patch(session_id, "agent_step", {"text": f"Connected nodes: {source_id} ➔ {target_id}"})
+    await emit_canvas_patch(session_id, "agent_step", {"text": f"Connected: {source_id} ➔ {target_id}"})
     return {"edge_id": edge_id, "status": "connected"}
 
 @tool
@@ -160,7 +163,7 @@ async def update_node_config(node_id: str, node_config: Any, config: RunnableCon
     payload = {"id": node_id, "config": parsed_config}
     await patch_graph(db, session_id, "update_node", payload)
     from ai.planner.session import emit_canvas_patch
-    await emit_canvas_patch(session_id, "agent_step", {"text": f"Configured node {node_id}"})
+    await emit_canvas_patch(session_id, "agent_step", {"text": f"Configured parameters for node {node_id}"})
     return {"node_id": node_id, "status": "updated"}
 
 @tool

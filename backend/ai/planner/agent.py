@@ -112,12 +112,13 @@ def get_planner_agent(api_key: str = "", base_url: str = "", model_name: str = "
 
     from langchain_openai import ChatOpenAI
 
-    resolved_base_url = settings.OPENROUTER_API_URL or "https://openrouter.ai/api/v1"
+    resolved_api_key = api_key or settings.OPENROUTER_API_KEY
+    resolved_base_url = base_url or settings.OPENROUTER_API_URL or "https://openrouter.ai/api/v1"
     logger.info(f"   -> Resolved base_url: '{resolved_base_url}'")
 
     llm = ChatOpenAI(
         model=target_model,
-        api_key=settings.OPENROUTER_API_KEY,
+        api_key=resolved_api_key,
         base_url=resolved_base_url,
         temperature=temperature,
     )

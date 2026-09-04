@@ -21,8 +21,8 @@ router = APIRouter(
 
 @router.get("/", response_model=List[WorkflowShort])
 def list_workflows(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    """List all workflows for the current user (no graph payload)."""
-    rows = db.query(Workflow).filter(Workflow.user_id == current_user.id).all()
+    """List all workflows for the current user (no graph payload), newest first."""
+    rows = db.query(Workflow).filter(Workflow.user_id == current_user.id).order_by(Workflow.created_at.desc()).all()
     return [
         WorkflowShort(
             id=w.id,

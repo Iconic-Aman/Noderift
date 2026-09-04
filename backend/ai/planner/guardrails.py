@@ -60,4 +60,16 @@ def verify_graph(db: Session, session_id: str) -> str | None:
             "Call connect_nodes NOW using their exact IDs."
         )
 
+    # Trigger nodes must be roots (no incoming edges)
+    TRIGGER_TYPES = {"schedule", "webhook", "gmail_trigger"}
+    target_ids = {e.get("target") for e in edges}
+    for n in nodes:
+        ntype = n.get("data", {}).get("node_type", "")
+        if ntype in TRIGGER_TYPES and n["id"] in target_ids:
+            return (
+                f"Node '{n.get('data',{}).get('label', n['id'])}' is a trigger node but has incoming edges. "
+                "Trigger nodes must be the starting point — no node should connect INTO them. "
+                "Fix the edge direction so the trigger node is the source."
+            )
+
     return None

@@ -100,9 +100,16 @@ async def add_node(node_type: str, label: str, node_config: Any, config: Runnabl
     
     current_graph = get_session_graph(db, session_id)
     node_count = len(current_graph.get("nodes", []))
-    
-    # Generate auto layout position
-    position = {"x": 100 + node_count * 250, "y": 150}
+
+    TRIGGER_TYPES = {"schedule", "webhook", "gmail_trigger"}
+    if node_type in TRIGGER_TYPES and node_count > 0:
+        # Shift all existing nodes right to make room for trigger at front
+        for existing in current_graph.get("nodes", []):
+            existing["position"]["x"] = existing["position"].get("x", 100) + 250
+            await patch_graph(db, session_id, "update_node", {"id": existing["id"], "position": existing["position"]})
+        position = {"x": 100, "y": 150}
+    else:
+        position = {"x": 100 + node_count * 250, "y": 150}
 
     node_payload = {
         "id": node_id,

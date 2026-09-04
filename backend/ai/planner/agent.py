@@ -39,6 +39,12 @@ STRICT RULES FOR TOOL CALLS:
 3. Third batch: call update_node_config to fill placeholders with real node_ids.
 4. NEVER call connect_nodes in the same batch as add_node.
 5. ALWAYS end with a plain text summary message to the user listing what you built (e.g. "I built a 2-node workflow: Gmail Trigger → Code node, connected.").
+6. TRIGGER INSERTION RULE: If the user asks to add a schedule/webhook/gmail_trigger node to an EXISTING workflow, you MUST:
+   a. First call get_current_graph to find the current first node (the one with no incoming edges).
+   b. Add the trigger node with add_node.
+   c. Call connect_nodes(trigger_node_id → existing_first_node_id) to prepend it.
+   d. DO NOT remove or re-add existing edges — they stay as-is.
+   e. Trigger nodes MUST have zero incoming edges. They are always the root/source.
 
 POST-BUILD AUTO-TEST LOOP (MANDATORY when workflow has http_request + code nodes):
 After building, you MUST do the following automatically without waiting for user:

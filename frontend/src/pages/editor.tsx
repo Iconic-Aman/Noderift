@@ -108,6 +108,7 @@ export default function Editor() {
         setShowLlmModal(true);
         return;
       }
+      setIsRightOpen(true);
     }
     setMode(newMode);
   };
@@ -282,14 +283,6 @@ export default function Editor() {
         {/* Right Docked Panel - Automatic Mode (Chat Sidebar like Cursor) */}
         {mode === "automatic" && (
           <div className="relative flex h-full shrink-0 z-10">
-            {/* Chevron toggle button — same as manual mode */}
-            <button
-              onClick={() => setIsRightOpen(!isRightOpen)}
-              className="absolute top-1/2 -left-3.5 z-20 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-full border border-slate-800 bg-slate-900 text-slate-400 hover:text-white shadow-lg hover:bg-slate-800 transition-all cursor-pointer"
-              style={{ transform: "translateX(-50%)" }}
-            >
-              {isRightOpen ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
-            </button>
             <div
               className={cn("overflow-hidden flex flex-col h-full bg-slate-900 border-l border-slate-800", !isResizingRight && "transition-all duration-300")}
               style={{ width: isRightOpen ? `${rightWidth}px` : "0px" }}
@@ -358,6 +351,18 @@ export default function Editor() {
         )}
 
       </div>
+
+      {/* Floating AI Pill Button when chat is shrunk (top-right, away from minimap) */}
+      {mode === "automatic" && !isRightOpen && (
+        <button
+          onClick={() => setIsRightOpen(true)}
+          title="Open AI Assistant"
+          className="fixed top-16 right-4 z-40 flex h-9 items-center gap-2 rounded-full border border-violet-500/40 bg-slate-900/95 px-3.5 py-1.5 text-xs font-semibold text-slate-200 shadow-xl shadow-violet-950/30 backdrop-blur-md hover:border-violet-400 hover:bg-slate-800 hover:text-white hover:scale-105 active:scale-95 transition-all cursor-pointer"
+        >
+          <Sparkles className="h-3.5 w-3.5 text-violet-400" />
+          <span>AI Assistant</span>
+        </button>
+      )}
 
       {/* Bottom Terminal Toggle Button */}
       <button

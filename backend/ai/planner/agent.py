@@ -1,5 +1,6 @@
 
 from langgraph.prebuilt import create_react_agent
+from langgraph.checkpoint.memory import MemorySaver
 from ai.planner.tools import (
     get_available_nodes,
     get_current_graph,
@@ -10,6 +11,9 @@ from ai.planner.tools import (
     clear_canvas,
     test_node_execution,
 )
+
+# Singleton checkpointer — shared across all requests so thread state survives between HTTP calls
+_checkpointer = MemorySaver()
 
 SYSTEM_PROMPT = """You are Noderift's AI Planner. Your job is to build and modify workflow automation pipelines on a visual canvas by calling tools.
 
@@ -145,5 +149,6 @@ def get_planner_agent(api_key: str = "", base_url: str = "", model_name: str = "
         model=llm_with_tools,
         tools=tools,
         state_modifier=SYSTEM_PROMPT,
+        checkpointer=_checkpointer,
     )
 

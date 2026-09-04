@@ -1,17 +1,13 @@
 """
 loop.py — Orchestrated self-correction execution loop.
 
-Replaces the single agent.ainvoke() call with a multi-turn loop:
-1. Invoke agent.
-2. Run guardrails to verify graph is correct.
-3. If guardrails fail → inject correction message → retry (max MAX_RETRIES).
-4. Return final reply text and all messages.
+Uses LangGraph checkpointer (thread_id) for full persistent state across HTTP requests.
+Each call passes only the new message; LangGraph appends it to the saved thread automatically.
 """
 import logging
 from sqlalchemy.orm import Session
-from langchain_core.messages import AIMessage
+from langchain_core.messages import AIMessage, HumanMessage
 
-from ai.planner.context import build_initial_messages, build_correction_message
 from ai.planner.guardrails import verify_graph
 from ai.planner.session import emit_canvas_patch
 
@@ -30,22 +26,32 @@ def _extract_reply(messages: list) -> str:
 async def run_agent_loop(
     agent,
     user_prompt: str,
-    history: list,
+    history: list,  # kept for signature compat; state managed by checkpointer via thread_id
     session_id: str,
     db: Session,
 ) -> tuple[str, list]:
     """
     Run the agent with self-correction harness.
+    LangGraph checkpointer resumes the full thread (all tool calls, node IDs) via thread_id.
 
     Returns:
         (reply_text, final_messages)
     """
-    messages = build_initial_messages(user_prompt, history)
-    config = {"configurable": {"session_id": session_id, "db": db}}
-    final_messages = messages
+    # thread_id tells LangGraph which saved state to resume
+    config = {
+        "configurable": {
+            "thread_id": session_id,
+            "session_id": session_id,
+            "db": db,
+        }
+    }
 
     from core.config import settings
     logger.info(f"🤖 [AI PLANNER] Starting workflow generation loop using Model: '{settings.OPENROUTER_MODEL}'")
+
+    # Only the new user message — LangGraph appends to the thread automatically
+    input_messages = {"messages": [HumanMessage(content=user_prompt)]}
+    final_messages = []
 
     for attempt in range(1, MAX_RETRIES + 1):
         logger.info(f"[Harness] Attempt {attempt}/{MAX_RETRIES}")
@@ -55,8 +61,10 @@ async def run_agent_loop(
         })
 
         try:
-            result = await agent.ainvoke({"messages": messages}, config=config)
-            final_messages = result.get("messages", messages)
+            result = await agent.ainvoke(input_messages, config=config)
+            final_messages = result.get("messages", [])
+            # Subsequent retry attempts pass empty — LangGraph manages thread internally
+            input_messages = {"messages": []}
         except Exception as e:
             err_str = str(e)
             from ai.planner.parser import has_xml_tool_calls, parse_xml_tool_calls
@@ -99,8 +107,12 @@ async def run_agent_loop(
             logger.error("[Harness] Max retries reached.")
             break
 
-        # Inject correction and continue loop
-        correction = build_correction_message(error)
-        messages = list(final_messages) + [correction]
+        # Inject correction into thread for next attempt
+        correction_text = (
+            f"Your previous output had the following issue:\n\n{error}\n\n"
+            "Please fix this now. Re-read the STRICT RULES and call the missing tools. "
+            "Do NOT add new nodes. Only fix what is broken."
+        )
+        input_messages = {"messages": [HumanMessage(content=correction_text)]}
 
     return _extract_reply(final_messages), final_messages

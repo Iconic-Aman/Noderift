@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { Node } from "@xyflow/react";
-import { X, Settings, Copy, Play, Trash2 } from "lucide-react";
+import { X, Settings, Copy, Play } from "lucide-react";
 import { NodeData } from "@/types/workflow";
 import { getNodeTemplate } from "@/lib/node-templates";
 import { NodeIcon } from "./node-icons";
@@ -21,7 +21,7 @@ interface Props {
 
 export function NodeConfigPanel({ node, onClose, onConfigChange, onRunNode }: Props) {
   const [cfg, setCfg] = useState<Record<string, any>>({});
-  const { edges, nodes, setNodeToDelete } = useWorkflowStore();
+  const { edges, nodes } = useWorkflowStore();
   const { id } = useParams();
   const [triggerData, setTriggerData] = useState<any>(null);
   const [copied, setCopied] = useState(false);
@@ -89,14 +89,6 @@ export function NodeConfigPanel({ node, onClose, onConfigChange, onRunNode }: Pr
               <Play className="h-3 w-3" /><span>Run Node</span>
             </button>
           )}
-          <button
-            onClick={() => setNodeToDelete({ id: node.id, label: node.data.label || node.id })}
-            title="Delete this node"
-            className="flex items-center gap-1 rounded bg-slate-800 hover:bg-rose-950 border border-slate-700 hover:border-rose-500/50 px-2 py-1 text-[11px] font-semibold text-slate-300 hover:text-rose-200 transition-all active:scale-95 cursor-pointer shadow-md"
-          >
-            <Trash2 className="h-3 w-3 text-rose-400" />
-            <span>Delete</span>
-          </button>
           <button onClick={onClose} className="p-1.5 text-slate-400 hover:bg-slate-800 rounded-lg"><X className="h-4 w-4" /></button>
         </div>
       </div>

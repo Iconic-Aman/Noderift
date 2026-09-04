@@ -16,6 +16,7 @@ import { cn } from "@/lib/utils";
 import { ButtonEdge } from "@/components/workflow/custom-edge";
 import { useEditorLogic } from "@/hooks/useEditorLogic";
 import { apiFetch } from "@/lib/api";
+import { useWorkflowStore } from "@/store/workflowStore";
 
 const nodeTypes = {
   workflowNode: WorkflowNode,
@@ -81,6 +82,7 @@ export default function Editor() {
 
   const [showUndeployWarning, setShowUndeployWarning] = useState(false);
   const [showLlmModal, setShowLlmModal] = useState(false);
+  const { nodeToDelete, setNodeToDelete, confirmDeleteNode } = useWorkflowStore();
 
   const handleDeployClick = () => {
     if (isActive) {
@@ -136,6 +138,46 @@ export default function Editor() {
       (isResizingLeft || isResizingRight) && "select-none cursor-col-resize",
       isResizingPanel && "select-none cursor-row-resize"
     )}>
+      {/* Node Delete Warning Modal */}
+      {nodeToDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+          <div className="w-[420px] rounded-xl border border-rose-500/30 bg-slate-900 p-6 shadow-2xl animate-in fade-in zoom-in-95 duration-200">
+            <div className="mb-4 flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-rose-500/15">
+                <AlertTriangle className="h-5 w-5 text-rose-400" />
+              </div>
+              <div>
+                <p className="font-semibold text-white">Delete Node?</p>
+                <p className="text-xs text-slate-400">{nodeToDelete.label}</p>
+              </div>
+              <button
+                onClick={() => setNodeToDelete(null)}
+                className="ml-auto rounded p-1 text-slate-500 hover:text-white cursor-pointer"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <p className="mb-5 text-sm text-slate-300">
+              Are you sure you want to delete this node? This action cannot be undone, and any connected lines will be removed.
+            </p>
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={() => setNodeToDelete(null)}
+                className="rounded-lg border border-slate-700 bg-slate-800 px-4 py-2 text-sm text-slate-300 hover:bg-slate-700 cursor-pointer"
+              >
+                Go Back
+              </button>
+              <button
+                onClick={() => confirmDeleteNode(nodeToDelete.id)}
+                className="rounded-lg bg-rose-600 px-4 py-2 text-sm font-medium text-white hover:bg-rose-500 cursor-pointer"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Undeploy Warning Modal */}
       {showUndeployWarning && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
@@ -228,6 +270,14 @@ export default function Editor() {
             defaultEdgeOptions={{ type: "buttonEdge" }}
             onNodeDragStop={onNodeDragStop}
             deleteKeyCode={['Backspace', 'Delete']}
+            onBeforeDelete={async ({ nodes: deletedNodes }) => {
+              if (deletedNodes && deletedNodes.length > 0) {
+                const target = deletedNodes[0];
+                setNodeToDelete({ id: target.id, label: (target.data as any)?.label || target.id });
+                return false;
+              }
+              return true;
+            }}
             selectionKeyCode={['Shift']}
             fitView
             className="bg-slate-950"

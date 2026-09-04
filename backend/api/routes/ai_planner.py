@@ -27,8 +27,8 @@ _fernet = Fernet(settings.SECRET_KEY.encode())
 # Provider defaults
 _PROVIDER_DEFAULTS = {
     "openrouter": {
-        "base_url": "https://openrouter.ai/api/v1",
-        "model": "meta-llama/llama-3.3-70b-instruct",
+        "base_url": settings.OPENROUTER_API_URL or "https://openrouter.ai/api/v1",
+        "model": settings.OPENROUTER_MODEL
     },
     "groq": {
         "base_url": "https://api.groq.com/openai/v1",
@@ -79,7 +79,28 @@ async def plan_workflow(req: PlanRequest, db: Session = Depends(get_db), user: U
     defaults = _PROVIDER_DEFAULTS.get(provider, _PROVIDER_DEFAULTS["openrouter"])
     api_key = cred_data["api_key"]
     base_url = cred_data.get("base_url") or defaults["base_url"]
-    model = cred_data.get("model") or defaults["model"]
+
+    # Candidate models in priority order:
+    # 1. Custom model in user credential (if set)
+    # 2. settings.OPENROUTER_MODEL
+    # 3. settings.OPENROUTER_MODEL2
+    # 4. settings.OPENROUTER_MODEL3
+    candidate_models: list[str] = []
+    if cred_data.get("model") and cred_data["model"].strip():
+        candidate_models.append(cred_data["model"].strip())
+
+    for env_m in [
+        getattr(settings, "OPENROUTER_MODEL", None),
+        getattr(settings, "OPENROUTER_MODEL2", None),
+        getattr(settings, "OPENROUTER_MODEL3", None),
+    ]:
+        if env_m and env_m.strip() and env_m.strip() not in candidate_models:
+            candidate_models.append(env_m.strip())
+
+    if not candidate_models:
+        candidate_models = [defaults["model"]]
+
+    primary_model = candidate_models[0]
 
     raw_history = await get_session_messages(req.session_id)
     history = [
@@ -91,17 +112,19 @@ async def plan_workflow(req: PlanRequest, db: Session = Depends(get_db), user: U
     logger.info(f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
     logger.info(f"[AI PLANNER] New request from user: '{user.email or user.username}'")
     logger.info(f"[AI PLANNER] Message: '{req.message[:120]}'")
-    logger.info(f"[AI PLANNER] Session: {req.session_id}")
-    logger.info(f"[AI PLANNER] Provider: '{provider}' | Model: '{model}'")
-    logger.info(f"[AI PLANNER] History: {len(raw_history)} raw → {len(history)} filtered")
+    logger.info(f"[AI PLANNER] Session: {req.session_id} | Provider: '{provider}' | Models to try: {candidate_models}")
     logger.info(f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
 
     try:
         from langchain_core.messages import HumanMessage, AIMessage
 
+        # Immediately record user prompt so it never disappears on refresh
+        history_with_user = list(history) + [HumanMessage(content=req.message)]
+        await save_session_messages(req.session_id, history_with_user)
+
         # Step 1: Route through chat model
         logger.info(f"[AI PLANNER] STEP 1 → Calling chat_router.route_message()...")
-        chat_reply, should_build = await route_message(req.message, history, api_key, base_url, model)
+        chat_reply, should_build = await route_message(req.message, history, api_key, base_url, primary_model)
         logger.info(f"[AI PLANNER] STEP 1 RESULT → should_build={should_build}, reply_preview='{chat_reply[:80] if chat_reply else 'N/A'}'")
 
         if not should_build:
@@ -113,27 +136,67 @@ async def plan_workflow(req: PlanRequest, db: Session = Depends(get_db), user: U
             await save_session_messages(req.session_id, clean_history)
             return PlanResponse(reply=chat_reply, session_id=req.session_id, is_build=False)
 
-        # Step 2: BUILD_REQUEST — run agent loop
-        logger.info(f"[AI PLANNER] 🔨 BUILD REQUEST — calling planner agent with model '{model}'")
-        agent = get_planner_agent(api_key=api_key, base_url=base_url, model_name=model)
-        reply, final_messages = await run_agent_loop(
-            agent=agent,
-            user_prompt=req.message,
-            history=[],   # Always start fresh — no old build prompts bleeding in
-            session_id=req.session_id,
-            db=db,
-        )
-        logger.info(f"[AI PLANNER] ✅ BUILD COMPLETE — reply: '{reply[:120]}'")
-        clean_history = [
+        # Step 2: Build request — try candidate models in sequence
+        from ai.planner.guardrails import verify_graph
+        from ai.planner.session import emit_canvas_patch
+
+        workflow_built = False
+        final_reply = ""
+
+        for idx, current_model in enumerate(candidate_models):
+            logger.info(f"🤖 [AI PLANNER] Attempt {idx + 1}/{len(candidate_models)} with Model: '{current_model}'")
+            try:
+                agent = get_planner_agent(api_key=api_key, base_url=base_url, model_name=current_model)
+                reply, final_messages = await run_agent_loop(
+                    agent=agent,
+                    user_prompt=req.message,
+                    history=[],
+                    session_id=req.session_id,
+                    db=db,
+                )
+                guardrail_err = verify_graph(db, req.session_id)
+                if guardrail_err is None:
+                    logger.info(f"✓ [AI PLANNER] Workflow successfully created with Model: '{current_model}'")
+                    workflow_built = True
+                    final_reply = reply
+                    break
+                else:
+                    logger.warning(f"⚠ [AI PLANNER] Model '{current_model}' guardrail check failed: {guardrail_err}")
+                    if idx < len(candidate_models) - 1:
+                        await emit_canvas_patch(req.session_id, "agent_step", {
+                            "text": "Refining workflow with alternative model..."
+                        })
+            except Exception as model_exc:
+                logger.error(f"❌ [AI PLANNER] Model '{current_model}' error: {type(model_exc).__name__}: {model_exc}")
+                if idx < len(candidate_models) - 1:
+                    await emit_canvas_patch(req.session_id, "agent_step", {
+                        "text": "Retrying with alternative model..."
+                    })
+
+        if not workflow_built:
+            logger.warning(f"[AI PLANNER] All candidate models {candidate_models} failed for session {req.session_id}.")
+            final_reply = "I couldn't generate the workflow right now. Please try again or rephrase your request."
+
+        clean_history = list(history) + [
             HumanMessage(content=req.message),
-            AIMessage(content=reply),
+            AIMessage(content=final_reply),
         ]
         await save_session_messages(req.session_id, clean_history)
-        return PlanResponse(reply=reply, session_id=req.session_id, is_build=True)
+        return PlanResponse(reply=final_reply, session_id=req.session_id, is_build=True)
 
     except Exception as e:
         logger.error(f"[AI PLANNER] ❌ EXCEPTION: {type(e).__name__}: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        fallback_reply = "I couldn't generate the workflow right now. Please try again or rephrase your request."
+        try:
+            from langchain_core.messages import HumanMessage, AIMessage
+            clean_history = list(history) + [
+                HumanMessage(content=req.message),
+                AIMessage(content=fallback_reply),
+            ]
+            await save_session_messages(req.session_id, clean_history)
+        except Exception:
+            pass
+        return PlanResponse(reply=fallback_reply, session_id=req.session_id, is_build=True)
 
 
 @router.get("/plan/{session_id}/messages", dependencies=[Depends(bearer_scheme)])

@@ -1,16 +1,16 @@
 import { memo } from "react";
-import { Handle, Position, NodeProps, Node, useReactFlow } from "@xyflow/react";
-import { X, Check, Loader2, AlertCircle } from "lucide-react";
+import { Handle, Position, NodeProps, Node } from "@xyflow/react";
+import { X, Check, Loader2, AlertCircle, Trash2 } from "lucide-react";
 import { NodeData } from "@/types/workflow";
 import { NodeIcon } from "./node-icons";
+import { useWorkflowStore } from "@/store/workflowStore";
 
 export const WorkflowNode = memo(({ id, data, selected }: NodeProps<Node<NodeData>>) => {
-  const { setNodes, setEdges } = useReactFlow();
+  const setNodeToDelete = useWorkflowStore((s) => s.setNodeToDelete);
 
   const onDelete = (e: React.MouseEvent) => {
     e.stopPropagation();
-    setNodes((nodes) => nodes.filter((n) => n.id !== id));
-    setEdges((edges) => edges.filter((edge) => edge.source !== id && edge.target !== id));
+    setNodeToDelete({ id, label: data.label || id });
   };
 
   // Dynamically resolve icon and color for database nodes
@@ -81,9 +81,10 @@ export const WorkflowNode = memo(({ id, data, selected }: NodeProps<Node<NodeDat
       {selected && (
         <button
           onClick={onDelete}
-          className="absolute -top-3 -right-3 z-10 flex h-6 w-6 items-center justify-center rounded-full bg-slate-800 border border-slate-600 text-slate-400 hover:bg-red-500 hover:text-white hover:border-red-500 transition-all shadow-lg opacity-0 group-hover:opacity-100"
+          title="Delete Node"
+          className="absolute -top-3 -right-3 z-20 flex h-6 w-6 items-center justify-center rounded-full bg-slate-900 border border-rose-500/60 text-rose-400 hover:bg-rose-600 hover:text-white hover:border-rose-600 transition-all shadow-lg active:scale-95 cursor-pointer"
         >
-          <X className="h-3 w-3" />
+          <Trash2 className="h-3 w-3" />
         </button>
       )}
       <Handle

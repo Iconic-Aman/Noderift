@@ -95,22 +95,23 @@ def get_planner_agent(api_key: str = "", base_url: str = "", model_name: str = "
     import logging
     logger = logging.getLogger("uvicorn")
 
-    if not api_key:
+    resolved_api_key = api_key or settings.OPENROUTER_API_KEY
+    if not resolved_api_key:
         raise ValueError("LLM API key is required. Please configure your LLM key in AI Mode settings.")
 
-    resolved_base_url = base_url or "https://openrouter.ai/api/v1"
+    resolved_base_url = base_url or settings.OPENROUTER_API_URL or "https://openrouter.ai/api/v1"
     target_model = model_name or "meta-llama/llama-3.3-70b-instruct"
 
     logger.info("🤖 [AI PLANNER DIAGNOSTICS]")
     logger.info(f"   -> Model: '{target_model}'")
     logger.info(f"   -> API Base: '{resolved_base_url}'")
-    logger.info(f"   -> API Key Length: {len(api_key)}")
+    logger.info(f"   -> API Key Length: {len(resolved_api_key)}")
 
     from langchain_openai import ChatOpenAI
 
     llm = ChatOpenAI(
         model=target_model,
-        api_key=api_key,
+        api_key=resolved_api_key,
         base_url=resolved_base_url,
         temperature=temperature,
     )

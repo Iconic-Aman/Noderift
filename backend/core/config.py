@@ -55,6 +55,7 @@ class Settings(BaseSettings):
     OPENROUTER_API_KEY: str = ""
     OPENROUTER_MODEL: str = "meta-llama/llama-3.3-70b-instruct"
     OPENROUTER_MODEL2: str = ""
+    OPENROUTER_MODEL3: str = ""
     OPENROUTER_CHAT_MODEL: str = "meta-llama/llama-3.3-70b-instruct"
     OPENROUTER_API_URL: str = "https://openrouter.ai/api/v1"
 

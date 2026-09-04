@@ -141,7 +141,10 @@ export default function Editor() {
         onToggleActive={handleDeployClick}
         onDownload={handleDownload}
         mode={mode}
-        onModeChange={setMode}
+        onModeChange={(m: "manual" | "automatic") => {
+          setMode(m);
+          if (m === "automatic") setIsRightOpen(true);
+        }}
       />
       <div className="flex flex-1 overflow-hidden">
         {/* Left Sliding Sidebar - Manual Mode only */}
@@ -247,7 +250,7 @@ export default function Editor() {
           <div className="relative flex h-full shrink-0 z-10">
             <div
               className={cn("overflow-hidden flex flex-col h-full bg-slate-900 border-l border-slate-800", !isResizingRight && "transition-all duration-300")}
-              style={{ width: `${rightWidth}px` }}
+              style={{ width: isRightOpen ? `${rightWidth}px` : "0px" }}
             >
               {selectedNode && (
                 /* Tab Selector — only shown when a node is selected */
@@ -286,7 +289,7 @@ export default function Editor() {
                   display: selectedNode && activeRightTab === "config" ? "none" : "flex"
                 }}
               >
-                <AIChatPanel isDocked={true} />
+                <AIChatPanel isDocked={true} onClose={() => setIsRightOpen(false)} />
               </div>
 
               {/* NodeConfigPanel — only when node selected + config tab */}
@@ -311,7 +314,20 @@ export default function Editor() {
             />
           </div>
         )}
+
       </div>
+
+      {/* Floating AI Pill Button when chat is shrunk (top-right, away from minimap) */}
+      {mode === "automatic" && !isRightOpen && (
+        <button
+          onClick={() => setIsRightOpen(true)}
+          title="Open AI Assistant"
+          className="fixed top-16 right-4 z-40 flex h-9 items-center gap-2 rounded-full border border-violet-500/40 bg-slate-900/95 px-3.5 py-1.5 text-xs font-semibold text-slate-200 shadow-xl shadow-violet-950/30 backdrop-blur-md hover:border-violet-400 hover:bg-slate-800 hover:text-white hover:scale-105 active:scale-95 transition-all cursor-pointer"
+        >
+          <Sparkles className="h-3.5 w-3.5 text-violet-400" />
+          <span>AI Assistant</span>
+        </button>
+      )}
 
       {/* Bottom Terminal Toggle Button */}
       <button

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
-import { Send, Sparkles, X } from "lucide-react";
+import { Send, Sparkles, X, Minimize2 } from "lucide-react";
 import { apiFetch } from "@/lib/api";
 import { AIChatMessage, TypingIndicator } from "./ai-chat-message";
 import { useAIPlannerSocket } from "@/hooks/useAIPlannerSocket";
@@ -93,8 +93,12 @@ export function AIChatPanel({ isDocked = false, onClose }: { isDocked?: boolean;
         AI Planner (Real-time)
       </div>
       {onClose && (
-        <button onClick={onClose} className="rounded p-1 text-slate-400 hover:bg-slate-800 hover:text-white">
-          <X className="h-4 w-4" />
+        <button
+          onClick={onClose}
+          title={isDocked ? "Collapse panel" : "Close"}
+          className="rounded p-1 text-slate-400 hover:bg-slate-800 hover:text-white transition-colors"
+        >
+          {isDocked ? <Minimize2 className="h-4 w-4" /> : <X className="h-4 w-4" />}
         </button>
       )}
     </div>

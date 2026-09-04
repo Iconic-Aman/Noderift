@@ -282,9 +282,17 @@ export default function Editor() {
         {/* Right Docked Panel - Automatic Mode (Chat Sidebar like Cursor) */}
         {mode === "automatic" && (
           <div className="relative flex h-full shrink-0 z-10">
+            {/* Chevron toggle button — same as manual mode */}
+            <button
+              onClick={() => setIsRightOpen(!isRightOpen)}
+              className="absolute top-1/2 -left-3.5 z-20 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-full border border-slate-800 bg-slate-900 text-slate-400 hover:text-white shadow-lg hover:bg-slate-800 transition-all cursor-pointer"
+              style={{ transform: "translateX(-50%)" }}
+            >
+              {isRightOpen ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
+            </button>
             <div
               className={cn("overflow-hidden flex flex-col h-full bg-slate-900 border-l border-slate-800", !isResizingRight && "transition-all duration-300")}
-              style={{ width: `${rightWidth}px` }}
+              style={{ width: isRightOpen ? `${rightWidth}px` : "0px" }}
             >
               {selectedNode && (
                 /* Tab Selector — only shown when a node is selected */
@@ -323,7 +331,7 @@ export default function Editor() {
                   display: selectedNode && activeRightTab === "config" ? "none" : "flex"
                 }}
               >
-                <AIChatPanel isDocked={true} />
+                <AIChatPanel isDocked={true} onClose={() => setIsRightOpen(false)} />
               </div>
 
               {/* NodeConfigPanel — only when node selected + config tab */}
@@ -348,6 +356,7 @@ export default function Editor() {
             />
           </div>
         )}
+
       </div>
 
       {/* Bottom Terminal Toggle Button */}

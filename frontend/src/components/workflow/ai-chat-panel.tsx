@@ -115,10 +115,10 @@ export function AIChatPanel({ isDocked = false, onClose }: { isDocked?: boolean;
       {onClose && (
         <button
           onClick={onClose}
-          title={isDocked ? "Collapse panel" : "Close"}
+          title="Shrink to bubble"
           className="rounded p-1 text-slate-400 hover:bg-slate-800 hover:text-white transition-colors"
         >
-          {isDocked ? <Minimize2 className="h-4 w-4" /> : <X className="h-4 w-4" />}
+          <X className="h-4 w-4" />
         </button>
       )}
     </div>

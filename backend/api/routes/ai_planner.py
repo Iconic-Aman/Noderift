@@ -150,7 +150,7 @@ async def plan_workflow(req: PlanRequest, db: Session = Depends(get_db), user: U
                 reply, final_messages = await run_agent_loop(
                     agent=agent,
                     user_prompt=req.message,
-                    history=history,
+                    history=[],  # checkpointer manages state via thread_id; history arg unused
                     session_id=req.session_id,
                     db=db,
                 )

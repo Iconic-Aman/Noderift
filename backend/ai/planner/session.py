@@ -79,6 +79,9 @@ async def patch_graph(db: Session, session_id: str, action: str, payload: dict):
                 new_config = payload.get("config", {})
                 current_data["config"] = {**current_config, **new_config}
                 n["data"] = current_data
+                # Merge position if provided
+                if "position" in payload:
+                    n["position"] = payload["position"]
                 break
         event = "node_updated"
     elif action == "remove_node":

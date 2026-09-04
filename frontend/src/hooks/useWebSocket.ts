@@ -7,6 +7,7 @@ export interface LogMessage {
   node_id?: string;
   node_name?: string;
   node_type?: string;
+  provider?: string;
   error?: string;
   output?: any;
   duration_ms?: number;

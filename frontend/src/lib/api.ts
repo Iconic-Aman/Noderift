@@ -1,7 +1,7 @@
 /// <reference types="vite/client" />
 export const API_URL = import.meta.env.VITE_API_URL;
 
-export async function apiFetch(endpoint: string, options: RequestInit = {}, timeoutMs = 90_000) {
+export async function apiFetch(endpoint: string, options: RequestInit = {}, timeoutMs = 300_000) {
   const token = localStorage.getItem("noderift_token");
   const headers = new Headers(options.headers || {});
 

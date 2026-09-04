@@ -90,11 +90,11 @@ export function ExecutionPanel({ isOpen, onClose, logs, status, onRun, loading, 
                 const authLog = logs.find((l) => l.type === "needs_auth");
                 const connectUrl = authLog?.connect_url || "/api/oauth/gmail/start";
                 const baseUrl = import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL.replace(/\/api$/, "") : "";
-                window.open(`${baseUrl}${connectUrl}`, "_blank", "width=500,height=600");
+                window.open(`${baseUrl}${connectUrl}`, "_blank", "width=600,height=700");
               }}
-              className="flex items-center gap-1.5 rounded bg-amber-600 px-3 py-1 text-xs font-medium text-white hover:bg-amber-500"
+              className="flex items-center gap-1.5 rounded bg-amber-600 px-3 py-1 text-xs font-medium text-white hover:bg-amber-500 cursor-pointer"
             >
-              Connect Gmail
+              Connect {logs.find((l) => l.type === "needs_auth")?.provider === "slack" ? "Slack" : "Gmail"}
             </button>
           )}
           <button onClick={onRun} disabled={loading || status === "running"} className="flex items-center gap-1.5 rounded bg-blue-600 px-3 py-1 text-xs font-medium text-white hover:bg-blue-500 disabled:opacity-50">

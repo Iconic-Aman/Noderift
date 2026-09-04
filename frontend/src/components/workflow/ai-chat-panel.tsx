@@ -16,13 +16,32 @@ const GREETING: Message = {
 export function AIChatPanel({ isDocked = false, onClose }: { isDocked?: boolean; onClose?: () => void }) {
   const { id: workflowId } = useParams();
   const [open, setOpen] = useState(false);
-  const [messages, setMessages] = useState<Message[]>([GREETING]);
+  const [messages, setMessages] = useState<Message[]>(() => {
+    if (!workflowId) return [GREETING];
+    try {
+      const cached = localStorage.getItem(`noderift_chat_${workflowId}`);
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch {}
+    return [GREETING];
+  });
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [steps, setSteps] = useState<string[]>([]);
   const stepsRef = useRef<string[]>([]);
 
   const active = isDocked || open;
+
+  // Persist messages to localStorage whenever they change
+  useEffect(() => {
+    if (workflowId && messages.length > 0) {
+      try {
+        localStorage.setItem(`noderift_chat_${workflowId}`, JSON.stringify(messages));
+      } catch {}
+    }
+  }, [messages, workflowId]);
 
   // Enable live websocket canvas updates & agent step events while panel open
   useAIPlannerSocket(active ? workflowId : undefined, (stepText) => {
@@ -34,6 +53,7 @@ export function AIChatPanel({ isDocked = false, onClose }: { isDocked?: boolean;
     if (!active || !workflowId) return;
     apiFetch(`/ai/plan/${workflowId}/messages`)
       .then((history: Message[]) => {
+        if (!Array.isArray(history) || history.length === 0) return;
         const stepsMap: Record<string, string[]> = {};
         // preserve in-memory steps
         messages.forEach((m) => {
@@ -46,7 +66,7 @@ export function AIChatPanel({ isDocked = false, onClose }: { isDocked?: boolean;
         // always keep greeting at top
         setMessages([GREETING, ...merged]);
       })
-      .catch(() => setMessages([GREETING]));
+      .catch(() => {});
   }, [active, workflowId]);
 
 

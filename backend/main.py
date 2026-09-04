@@ -6,7 +6,7 @@ import uvicorn
 
 from core.config import settings
 from core.security import AuthMiddleware, bearer_scheme
-from api.routes import auth, workflows, credentials, executions, websocket, webhooks, node_testing, ai, ai_planner, gmail_oauth, files, feedback
+from api.routes import auth, workflows, credentials, executions, websocket, webhooks, node_testing, ai, ai_planner, gmail_oauth, slack_oauth, files, feedback
 from core.scheduler import scheduler_manager
 from core.database import SessionLocal
 import logging
@@ -44,6 +44,7 @@ app.include_router(node_testing.router, prefix="/api", tags=["nodes"])
 app.include_router(ai.router, prefix="/api", tags=["ai"])
 app.include_router(ai_planner.router, prefix="/api", tags=["ai_planner"])
 app.include_router(gmail_oauth.router, prefix="/api", tags=["gmail"])
+app.include_router(slack_oauth.router, prefix="/api", tags=["slack"])
 app.include_router(files.router, prefix="/api", tags=["files"])
 app.include_router(feedback.router, prefix="/api", tags=["feedback"])
 
@@ -60,6 +61,17 @@ def startup_event():
     scheduler_manager.start()
     db = SessionLocal()
     try:
+        from sqlalchemy import text
+        try:
+            db.execute(text("ALTER TABLE workflows ADD COLUMN IF NOT EXISTS chat_history JSONB;"))
+            db.commit()
+        except Exception:
+            db.rollback()
+            try:
+                db.execute(text("ALTER TABLE workflows ADD COLUMN chat_history JSON;"))
+                db.commit()
+            except Exception:
+                db.rollback()
         scheduler_manager.sync_triggers(db)
     finally:
         db.close()

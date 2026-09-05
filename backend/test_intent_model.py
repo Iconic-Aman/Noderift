@@ -18,7 +18,7 @@ async def run_diagnostics():
     print("      NODERIFT INTENT CLASSIFICATION & DUAL-MODEL EVALUATION TEST")
     print("=" * 80)
     print(f"[CONFIG] Active Intent Model (OPENROUTER_MODEL2): {active_intent_model}")
-    print(f"[CONFIG] Active Heavy Builder Model (70B)        : {settings.OPENROUTER_MODEL}")
+    print(f"[CONFIG] Active Heavy Builder Model               : {settings.OPENROUTER_MODEL or settings.OPENROUTER_MODEL1}")
     print("=" * 80)
 
     test_cases = [

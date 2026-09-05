@@ -27,7 +27,7 @@ _fernet = Fernet(settings.SECRET_KEY.encode())
 _PROVIDER_DEFAULTS = {
     "openrouter": {
         "base_url": settings.OPENROUTER_API_URL or "https://openrouter.ai/api/v1",
-        "model": settings.OPENROUTER_MODEL
+        "model": settings.OPENROUTER_MODEL or settings.OPENROUTER_MODEL1 or "openrouter/free"
     },
     "groq": {
         "base_url": "https://api.groq.com/openai/v1",
@@ -100,6 +100,7 @@ async def plan_workflow(req: PlanRequest, db: Session = Depends(get_db), user: U
 
     for env_m in [
         getattr(settings, "OPENROUTER_MODEL", None),
+        getattr(settings, "OPENROUTER_MODEL1", None),
         getattr(settings, "OPENROUTER_MODEL2", None),
         getattr(settings, "OPENROUTER_MODEL3", None),
     ]:
@@ -159,6 +160,7 @@ async def plan_workflow(req: PlanRequest, db: Session = Depends(get_db), user: U
                     history=[],  # checkpointer manages state via thread_id; history arg unused
                     session_id=req.session_id,
                     db=db,
+                    model_name=current_model,
                 )
                 guardrail_err = verify_graph(db, req.session_id)
                 if guardrail_err is None:

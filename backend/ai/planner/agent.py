@@ -111,7 +111,7 @@ def get_planner_agent(api_key: str = "", base_url: str = "", model_name: str = "
     import logging
     logger = logging.getLogger("uvicorn")
 
-    target_model = model_name or settings.OPENROUTER_MODEL
+    target_model = model_name or settings.OPENROUTER_MODEL or settings.OPENROUTER_MODEL1 or "openrouter/free"
     key_len = len(settings.OPENROUTER_API_KEY) if settings.OPENROUTER_API_KEY else 0
     key_preview = f"{settings.OPENROUTER_API_KEY[:8]}...{settings.OPENROUTER_API_KEY[-4:]}" if key_len > 12 else "EMPTY/MISSING"
 

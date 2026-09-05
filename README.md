@@ -21,7 +21,23 @@ AI-powered visual workflow automation platform. Build, orchestrate, and execute 
 - [Docker](https://docs.docker.com/get-docker/) & Docker Compose
 
 ### 1. Run with Docker (One-Liner)
+
+**Linux / macOS:**
 ```bash
+curl -O https://raw.githubusercontent.com/Iconic-Aman/Noderift/main/docker-compose.yml && docker compose up -d
+```
+
+**Windows (PowerShell):**
+```powershell
+curl.exe -O https://raw.githubusercontent.com/Iconic-Aman/Noderift/main/docker-compose.yml; docker compose up -d
+```
+*or:*
+```powershell
+Invoke-WebRequest -Uri https://raw.githubusercontent.com/Iconic-Aman/Noderift/main/docker-compose.yml -OutFile docker-compose.yml; docker compose up -d
+```
+
+**Windows (Command Prompt):**
+```cmd
 curl -O https://raw.githubusercontent.com/Iconic-Aman/Noderift/main/docker-compose.yml && docker compose up -d
 ```
 

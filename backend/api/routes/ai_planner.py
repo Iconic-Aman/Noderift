@@ -59,21 +59,29 @@ class PlanResponse(BaseModel):
 
 @router.get("/llm-key-status", dependencies=[Depends(bearer_scheme)])
 def llm_key_status(db: Session = Depends(get_db), user: User = Depends(get_current_user)):
-    """Check if the current user has a saved LLM API key."""
+    """Check if the current user has a saved LLM API key or global env key."""
     cred_data = _get_llm_credential(db, user.id)
-    return {"configured": cred_data is not None}
+    return {"configured": cred_data is not None or bool(settings.OPENROUTER_API_KEY)}
 
 @router.post("/plan", response_model=PlanResponse, dependencies=[Depends(bearer_scheme)])
 async def plan_workflow(req: PlanRequest, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
-    """Run the AI Planner — reads LLM key from local DB credentials."""
+    """Run the AI Planner — reads LLM key from local DB credentials or env fallback."""
     workflow = db.query(Workflow).filter(Workflow.id == req.session_id, Workflow.user_id == user.id).first()
     if not workflow:
         raise HTTPException(status_code=404, detail="Workflow not found")
 
-    # Resolve LLM key from local DB
+    # Resolve LLM key from local DB or fallback to env settings
     cred_data = _get_llm_credential(db, user.id)
     if not cred_data or not cred_data.get("api_key"):
-        raise HTTPException(status_code=428, detail="no_llm_key")
+        if settings.OPENROUTER_API_KEY:
+            cred_data = {
+                "provider": "openrouter",
+                "api_key": settings.OPENROUTER_API_KEY,
+                "base_url": settings.OPENROUTER_API_URL or "https://openrouter.ai/api/v1",
+                "model": settings.OPENROUTER_MODEL or settings.OPENROUTER_MODEL1 or "meta-llama/llama-3.3-70b-instruct",
+            }
+        else:
+            raise HTTPException(status_code=428, detail="no_llm_key")
 
     provider = cred_data.get("provider", "openrouter")
     defaults = _PROVIDER_DEFAULTS.get(provider, _PROVIDER_DEFAULTS["openrouter"])

@@ -107,6 +107,9 @@ jobs:
             sed -i '/^GROQ_MODEL=/d' .env
             sed -i '/^OPENROUTER_API_KEY=/d' .env
             sed -i '/^OPENROUTER_MODEL=/d' .env
+            sed -i '/^OPENROUTER_MODEL1=/d' .env
+            sed -i '/^OPENROUTER_MODEL2=/d' .env
+            sed -i '/^OPENROUTER_MODEL3=/d' .env
             sed -i '/^OPENROUTER_API_URL=/d' .env
             sed -i '/^RESEND_API_KEY=/d' .env
             sed -i '/^FEEDBACK_TO_EMAIL=/d' .env
@@ -135,6 +138,9 @@ jobs:
             echo "GROQ_MODEL=${{ vars.GROQ_MODEL }}" >> .env
             echo "OPENROUTER_API_KEY=${{ secrets.OPENROUTER_API_KEY }}" >> .env
             echo "OPENROUTER_MODEL=${{ vars.OPENROUTER_MODEL }}" >> .env
+            echo "OPENROUTER_MODEL1=${{ vars.OPENROUTER_MODEL1 }}" >> .env
+            echo "OPENROUTER_MODEL2=${{ vars.OPENROUTER_MODEL2 }}" >> .env
+            echo "OPENROUTER_MODEL3=${{ vars.OPENROUTER_MODEL3 }}" >> .env
             echo "OPENROUTER_API_URL=${{ vars.OPENROUTER_API_URL }}" >> .env
             echo "RESEND_API_KEY=${{ secrets.RESEND_API_KEY }}" >> .env
             echo "FEEDBACK_TO_EMAIL=${{ vars.FEEDBACK_TO_EMAIL }}" >> .env
@@ -189,6 +195,9 @@ jobs:
             sed -i '/^GROQ_MODEL=/d' .env
             sed -i '/^OPENROUTER_API_KEY=/d' .env
             sed -i '/^OPENROUTER_MODEL=/d' .env
+            sed -i '/^OPENROUTER_MODEL1=/d' .env
+            sed -i '/^OPENROUTER_MODEL2=/d' .env
+            sed -i '/^OPENROUTER_MODEL3=/d' .env
             sed -i '/^OPENROUTER_API_URL=/d' .env
             sed -i '/^RESEND_API_KEY=/d' .env
             sed -i '/^FEEDBACK_TO_EMAIL=/d' .env
@@ -217,6 +226,9 @@ jobs:
             echo "GROQ_MODEL=${{ vars.GROQ_MODEL }}" >> .env
             echo "OPENROUTER_API_KEY=${{ secrets.OPENROUTER_API_KEY }}" >> .env
             echo "OPENROUTER_MODEL=${{ vars.OPENROUTER_MODEL }}" >> .env
+            echo "OPENROUTER_MODEL1=${{ vars.OPENROUTER_MODEL1 }}" >> .env
+            echo "OPENROUTER_MODEL2=${{ vars.OPENROUTER_MODEL2 }}" >> .env
+            echo "OPENROUTER_MODEL3=${{ vars.OPENROUTER_MODEL3 }}" >> .env
             echo "OPENROUTER_API_URL=${{ vars.OPENROUTER_API_URL }}" >> .env
             echo "RESEND_API_KEY=${{ secrets.RESEND_API_KEY }}" >> .env
             echo "FEEDBACK_TO_EMAIL=${{ vars.FEEDBACK_TO_EMAIL }}" >> .env

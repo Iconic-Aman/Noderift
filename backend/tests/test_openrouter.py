@@ -10,7 +10,7 @@ from ai.planner.agent import get_planner_agent
 
 def test_openrouter_config():
     assert settings.OPENROUTER_API_KEY != "", "OPENROUTER_API_KEY must be loaded from .env"
-    assert settings.OPENROUTER_MODEL == "cohere/north-mini-code:free", "OPENROUTER_MODEL setting mismatch"
+    assert bool(settings.OPENROUTER_MODEL), "OPENROUTER_MODEL must be loaded from .env"
     assert settings.OPENROUTER_API_URL == "https://openrouter.ai/api/v1", "OPENROUTER_API_URL setting mismatch"
     print("✅ OpenRouter settings verified from .env")
 

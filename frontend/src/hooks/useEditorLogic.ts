@@ -77,22 +77,27 @@ export function useEditorLogic() {
   const [isExecutionPanelOpen, setIsExecutionPanelOpen] = useState(false);
   const [executionStatus, setExecutionStatus] = useState<string>("idle");
   const [isSingleRun, setIsSingleRun] = useState(false);
-  const { logs, setLogs } = useWebSocket(activeExecutionId);
+  const { logs, connected, setLogs } = useWebSocket(activeExecutionId);
 
   // Sync execution status from live websocket event logs
   useEffect(() => {
     if (logs.length > 0) {
       const hasNeedsAuth = logs.some((l) => l.type === "needs_auth");
-      const hasFailed = logs.some((l) => l.type === "workflow_failed");
-      const hasSuccess = logs.some((l) => l.type === "workflow_success");
-      const hasStarted = logs.some((l) => l.type === "workflow_started");
+      const hasFailed = logs.some(
+        (l) => l.type === "workflow_failed" || l.type === "node_failed" || Boolean(l.error)
+      );
+      const hasSuccess = logs.some(
+        (l) => l.type === "workflow_success" || (isSingleRun && l.type === "node_success")
+      );
+      const hasStarted = logs.some((l) => l.type === "workflow_started" || l.type === "node_started");
 
       if (hasNeedsAuth) setExecutionStatus("needs_auth");
       else if (hasFailed) setExecutionStatus("failed");
       else if (hasSuccess) setExecutionStatus("success");
+      else if (!connected && hasStarted) setExecutionStatus(hasFailed ? "failed" : "idle");
       else if (hasStarted) setExecutionStatus("running");
     }
-  }, [logs]);
+  }, [logs, connected, isSingleRun]);
 
   // Sync individual node execution states from live websocket logs
   useEffect(() => {
@@ -111,6 +116,9 @@ export function useEditorLogic() {
       return;
     }
 
+    const hasFailed = logs.some(
+      (l) => l.type === "workflow_failed" || l.type === "node_failed" || Boolean(l.error)
+    );
     const latestStatuses: Record<string, "running" | "success" | "failed"> = {};
     const latestOutputs: Record<string, any> = {};
     const latestErrors: Record<string, any> = {};
@@ -118,8 +126,16 @@ export function useEditorLogic() {
       if (!log.node_id) continue;
       if (log.type === "node_started") latestStatuses[log.node_id] = "running";
       else if (log.type === "node_success") { latestStatuses[log.node_id] = "success"; latestOutputs[log.node_id] = log.output; }
-      else if (log.type === "node_failed") { latestStatuses[log.node_id] = "failed"; latestErrors[log.node_id] = log.error; }
+      else if (log.type === "node_failed" || log.error) { latestStatuses[log.node_id] = "failed"; latestErrors[log.node_id] = log.error; }
       else if (log.type === "needs_auth") { latestStatuses[log.node_id] = "failed"; latestErrors[log.node_id] = "Gmail account not connected"; }
+    }
+
+    if (hasFailed || !connected) {
+      for (const nid of Object.keys(latestStatuses)) {
+        if (latestStatuses[nid] === "running") {
+          latestStatuses[nid] = "failed";
+        }
+      }
     }
 
     let hasChanges = false;

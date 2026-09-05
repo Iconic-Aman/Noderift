@@ -53,8 +53,10 @@ class Settings(BaseSettings):
 
     # OpenRouter Config
     OPENROUTER_API_KEY: str = ""
-    OPENROUTER_MODEL: str = "cohere/north-mini-code:free"
+    OPENROUTER_MODEL: str = ""
+    OPENROUTER_MODEL1: str = ""
     OPENROUTER_MODEL2: str = ""
+    OPENROUTER_MODEL3: str = ""
     OPENROUTER_CHAT_MODEL: str = "openrouter/free"
     OPENROUTER_API_URL: str = "https://openrouter.ai/api/v1"
 

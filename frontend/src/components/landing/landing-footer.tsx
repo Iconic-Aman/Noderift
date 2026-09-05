@@ -14,12 +14,12 @@ export function LandingFooter() {
           >
             GitHub
           </a>
-          <a href="#" className="hover:text-slate-300 transition-colors">
+          <Link to="/privacy" className="hover:text-slate-300 transition-colors">
             Privacy Policy
-          </a>
-          <a href="#" className="hover:text-slate-300 transition-colors">
+          </Link>
+          <Link to="/terms" className="hover:text-slate-300 transition-colors">
             Terms of Service
-          </a>
+          </Link>
           <Link
             to="/report-vulnerability"
             className="hover:text-slate-300 transition-colors"

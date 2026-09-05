@@ -41,10 +41,7 @@ export function ExecutionLogEntry({ log }: Props) {
         </div>
         <div className="flex items-center gap-3">
           {log.status === "success" && (() => {
-            const files: string[] = log.output?._generated_files || (log.output?.file ? [log.output.file] : log.output?.filename ? [log.output.filename] : []);
-            if (files.length === 0 && (log.type === "code" || log.name.toLowerCase().includes("excel"))) {
-              files.push("daily_joke.xlsx");
-            }
+            const files: string[] = log.output?._generated_files || (log.output?.file ? [log.output.file] : log.output?.filename ? [log.output.filename] : log.output?.excel_file ? [log.output.excel_file] : []);
             return files.map((file) => (
               <a
                 key={file}

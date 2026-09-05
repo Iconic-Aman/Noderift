@@ -68,6 +68,7 @@ async def run_agent_loop(
     history: list,  # kept for signature compat; state managed by checkpointer via thread_id
     session_id: str,
     db: Session,
+    model_name: str = "",
 ) -> tuple[str, list]:
     """
     Run the agent with self-correction harness.
@@ -86,7 +87,8 @@ async def run_agent_loop(
     }
 
     from core.config import settings
-    logger.info(f"━━━ [Loop] thread_id={session_id} | model={settings.OPENROUTER_MODEL} ━━━")
+    active_model = model_name or settings.OPENROUTER_MODEL or "default"
+    logger.info(f"━━━ [Loop] thread_id={session_id} | model={active_model} ━━━")
     logger.info(f"[Loop] 💬 User prompt: '{user_prompt[:120]}'")
 
     # Log canvas state BEFORE agent runs so we can see what it's starting from

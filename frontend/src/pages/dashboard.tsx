@@ -97,7 +97,7 @@ export function Dashboard() {
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-200 flex flex-col">
-      <AppNavbar title="Workflows" subtitle="My Automations">
+      <AppNavbar>
         <button
           onClick={createWorkflow}
           className="flex items-center gap-1.5 rounded-lg bg-blue-600 px-3.5 py-1.5 text-xs font-semibold text-white hover:bg-blue-500 transition-all shadow-lg shadow-blue-600/20 cursor-pointer"

@@ -1,5 +1,6 @@
 
 from langgraph.prebuilt import create_react_agent
+from langgraph.checkpoint.memory import MemorySaver
 from ai.planner.tools import (
     get_available_nodes,
     get_current_graph,
@@ -10,6 +11,9 @@ from ai.planner.tools import (
     clear_canvas,
     test_node_execution,
 )
+
+# Singleton checkpointer — shared across all requests so thread state survives between HTTP calls
+_checkpointer = MemorySaver()
 
 SYSTEM_PROMPT = """You are Noderift's AI Planner. Your job is to build and modify workflow automation pipelines on a visual canvas by calling tools.
 
@@ -34,11 +38,18 @@ Allowed node types:
 - slack: Send a message to a Slack channel. Config: {channel, message}
 
 STRICT RULES FOR TOOL CALLS:
+0. MANDATORY FIRST STEP — ALWAYS call get_current_graph BEFORE anything else, on EVERY request. You must know what nodes and edges already exist before making any decisions. Never skip this.
 1. First batch: call ALL add_node calls. Note the EXACT node_id returned by each.
 2. Second batch: ALWAYS call connect_nodes for EVERY pair of nodes that should be linked. You MUST connect nodes — skipping this is a critical failure.
 3. Third batch: call update_node_config to fill placeholders with real node_ids.
 4. NEVER call connect_nodes in the same batch as add_node.
 5. ALWAYS end with a plain text summary message to the user listing what you built (e.g. "I built a 2-node workflow: Gmail Trigger → Code node, connected.").
+6. TRIGGER INSERTION RULE: If the user asks to add a schedule/webhook/gmail_trigger node to an EXISTING workflow, you MUST:
+   a. First call get_current_graph to find the current first node (the one with no incoming edges).
+   b. Add the trigger node with add_node.
+   c. Call connect_nodes(trigger_node_id → existing_first_node_id) to prepend it.
+   d. DO NOT remove or re-add existing edges — they stay as-is.
+   e. Trigger nodes MUST have zero incoming edges. They are always the root/source.
 
 POST-BUILD AUTO-TEST LOOP (MANDATORY when workflow has http_request + code nodes):
 After building, you MUST do the following automatically without waiting for user:
@@ -71,10 +82,12 @@ if joke_type == 'twopart':
     joke_text = response.get('setup', '') + ' ' + response.get('delivery', '')
 else:
     joke_text = response.get('joke', '')
+filename = 'joke_output.xlsx'
 df = pd.DataFrame([{'Joke': joke_text, 'Category': response.get('category', ''), 'Type': joke_type}])
-df.to_excel('daily_joke.xlsx', index=False)
-output_data = {'status': 'saved', 'joke': joke_text}
+df.to_excel(filename, index=False)
+output_data = {'status': 'saved', 'excel_file': filename, 'joke': joke_text}
 ```
+CRITICAL: ALWAYS use a context-appropriate filename (e.g. 'names.xlsx', 'emails.xlsx', 'report.xlsx'). NEVER use 'daily_joke.xlsx' unless the task is about jokes. ALWAYS include 'excel_file': filename in output_data.
 
 STRICT RULES FOR VARIABLE INTERPOLATION (PLACEHOLDERS):
 1. When a downstream node needs data from an upstream node, use: {REAL_NODE_ID.field_name}
@@ -98,7 +111,7 @@ def get_planner_agent(api_key: str = "", base_url: str = "", model_name: str = "
     import logging
     logger = logging.getLogger("uvicorn")
 
-    target_model = model_name or settings.OPENROUTER_MODEL
+    target_model = model_name or settings.OPENROUTER_MODEL or settings.OPENROUTER_MODEL1 or "openrouter/free"
     key_len = len(settings.OPENROUTER_API_KEY) if settings.OPENROUTER_API_KEY else 0
     key_preview = f"{settings.OPENROUTER_API_KEY[:8]}...{settings.OPENROUTER_API_KEY[-4:]}" if key_len > 12 else "EMPTY/MISSING"
 
@@ -139,5 +152,6 @@ def get_planner_agent(api_key: str = "", base_url: str = "", model_name: str = "
         model=llm_with_tools,
         tools=tools,
         state_modifier=SYSTEM_PROMPT,
+        checkpointer=_checkpointer,
     )
 

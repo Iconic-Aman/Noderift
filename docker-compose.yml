@@ -30,7 +30,7 @@ services:
       DATABASE_URL: ${DATABASE_URL:-postgresql://noderift:noderift@postgres:5432/noderift}
       REDIS_URL: redis://redis:6379/0
       ENVIRONMENT: ${ENVIRONMENT:-production}
-      SECRET_KEY: ${SECRET_KEY:-insecure_default_secret_key_change_me}
+      SECRET_KEY: ${SECRET_KEY:-}
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
       GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
       GOOGLE_REDIRECT_URI: ${GOOGLE_REDIRECT_URI:-}

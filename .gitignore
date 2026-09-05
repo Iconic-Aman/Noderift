@@ -2,6 +2,8 @@
 .env
 .env.*
 !.env.example
+*.noderift_secret
+.noderift_secret
 
 # ── Agent rules (local only) ──────────────────────────────────────────────────
 .agents/

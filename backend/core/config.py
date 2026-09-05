@@ -12,9 +12,14 @@ def get_or_create_secret_key() -> str:
     key_file = Path(".noderift_secret")
     
     # Check env var first
-    env_key = os.getenv("SECRET_KEY")
+    env_key = os.getenv("SECRET_KEY", "").strip()
     if env_key:
-        return env_key
+        try:
+            Fernet(env_key.encode())
+            return env_key
+        except Exception:
+            import base64, hashlib
+            return base64.urlsafe_b64encode(hashlib.sha256(env_key.encode()).digest()).decode()
         
     # Check persisted file second
     if key_file.exists():

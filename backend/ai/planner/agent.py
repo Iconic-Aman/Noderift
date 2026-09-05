@@ -38,6 +38,7 @@ Allowed node types:
 - slack: Send a message to a Slack channel. Config: {channel, message}
 
 STRICT RULES FOR TOOL CALLS:
+0. MANDATORY FIRST STEP — ALWAYS call get_current_graph BEFORE anything else, on EVERY request. You must know what nodes and edges already exist before making any decisions. Never skip this.
 1. First batch: call ALL add_node calls. Note the EXACT node_id returned by each.
 2. Second batch: ALWAYS call connect_nodes for EVERY pair of nodes that should be linked. You MUST connect nodes — skipping this is a critical failure.
 3. Third batch: call update_node_config to fill placeholders with real node_ids.
@@ -81,10 +82,12 @@ if joke_type == 'twopart':
     joke_text = response.get('setup', '') + ' ' + response.get('delivery', '')
 else:
     joke_text = response.get('joke', '')
+filename = 'joke_output.xlsx'
 df = pd.DataFrame([{'Joke': joke_text, 'Category': response.get('category', ''), 'Type': joke_type}])
-df.to_excel('daily_joke.xlsx', index=False)
-output_data = {'status': 'saved', 'joke': joke_text}
+df.to_excel(filename, index=False)
+output_data = {'status': 'saved', 'excel_file': filename, 'joke': joke_text}
 ```
+CRITICAL: ALWAYS use a context-appropriate filename (e.g. 'names.xlsx', 'emails.xlsx', 'report.xlsx'). NEVER use 'daily_joke.xlsx' unless the task is about jokes. ALWAYS include 'excel_file': filename in output_data.
 
 STRICT RULES FOR VARIABLE INTERPOLATION (PLACEHOLDERS):
 1. When a downstream node needs data from an upstream node, use: {REAL_NODE_ID.field_name}

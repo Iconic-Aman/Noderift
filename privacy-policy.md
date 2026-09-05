@@ -1,0 +1,100 @@
+# Privacy Policy — Noderift
+
+**Last updated:** September 5, 2026
+
+Noderift ("we," "us," "our") is an AI-powered workflow automation platform. This policy explains what data we collect, how it's used, and how it's stored, whether you use our hosted cloud version or self-host the open-source version.
+
+This policy applies to users based in India and elsewhere. Noderift is operated from India, and Indian law governs this policy and any disputes arising from it.
+
+---
+
+## 1. Who this applies to
+
+This policy applies to all users of Noderift across both the cloud-hosted platform and self-hosted deployments.
+
+---
+
+## 2. What data we collect
+
+### 2.1 Account data
+- **Cloud version:** you sign in via Google OAuth. We receive your name, email address, and profile picture from Google.
+- **Self-hosted (open-source) version:** account data depends on your own deployment. The default setup uses a username/password system stored in your own database — we do not receive or store this data, since it never leaves your infrastructure.
+
+### 2.2 Workflow and execution data
+
+Noderift stores the following to let you view execution history, debug workflows, and resume past work:
+
+| Table | What's stored |
+|---|---|
+| `workflows` | Full workflow node configuration (`graph`), and AI chat conversation history (`chat_history`) |
+| `node_logs` | Per-node input (including prompt text, model name, system prompts for AI nodes; queries for database nodes; headers/body for HTTP nodes) and output (result data returned by each node) |
+| `executions` | Run status, trigger source, start/finish timestamps, and error messages |
+
+**In plain terms:** if your workflow includes an AI agent node, the prompt text you write, the model you selected, and the AI's response are stored as part of your workflow's execution history.
+
+### 2.3 What we do NOT collect
+We do not currently use any third-party analytics or tracking tools (e.g., Google Analytics, Mixpanel, PostHog). We do not track your behavior across other websites.
+
+---
+
+## 3. How long we keep your data
+
+We retain workflow data, node logs, and execution history **indefinitely** — there is currently no automatic deletion or expiry period. Data is deleted only when:
+- You delete a specific workflow (this cascades to delete its associated executions and node logs), or
+- You delete your account (this cascades to delete all associated workflows, executions, and logs).
+
+If you want your data removed, deleting the relevant workflow or your account is currently the only way to do so.
+
+---
+
+## 4. AI processing — how your prompts reach the language model
+
+Noderift uses open-source large language models, accessed via OpenRouter, to power AI agent nodes. How your data flows depends on which version of Noderift you're using:
+
+### 4.1 Cloud version (hosted by us)
+
+If you use Noderift's hosted cloud version, we use **our own OpenRouter API key** to send your prompts to the underlying AI model on your behalf. You do not need to provide your own key or manage this yourself.
+
+**Important disclosures about this data flow:**
+- We do not currently enforce Zero Data Retention (ZDR) with our AI provider. Depending on which model is used, the underlying model provider (accessed through OpenRouter) **may retain your prompts and outputs and use them to improve their own models**, per that provider's own data policy.
+- We use free-tier ("`:free`") open-source models where possible to keep Noderift free to use. Free-tier models are often served by third-party inference providers under shared usage pools, and our OpenRouter account currently allows these providers to retain and train on prompts/completions sent to free-tier models.
+- We do not enroll in OpenRouter's own data-sharing discount program — OpenRouter itself does not use your prompts to improve their product.
+- Because free-tier model availability can change (models are sometimes rate-limited or removed from the free tier without notice), Noderift may automatically route your request to one of several available open-source models. Regardless of which model handles a given request, the same data-handling disclosures in this section apply.
+
+### 4.2 Self-hosted / open-source version (your own OpenRouter key)
+
+If you run Noderift yourself and provide your **own OpenRouter API key**, your prompts are sent directly from your own instance to OpenRouter using your own credentials.
+
+- **We do not see, store, or process this traffic on our servers** beyond what your own self-hosted instance does (see Section 2.2 — your own database will still store workflow/execution data locally, under your control).
+- Data retention and training policies for AI processing in this mode are governed entirely by **your own OpenRouter account settings** — not by us. We recommend reviewing [OpenRouter's Privacy Policy](https://openrouter.ai/privacy) and your own account's Data Policy / Zero Data Retention settings before processing sensitive data.
+
+---
+
+## 5. Third parties we share data with
+
+- **Google** (OAuth sign-in, cloud version only) — for authentication.
+- **OpenRouter and its underlying model providers** — to process AI agent node requests, as described in Section 4.
+- We do not sell your data to anyone.
+
+---
+
+## 6. Your rights
+
+You can:
+- Delete individual workflows (this removes associated execution history and logs).
+- Delete your account entirely (this removes all associated data).
+- Contact us to ask what data we hold about you.
+
+Since Noderift currently operates only under Indian jurisdiction, formal GDPR/CCPA rights mechanisms are not separately implemented, but we will make reasonable efforts to honor deletion and access requests from any user.
+
+---
+
+## 7. Changes to this policy
+
+We may update this policy as Noderift evolves (e.g., if we add paid plans, analytics, or change AI provider settings). We'll update the "Last updated" date above when changes are made.
+
+---
+
+## 8. Contact
+
+For privacy questions or data deletion requests, contact: **[add your contact email here]**

@@ -15,7 +15,7 @@ interface Step {
   };
 }
 
-const COMPOSE_URL = "https://raw.githubusercontent.com/Iconic-Aman/Noderift/main/docker-compose.yml";
+const COMPOSE_URL = "https://raw.githubusercontent.com/Iconic-Aman/Noderift/feature/open-source/docker-compose.yml";
 
 const steps: Step[] = [
   {

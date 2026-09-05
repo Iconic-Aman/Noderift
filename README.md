@@ -24,21 +24,21 @@ AI-powered visual workflow automation platform. Build, orchestrate, and execute 
 
 **Linux / macOS:**
 ```bash
-curl -O https://raw.githubusercontent.com/Iconic-Aman/Noderift/main/docker-compose.yml && docker compose up -d
+curl -O https://raw.githubusercontent.com/Iconic-Aman/Noderift/feature/open-source/docker-compose.yml && docker compose up -d
 ```
 
 **Windows (PowerShell):**
 ```powershell
-curl.exe -O https://raw.githubusercontent.com/Iconic-Aman/Noderift/main/docker-compose.yml; docker compose up -d
+curl.exe -O https://raw.githubusercontent.com/Iconic-Aman/Noderift/feature/open-source/docker-compose.yml; docker compose up -d
 ```
 *or:*
 ```powershell
-Invoke-WebRequest -Uri https://raw.githubusercontent.com/Iconic-Aman/Noderift/main/docker-compose.yml -OutFile docker-compose.yml; docker compose up -d
+Invoke-WebRequest -Uri https://raw.githubusercontent.com/Iconic-Aman/Noderift/feature/open-source/docker-compose.yml -OutFile docker-compose.yml; docker compose up -d
 ```
 
 **Windows (Command Prompt):**
 ```cmd
-curl -O https://raw.githubusercontent.com/Iconic-Aman/Noderift/main/docker-compose.yml && docker compose up -d
+curl -O https://raw.githubusercontent.com/Iconic-Aman/Noderift/feature/open-source/docker-compose.yml && docker compose up -d
 ```
 
 *Or via Git clone:*

@@ -1,6 +1,7 @@
+from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
-from typing import List, Optional
-import os
+from typing import List, Optional, Any
+import os, base64, hashlib
 from dotenv import load_dotenv, find_dotenv
 
 load_dotenv(find_dotenv())
@@ -11,17 +12,7 @@ from pathlib import Path
 def get_or_create_secret_key() -> str:
     key_file = Path(".noderift_secret")
     
-    # Check env var first
-    env_key = os.getenv("SECRET_KEY", "").strip()
-    if env_key:
-        try:
-            Fernet(env_key.encode())
-            return env_key
-        except Exception:
-            import base64, hashlib
-            return base64.urlsafe_b64encode(hashlib.sha256(env_key.encode()).digest()).decode()
-        
-    # Check persisted file second
+    # Check persisted file first
     if key_file.exists():
         try:
             val = key_file.read_text().strip()
@@ -42,7 +33,19 @@ def get_or_create_secret_key() -> str:
 class Settings(BaseSettings):
     # App
     ENVIRONMENT: str = "development"
-    SECRET_KEY: str = get_or_create_secret_key()
+    SECRET_KEY: str = ""
+
+    @field_validator("SECRET_KEY", mode="before")
+    @classmethod
+    def validate_secret_key(cls, v: Any) -> str:
+        s = (str(v) if v is not None else "").strip()
+        if not s:
+            return get_or_create_secret_key()
+        try:
+            Fernet(s.encode())
+            return s
+        except Exception:
+            return base64.urlsafe_b64encode(hashlib.sha256(s.encode()).digest()).decode()
 
     # CORS — comma-separated list of allowed origins
     ALLOWED_ORIGINS: List[str] = ["http://localhost:5173", "http://localhost:3000"]

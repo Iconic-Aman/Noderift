@@ -4,6 +4,35 @@ from fastapi.responses import JSONResponse
 from datetime import datetime, timezone
 import uvicorn
 
+import sys
+
+# Silence Windows asyncio connection reset bug (WinError 10054)
+if sys.platform == "win32":
+    import asyncio.proactor_events
+
+    _orig_call_conn_lost = asyncio.proactor_events._ProactorBasePipeTransport._call_connection_lost
+
+    def _safe_call_connection_lost(self, exc):
+        try:
+            _orig_call_conn_lost(self, exc)
+        except (ConnectionResetError, OSError):
+            if hasattr(self, "_sock") and self._sock is not None:
+                try:
+                    self._sock.close()
+                except Exception:
+                    pass
+                self._sock = None
+            server = getattr(self, "_server", None)
+            if server is not None:
+                try:
+                    server._detach()
+                except Exception:
+                    pass
+                self._server = None
+            self._called_connection_lost = True
+
+    asyncio.proactor_events._ProactorBasePipeTransport._call_connection_lost = _safe_call_connection_lost
+
 from core.config import settings
 from core.security import AuthMiddleware, bearer_scheme
 from api.routes import auth, workflows, credentials, executions, websocket, webhooks, node_testing, ai, ai_planner, gmail_oauth, slack_oauth, files, feedback

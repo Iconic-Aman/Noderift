@@ -237,8 +237,8 @@ async def websocket_ai_plan(websocket: WebSocket, session_id: str):
 
     try:
         while True:
-            # Keep connection alive for server-sent events
-            await asyncio.sleep(1)
+            # Await client frames or clean disconnect signal
+            await websocket.receive_text()
     except WebSocketDisconnect:
         logger.info(f"AI Planner WebSocket client disconnected from session {session_id}")
     except Exception as e:

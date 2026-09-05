@@ -35,7 +35,7 @@ if sys.platform == "win32":
 
 from core.config import settings
 from core.security import AuthMiddleware, bearer_scheme
-from api.routes import auth, workflows, credentials, executions, websocket, webhooks, node_testing, ai, ai_planner, gmail_oauth, slack_oauth, files, feedback
+from api.routes import auth, workflows, credentials, executions, websocket, webhooks, node_testing, ai, ai_planner, gmail_oauth, slack_oauth, files, feedback, legal
 from core.scheduler import scheduler_manager
 from core.database import SessionLocal
 import logging
@@ -76,6 +76,7 @@ app.include_router(gmail_oauth.router, prefix="/api", tags=["gmail"])
 app.include_router(slack_oauth.router, prefix="/api", tags=["slack"])
 app.include_router(files.router, prefix="/api", tags=["files"])
 app.include_router(feedback.router, prefix="/api", tags=["feedback"])
+app.include_router(legal.router, prefix="/api", tags=["legal"])
 
 
 @app.on_event("startup")

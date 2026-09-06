@@ -196,11 +196,25 @@ async def global_exception_handler(request, exc):
 
 
 from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
+from starlette.exceptions import HTTPException as StarletteHTTPException
 import os
 
-# Mount AFTER all API routes so API takes priority, but root "/" falls through to static
+class SPAStaticFiles(StaticFiles):
+    async def get_response(self, path: str, scope):
+        try:
+            response = await super().get_response(path, scope)
+            if response.status_code == 404:
+                return FileResponse(os.path.join(self.directory, "index.html"))
+            return response
+        except StarletteHTTPException as ex:
+            if ex.status_code == 404:
+                return FileResponse(os.path.join(self.directory, "index.html"))
+            raise
+
+# Mount AFTER all API routes so API takes priority, but root "/" falls through to static SPA
 if os.path.exists("static"):
-    app.mount("/", StaticFiles(directory="static", html=True), name="static")
+    app.mount("/", SPAStaticFiles(directory="static", html=True), name="static")
 
 if __name__ == "__main__":
     uvicorn.run(app, host="localhost", port=8000)

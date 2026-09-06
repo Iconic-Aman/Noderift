@@ -175,7 +175,7 @@ export function Dashboard() {
                 </div>
                 <div className="text-center">
                   <p className="font-semibold text-white mb-1">AI Mode</p>
-                  <p className="text-xs text-slate-500 leading-relaxed">Describe what you want â€” AI builds the workflow for you</p>
+                  <p className="text-xs text-slate-500 leading-relaxed">Describe what you want and AI builds the workflow for you</p>
                 </div>
               </button>
             </div>

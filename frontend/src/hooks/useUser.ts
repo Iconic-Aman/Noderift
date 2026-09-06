@@ -32,6 +32,7 @@ export function useUser() {
       setUser(data);
     } catch (err) {
       console.error("[useUser] Failed to fetch /auth/me:", err);
+      localStorage.removeItem("noderift_token");
       setUser(null);
     } finally {
       setLoading(false);

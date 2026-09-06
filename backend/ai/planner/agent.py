@@ -141,10 +141,20 @@ def get_planner_agent(api_key: str = "", base_url: str = "", model_name: str = "
     ]
     # Bind tools explicitly to enforce structured tool call format
     llm_with_tools = llm.bind_tools(tools)
+    _TOOL_MAX = 4000
+
+    def _messages_modifier(messages):
+        trimmed = []
+        for m in messages:
+            if hasattr(m, "type") and m.type == "tool" and isinstance(m.content, str) and len(m.content) > _TOOL_MAX:
+                m = m.copy(update={"content": m.content[:_TOOL_MAX] + "\n...[truncated]"})
+            trimmed.append(m)
+        return [{"role": "system", "content": SYSTEM_PROMPT}] + trimmed
+
     return create_react_agent(
         model=llm_with_tools,
         tools=tools,
-        state_modifier=SYSTEM_PROMPT,
+        messages_modifier=_messages_modifier,
         checkpointer=_checkpointer,
     )
 

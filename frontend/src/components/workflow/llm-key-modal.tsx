@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { X, Sparkles, Eye, EyeOff, ExternalLink } from "lucide-react";
 import { apiFetch } from "@/lib/api";
 
@@ -38,7 +39,7 @@ export function LlmKeyModal({ onClose, onSuccess }: LlmKeyModalProps) {
   const [existingConfig, setExistingConfig] = useState<{ configured: boolean; model?: string; masked_key?: string; provider?: string } | null>(null);
 
   // Load existing key status on mount to prefill and show current state
-  useState(() => {
+  useEffect(() => {
     apiFetch("/ai/llm-key-status")
       .then((data) => {
         if (data && data.configured) {
@@ -51,7 +52,7 @@ export function LlmKeyModal({ onClose, onSuccess }: LlmKeyModalProps) {
         }
       })
       .catch(() => {});
-  });
+  }, []);
 
   const handleProviderChange = (id: string) => {
     const p = PROVIDERS.find((p) => p.id === id)!;
@@ -96,9 +97,9 @@ export function LlmKeyModal({ onClose, onSuccess }: LlmKeyModalProps) {
     }
   };
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-      <div className="w-full max-w-md rounded-2xl border border-slate-800 bg-slate-950 shadow-2xl">
+  const modalContent = (
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 animate-in fade-in duration-150">
+      <div className="w-full max-w-md rounded-2xl border border-slate-800 bg-slate-950 shadow-2xl overflow-hidden animate-in zoom-in-95 duration-150">
         <div className="flex items-center justify-between border-b border-slate-800 px-6 py-4">
           <div className="flex items-center gap-2">
             <Sparkles className="h-4 w-4 text-violet-400" />
@@ -190,4 +191,6 @@ export function LlmKeyModal({ onClose, onSuccess }: LlmKeyModalProps) {
       </div>
     </div>
   );
+
+  return createPortal(modalContent, document.body);
 }

@@ -81,12 +81,29 @@ app.include_router(legal.router, prefix="/api", tags=["legal"])
 
 @app.on_event("startup")
 def startup_event():
-    # Automatically create missing database tables on first boot
     from core.database import Base, engine
     from sqlalchemy import text
     import models
+
+    # Enable pgvector if postgresql
+    if engine.dialect.name == "postgresql":
+        try:
+            with engine.begin() as conn:
+                conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector;"))
+            logger.info("Enabled pgvector extension.")
+        except Exception as e:
+            logger.warning(f"Could not enable pgvector extension: {e}")
+
     logger.info("Initializing database tables...")
-    Base.metadata.create_all(bind=engine)
+    try:
+        Base.metadata.create_all(bind=engine)
+    except Exception as e:
+        logger.warning(f"Full Base.metadata.create_all failed ({e}). Creating tables individually...")
+        for table in Base.metadata.sorted_tables:
+            try:
+                table.create(bind=engine, checkfirst=True)
+            except Exception as tbl_err:
+                logger.warning(f"Skipping table '{table.name}': {tbl_err}")
 
     # Safe column migration for existing databases
     try:

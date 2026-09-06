@@ -51,6 +51,26 @@ def get_current_graph(config: RunnableConfig) -> dict:
         return {"nodes": [], "edges": []}
     return get_session_graph(db, session_id)
 
+def _parse_config(node_config: Any) -> dict:
+    if isinstance(node_config, dict):
+        return node_config
+    if not isinstance(node_config, str):
+        return {}
+    s = node_config.strip()
+    if not s:
+        return {}
+    try:
+        return json.loads(s, strict=False)
+    except Exception:
+        pass
+    if s.startswith(("import ", "from ", "#", "def ", "output_data", "input_data")):
+        return {"code": s}
+    import re
+    m = re.search(r'["\']code["\']\s*:\s*["\'](.*)["\']\s*}?\s*$', s, re.DOTALL)
+    if m:
+        return {"code": m.group(1)}
+    return {}
+
 @tool
 async def add_node(node_type: str, label: str, node_config: Any, config: RunnableConfig) -> dict:
     """
@@ -62,10 +82,7 @@ async def add_node(node_type: str, label: str, node_config: Any, config: Runnabl
         label: Human-readable name shown on the canvas
         node_config: Node-specific configuration as a JSON string, e.g. '{"url": "https://...", "method": "GET"}'
     """
-    try:
-        parsed_config = json.loads(node_config) if isinstance(node_config, str) else node_config
-    except Exception:
-        parsed_config = {}
+    parsed_config = _parse_config(node_config)
     db = config.get("configurable", {}).get("db")
     session_id = config.get("configurable", {}).get("session_id")
     if not db or not session_id:
@@ -159,16 +176,34 @@ async def update_node_config(node_id: str, node_config: Any, config: RunnableCon
     if not db or not session_id:
         return {"error": "No db session or session_id in config"}
 
-    try:
-        parsed_config = json.loads(node_config) if isinstance(node_config, str) else node_config
-    except Exception:
-        parsed_config = {}
-
+    parsed_config = _parse_config(node_config)
     payload = {"id": node_id, "config": parsed_config}
     await patch_graph(db, session_id, "update_node", payload)
     from ai.planner.session import emit_canvas_patch
     await emit_canvas_patch(session_id, "agent_step", {"text": f"Configured node {node_id}"})
     return {"node_id": node_id, "status": "updated"}
+
+@tool
+async def set_node_code(node_id: str, code: str, config: RunnableConfig) -> dict:
+    """
+    Set or update the Python code for a 'code' node.
+    ALWAYS use this tool to write or modify Python code for code nodes instead of update_node_config.
+
+    Args:
+        node_id: ID of the code node (e.g. 'code-5d104beb')
+        code: The complete, valid Python code to run in this node
+    """
+    db = config.get("configurable", {}).get("db")
+    session_id = config.get("configurable", {}).get("session_id")
+    if not db or not session_id:
+        return {"error": "No db session or session_id in config"}
+
+    clean_code = code.strip()
+    payload = {"id": node_id, "config": {"code": clean_code}}
+    await patch_graph(db, session_id, "update_node", payload)
+    from ai.planner.session import emit_canvas_patch
+    await emit_canvas_patch(session_id, "agent_step", {"text": f"Saved code for {node_id}"})
+    return {"node_id": node_id, "status": "code_updated"}
 
 @tool
 async def remove_node(node_id: str, config: RunnableConfig) -> dict:

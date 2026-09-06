@@ -183,7 +183,7 @@ async def plan_workflow(req: PlanRequest, db: Session = Depends(get_db), user: U
                     db=db,
                     model_name=current_model,
                 )
-                guardrail_err = verify_graph(db, req.session_id)
+                guardrail_err = verify_graph(db, req.session_id, user_prompt=req.message)
                 if guardrail_err is None:
                     logger.info(f"✓ [AI PLANNER] Workflow successfully created with Model: '{current_model}'")
                     workflow_built = True

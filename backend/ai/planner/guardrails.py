@@ -12,7 +12,7 @@ from sqlalchemy.orm import Session
 from ai.planner.session import get_session_graph
 
 
-def verify_graph(db: Session, session_id: str) -> str | None:
+def verify_graph(db: Session, session_id: str, user_prompt: str = "") -> str | None:
     """
     Independently verify the current workflow graph.
     Returns None if valid, or an error description string if not.
@@ -71,5 +71,49 @@ def verify_graph(db: Session, session_id: str) -> str | None:
                 "Trigger nodes must be the starting point — no node should connect INTO them. "
                 "Fix the edge direction so the trigger node is the source."
             )
+
+    # Validate code nodes
+    incoming_map = {n["id"]: [] for n in nodes}
+    for edge in edges:
+        tgt = edge.get("target")
+        src = edge.get("source")
+        if tgt in incoming_map and src:
+            incoming_map[tgt].append(src)
+
+    for n in nodes:
+        ntype = n.get("data", {}).get("node_type", "")
+        if ntype == "code":
+            node_id = n["id"]
+            label = n.get("data", {}).get("label", node_id)
+            cfg = n.get("data", {}).get("config", {})
+            code_str = str(cfg.get("code", "")).strip()
+
+            if not code_str or code_str == "output_data = {'status': 'processed', 'input': input_data}":
+                return (
+                    f"Node '{label}' (id: {node_id}) has no Python code written. "
+                    f"Write complete Python code to extract/process data and call set_node_code(node_id='{node_id}', code=...)."
+                )
+
+            try:
+                compile(code_str, "<string>", "exec")
+            except SyntaxError as e:
+                return (
+                    f"Node '{label}' (id: {node_id}) has Python syntax error: {e.msg} on line {e.lineno}. "
+                    f"Call set_node_code with fixed Python code."
+                )
+
+            if incoming_map.get(node_id) and "input_data" not in code_str:
+                return (
+                    f"Node '{label}' (id: {node_id}) has upstream inputs, but code does not use 'input_data'. "
+                    f"Extract data using input_data.get(...) and call set_node_code."
+                )
+
+            prompt_lower = user_prompt.lower()
+            if any(w in prompt_lower for w in ["excel", ".xlsx", "spreadsheet"]):
+                if "to_excel" not in code_str or "pandas" not in code_str:
+                    return (
+                        f"User asked for an Excel file, but code node '{label}' (id: {node_id}) does not use pandas to_excel. "
+                        f"Write code with 'import pandas as pd' and 'df.to_excel(filename, index=False)' and call set_node_code."
+                    )
 
     return None

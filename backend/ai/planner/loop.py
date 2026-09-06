@@ -10,6 +10,7 @@ from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
 
 from ai.planner.guardrails import verify_graph
 from ai.planner.session import emit_canvas_patch, get_session_graph
+from ai.planner import tools
 
 logger = logging.getLogger("uvicorn")
 MAX_RETRIES = 3
@@ -155,7 +156,7 @@ async def run_agent_loop(
         _log_canvas_state(db, session_id, label="AFTER:")
 
         # Run guardrails
-        error = verify_graph(db, session_id)
+        error = verify_graph(db, session_id, user_prompt=user_prompt)
         if error is None:
             logger.info("[Harness] ✅ Guardrails passed.")
             await emit_canvas_patch(session_id, "agent_step", {

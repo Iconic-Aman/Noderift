@@ -150,7 +150,8 @@ def get_planner_agent(api_key: str = "", base_url: str = "", model_name: str = "
     llm_with_tools = llm.bind_tools(tools)
     _TOOL_MAX = 4000
 
-    def _messages_modifier(messages):
+    def _prompt(state):
+        messages = state if isinstance(state, list) else state.get("messages", [])
         trimmed = []
         for m in messages:
             if hasattr(m, "type") and m.type == "tool" and isinstance(m.content, str) and len(m.content) > _TOOL_MAX:
@@ -161,7 +162,7 @@ def get_planner_agent(api_key: str = "", base_url: str = "", model_name: str = "
     return create_react_agent(
         model=llm_with_tools,
         tools=tools,
-        messages_modifier=_messages_modifier,
+        prompt=_prompt,
         checkpointer=_checkpointer,
     )
 

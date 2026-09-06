@@ -96,10 +96,10 @@ export function useEditorLogic() {
       if (hasNeedsAuth) setExecutionStatus("needs_auth");
       else if (hasFailed) setExecutionStatus("failed");
       else if (hasSuccess) setExecutionStatus("success");
-      else if (!connected && hasStarted) setExecutionStatus(hasFailed ? "failed" : "idle");
       else if (hasStarted) setExecutionStatus("running");
+      else setExecutionStatus("idle");
     }
-  }, [logs, connected, isSingleRun]);
+  }, [logs, isSingleRun]);
 
   // Sync individual node execution states from live websocket logs
   useEffect(() => {
@@ -118,9 +118,7 @@ export function useEditorLogic() {
       return;
     }
 
-    const hasFailed = logs.some(
-      (l) => l.type === "workflow_failed" || l.type === "node_failed" || Boolean(l.error)
-    );
+    const workflowFailed = logs.some((l) => l.type === "workflow_failed");
     const latestStatuses: Record<string, "running" | "success" | "failed"> = {};
     const latestOutputs: Record<string, any> = {};
     const latestErrors: Record<string, any> = {};
@@ -132,7 +130,7 @@ export function useEditorLogic() {
       else if (log.type === "needs_auth") { latestStatuses[log.node_id] = "failed"; latestErrors[log.node_id] = "Gmail account not connected"; }
     }
 
-    if (hasFailed || !connected) {
+    if (workflowFailed) {
       for (const nid of Object.keys(latestStatuses)) {
         if (latestStatuses[nid] === "running") {
           latestStatuses[nid] = "failed";
@@ -237,12 +235,14 @@ export function useEditorLogic() {
     }
   };
 
+  const isStartingRunRef = useRef(false);
+
   const handleRun = async () => {
-    if (!id) return;
-    await onSave();
+    if (!id || executionStatus === "running" || isStartingRunRef.current) return;
+    isStartingRunRef.current = true;
+    setExecutionStatus("running");
     setIsSingleRun(false);
     setLogs([]);
-    setExecutionStatus("running");
     setIsExecutionPanelOpen(true);
     const currentNodes = useWorkflowStore.getState().nodes;
     const clearedNodes = currentNodes.map((n) => {
@@ -254,20 +254,23 @@ export function useEditorLogic() {
     });
     setNodes(clearedNodes);
     try {
+      await onSave();
       const runData = await triggerExecution(id);
       setActiveExecutionId(runData.id);
     } catch (err) {
       console.error("Failed to execute workflow", err);
       setExecutionStatus("idle");
+    } finally {
+      isStartingRunRef.current = false;
     }
   };
 
   const handleRunNode = async (nodeId: string) => {
-    if (!id) return;
-    await onSave();
+    if (!id || executionStatus === "running" || isStartingRunRef.current) return;
+    isStartingRunRef.current = true;
+    setExecutionStatus("running");
     setIsSingleRun(true);
     setLogs([]);
-    setExecutionStatus("running");
     setIsExecutionPanelOpen(true);
     const currentNodes = useWorkflowStore.getState().nodes;
     const clearedNodes = currentNodes.map((n) => {
@@ -279,11 +282,14 @@ export function useEditorLogic() {
     });
     setNodes(clearedNodes);
     try {
+      await onSave();
       const runData = await triggerExecution(id, nodeId);
       setActiveExecutionId(runData.id);
     } catch (err) {
       console.error("Failed to execute node", err);
       setExecutionStatus("idle");
+    } finally {
+      isStartingRunRef.current = false;
     }
   };
 

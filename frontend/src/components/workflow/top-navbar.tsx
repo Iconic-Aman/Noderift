@@ -22,11 +22,23 @@ export function TopNavbar({
   const [isEditing, setIsEditing] = useState(false);
   const [editValue, setEditValue] = useState(workflowName);
   const [saveState, setSaveState] = useState<"idle" | "saving" | "saved">("idle");
+  const [showRunningNotice, setShowRunningNotice] = useState(false);
+  const noticeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (isEditing) inputRef.current?.focus();
   }, [isEditing]);
+
+  const handleRunClick = () => {
+    if (status === "running") {
+      setShowRunningNotice(true);
+      if (noticeTimerRef.current) clearTimeout(noticeTimerRef.current);
+      noticeTimerRef.current = setTimeout(() => setShowRunningNotice(false), 3000);
+      return;
+    }
+    onRun();
+  };
 
   const handleSubmit = () => {
     onNameChange(editValue.trim() || workflowName);
@@ -166,7 +178,35 @@ export function TopNavbar({
             </>
           )}
         </button>
-        <button onClick={onRun} disabled={status === "running"} className="flex items-center gap-2 rounded-lg bg-blue-600 px-3 py-1.5 text-sm text-white hover:bg-blue-500 disabled:opacity-50 cursor-pointer"><Play className="h-4 w-4" />Run</button>
+        <div className="relative">
+          <button
+            onClick={handleRunClick}
+            className={cn(
+              "flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm font-medium transition-all shadow-md active:scale-95 cursor-pointer",
+              status === "running"
+                ? "bg-blue-600/80 text-blue-100 hover:bg-blue-600/90"
+                : "bg-blue-600 text-white hover:bg-blue-500"
+            )}
+          >
+            {status === "running" ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin text-blue-200" />
+                <span>Running...</span>
+              </>
+            ) : (
+              <>
+                <Play className="h-4 w-4" />
+                <span>Run</span>
+              </>
+            )}
+          </button>
+          {showRunningNotice && (
+            <div className="absolute right-0 top-full mt-2 z-50 flex items-center gap-1.5 whitespace-nowrap rounded-lg bg-amber-500/95 px-3 py-1.5 text-xs font-semibold text-slate-950 shadow-xl shadow-amber-950/30 animate-in fade-in slide-in-from-top-1">
+              <Loader2 className="h-3.5 w-3.5 animate-spin text-slate-950" />
+              <span>It's running, wait to see output</span>
+            </div>
+          )}
+        </div>
         <div className="h-4 w-[1px] bg-slate-800" />
         <UserMenu />
       </div>

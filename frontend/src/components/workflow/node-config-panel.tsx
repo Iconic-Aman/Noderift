@@ -87,7 +87,7 @@ export function NodeConfigPanel({ node, onClose, onConfigChange, onRunNode, isRu
   return (
     <div className="flex h-full w-full shrink-0 flex-col border-l border-slate-800 bg-slate-900">
       {/* Header */}
-      <div className="flex items-center justify-between border-b border-slate-800 px-4 py-3 shrink-0">
+      <div className="relative z-20 flex items-center justify-between border-b border-slate-800 px-4 py-3 shrink-0">
         <div className="flex items-center gap-3">
           <div className="flex h-8 w-8 items-center justify-center rounded-lg" style={{ backgroundColor: `${node.data.color}20` }}>
             <NodeIcon icon={node.data.icon} color={node.data.color} className="h-4 w-4" />
@@ -123,8 +123,8 @@ export function NodeConfigPanel({ node, onClose, onConfigChange, onRunNode, isRu
                 )}
               </button>
               {showRunningNotice && (
-                <div className="absolute right-0 top-full mt-2 z-50 flex items-center gap-1.5 whitespace-nowrap rounded-lg bg-amber-500/95 px-2.5 py-1 text-[11px] font-semibold text-slate-950 shadow-xl shadow-amber-950/30 animate-in fade-in slide-in-from-top-1">
-                  <Loader2 className="h-3 w-3 animate-spin text-slate-950" />
+                <div className="absolute right-0 top-full mt-2 z-[99999] flex items-center gap-1.5 whitespace-nowrap rounded-lg bg-white px-2.5 py-1 text-[11px] font-semibold text-slate-900 border border-slate-200 shadow-2xl shadow-black/50 animate-in fade-in slide-in-from-top-1">
+                  <Loader2 className="h-3 w-3 animate-spin text-slate-900" />
                   <span>It's running, wait to see output</span>
                 </div>
               )}

@@ -61,7 +61,7 @@ export function TopNavbar({
   const cfg = statusCfg[status] || statusCfg.idle;
 
   return (
-    <div className="flex h-14 items-center justify-between border-b border-slate-800 bg-slate-900/80 px-4 backdrop-blur-sm">
+    <div className="relative z-50 flex h-14 items-center justify-between border-b border-slate-800 bg-slate-900/80 px-4 backdrop-blur-sm">
       <div className="flex items-center gap-3">
         <Link
           to="/dashboard"
@@ -200,8 +200,8 @@ export function TopNavbar({
             )}
           </button>
           {showRunningNotice && (
-            <div className="absolute right-0 top-full mt-2 z-50 flex items-center gap-1.5 whitespace-nowrap rounded-lg bg-amber-500/95 px-3 py-1.5 text-xs font-semibold text-slate-950 shadow-xl shadow-amber-950/30 animate-in fade-in slide-in-from-top-1">
-              <Loader2 className="h-3.5 w-3.5 animate-spin text-slate-950" />
+            <div className="absolute right-0 top-full mt-2 z-[99999] flex items-center gap-1.5 whitespace-nowrap rounded-lg bg-white px-3 py-1.5 text-xs font-semibold text-slate-900 border border-slate-200 shadow-2xl shadow-black/50 animate-in fade-in slide-in-from-top-1">
+              <Loader2 className="h-3.5 w-3.5 animate-spin text-slate-900" />
               <span>It's running, wait to see output</span>
             </div>
           )}

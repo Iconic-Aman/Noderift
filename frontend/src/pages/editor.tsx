@@ -10,10 +10,11 @@ import { AIChatPanel } from "@/components/workflow/ai-chat-panel";
 import { NodeData } from "@/types/workflow";
 import { ExecutionPanel } from "@/components/workflow/execution-panel";
 import { ChevronLeft, ChevronRight, Terminal, Sparkles, Settings, AlertTriangle, X } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { ButtonEdge } from "@/components/workflow/custom-edge";
 import { useEditorLogic } from "@/hooks/useEditorLogic";
+import { useWorkflowStore } from "@/store/workflowStore";
 
 const nodeTypes = {
   workflowNode: WorkflowNode,
@@ -92,6 +93,16 @@ export default function Editor() {
     onToggleActive();
   };
 
+  // Auto-fit and smoothly animate viewport whenever AI planner modifies nodes/edges
+  const aiCanvasRevision = useWorkflowStore((s) => s.aiCanvasRevision);
+  useEffect(() => {
+    if (aiCanvasRevision > 0 && rfInstance) {
+      const timer = setTimeout(() => {
+        rfInstance.fitView({ padding: 0.25, duration: 400 });
+      }, 50);
+      return () => clearTimeout(timer);
+    }
+  }, [aiCanvasRevision, rfInstance]);
   return (
     <div className={cn(
       "flex h-screen w-full flex-col bg-slate-950 text-slate-200",
@@ -230,6 +241,7 @@ export default function Editor() {
                 onClose={() => setSelectedNode(null)}
                 onConfigChange={updateNodeConfig}
                 onRunNode={handleRunNode}
+                isRunning={executionStatus === "running"}
               />
             </div>
             {isRightOpen && (
@@ -300,6 +312,7 @@ export default function Editor() {
                     onClose={() => setSelectedNode(null)}
                     onConfigChange={updateNodeConfig}
                     onRunNode={handleRunNode}
+                    isRunning={executionStatus === "running"}
                   />
                 </div>
               )}

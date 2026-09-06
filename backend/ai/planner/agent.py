@@ -7,6 +7,7 @@ from ai.planner.tools import (
     add_node,
     connect_nodes,
     update_node_config,
+    set_node_code,
     remove_node,
     clear_canvas,
     test_node_execution,
@@ -41,7 +42,7 @@ STRICT RULES FOR TOOL CALLS:
 0. MANDATORY FIRST STEP — ALWAYS call get_current_graph BEFORE anything else, on EVERY request. You must know what nodes and edges already exist before making any decisions. Never skip this.
 1. First batch: call ALL add_node calls. Note the EXACT node_id returned by each.
 2. Second batch: ALWAYS call connect_nodes for EVERY pair of nodes that should be linked. You MUST connect nodes — skipping this is a critical failure.
-3. Third batch: call update_node_config to fill placeholders with real node_ids.
+3. Third batch: call update_node_config to fill placeholders. For code nodes: ALWAYS call set_node_code(node_id, code) to write complete Python code.
 4. NEVER call connect_nodes in the same batch as add_node.
 5. ALWAYS end with a plain text summary message to the user listing what you built (e.g. "I built a 2-node workflow: Gmail Trigger → Code node, connected.").
 6. TRIGGER INSERTION RULE: If the user asks to add a schedule/webhook/gmail_trigger node to an EXISTING workflow, you MUST:
@@ -51,43 +52,23 @@ STRICT RULES FOR TOOL CALLS:
    d. DO NOT remove or re-add existing edges — they stay as-is.
    e. Trigger nodes MUST have zero incoming edges. They are always the root/source.
 
-POST-BUILD AUTO-TEST LOOP (MANDATORY when workflow has http_request + code nodes):
-After building, you MUST do the following automatically without waiting for user:
-1. Call test_node_execution on the http_request node with its exact config to get the REAL API response.
-2. Read the actual JSON response structure carefully (field names, nested keys, data types).
-3. Write Python code for the code node based on the REAL response structure.
-4. Call update_node_config to update the code node with the correct Python code.
-5. Tell the user: what the API returned, what code you wrote, and that the workflow is ready to run.
-DO NOT call test_node_execution on the code node — just write and update it. This avoids timeouts.
+POST-BUILD DATA HANDLING (MANDATORY when workflow has http_request + code nodes):
+When you have an http_request feeding into a code node:
+1. Call test_node_execution on the http_request node to inspect the real API response structure.
+2. Upstream HTTP response arrives in `input_data.get("response", {})`.
+3. Call set_node_code on the code node with Python code extracting the target fields.
+4. DO NOT call test_node_execution on the code node — just write and update it.
 
-EXAMPLE — Joke API workflow:
-- Test http_request → response = {"joke": "Why did...", "type": "single", "id": 123}
-- Write: joke = input_data.get("response", {}).get("joke", "") → save to excel
-- Update code node → tell user workflow is ready
-
-SPECIAL RULE FOR CODE NODES:
+SPECIAL RULES FOR CODE NODES:
 When writing Python code for `code` nodes:
-- ALWAYS use `import pandas as pd` for Excel — NEVER import xlsxwriter (not installed).
-- pandas .to_excel() uses openpyxl by default — that's already installed. Just call df.to_excel("file.xlsx", index=False).
-- Read input with input_data.get("key") — NEVER hardcode data.
-- IMPORTANT: When bsing the Joke API (jokeapi.dev), jokes can be "single" OR "twopart" type. ALWAYS handle both:
-  - single: response has "joke" key
-  - twopart: response has "setup" and "delivery" keys, NO "joke" key
-Example for Joke API:
-```python
-import pandas as pd
-response = input_data.get('response', {})
-joke_type = response.get('type', 'single')
-if joke_type == 'twopart':
-    joke_text = response.get('setup', '') + ' ' + response.get('delivery', '')
-else:
-    joke_text = response.get('joke', '')
-filename = 'joke_output.xlsx'
-df = pd.DataFrame([{'Joke': joke_text, 'Category': response.get('category', ''), 'Type': joke_type}])
-df.to_excel(filename, index=False)
-output_data = {'status': 'saved', 'excel_file': filename, 'joke': joke_text}
-```
-CRITICAL: ALWAYS use a context-appropriate filename (e.g. 'names.xlsx', 'emails.xlsx', 'report.xlsx'). NEVER use 'daily_joke.xlsx' unless the task is about jokes. ALWAYS include 'excel_file': filename in output_data.
+- ALWAYS read inputs using `input_data.get("key")` — NEVER hardcode static data.
+- Upstream HTTP response is in `input_data.get("response", {})`.
+- For Excel export:
+  - ALWAYS use `import pandas as pd` and `df.to_excel(filename, index=False)`.
+  - NEVER import xlsxwriter (not installed; openpyxl is installed for pandas).
+  - Use a descriptive filename matching the task (e.g. 'jobs.xlsx', 'report.xlsx', 'output.xlsx').
+  - Include 'excel_file': filename in output_data.
+- Always set `output_data = {"status": "success", ...}`.
 
 STRICT RULES FOR VARIABLE INTERPOLATION (PLACEHOLDERS):
 1. When a downstream node needs data from an upstream node, use: {REAL_NODE_ID.field_name}
@@ -111,23 +92,27 @@ def get_planner_agent(api_key: str = "", base_url: str = "", model_name: str = "
     import logging
     logger = logging.getLogger("uvicorn")
 
-    target_model = model_name or settings.OPENROUTER_MODEL or settings.OPENROUTER_MODEL1 or "openrouter/free"
-    key_len = len(settings.OPENROUTER_API_KEY) if settings.OPENROUTER_API_KEY else 0
-    key_preview = f"{settings.OPENROUTER_API_KEY[:8]}...{settings.OPENROUTER_API_KEY[-4:]}" if key_len > 12 else "EMPTY/MISSING"
+    if not api_key:
+        openrouter_keys = settings.get_openrouter_keys()
+        resolved_api_key = openrouter_keys[0] if openrouter_keys else settings.OPENROUTER_API_KEY
+    else:
+        resolved_api_key = api_key
+
+    resolved_base_url = base_url or settings.OPENROUTER_API_URL or "https://openrouter.ai/api/v1"
+    target_model = model_name or settings.OPENROUTER_MODEL or settings.OPENROUTER_MODEL1 or "meta-llama/llama-3.3-70b-instruct"
+
+    key_len = len(resolved_api_key) if resolved_api_key else 0
+    key_preview = f"{resolved_api_key[:8]}...{resolved_api_key[-4:]}" if key_len > 12 else "EMPTY/MISSING"
 
     logger.info("🤖 [AI PLANNER DIAGNOSTICS]")
     logger.info(f"   -> Model: '{target_model}'")
-    logger.info(f"   -> API Base: '{settings.OPENROUTER_API_URL}'")
+    logger.info(f"   -> API Base: '{resolved_base_url}'")
     logger.info(f"   -> API Key Length: {key_len} ({key_preview})")
 
-    if not settings.OPENROUTER_API_KEY:
+    if not resolved_api_key:
         logger.error("❌ [AI PLANNER ERROR] OPENROUTER_API_KEY is EMPTY in settings!")
 
     from langchain_openai import ChatOpenAI
-
-    resolved_api_key = api_key or settings.OPENROUTER_API_KEY
-    resolved_base_url = base_url or settings.OPENROUTER_API_URL or "https://openrouter.ai/api/v1"
-    logger.info(f"   -> Resolved base_url: '{resolved_base_url}'")
 
     llm = ChatOpenAI(
         model=target_model,
@@ -142,16 +127,28 @@ def get_planner_agent(api_key: str = "", base_url: str = "", model_name: str = "
         add_node,
         connect_nodes,
         update_node_config,
+        set_node_code,
         remove_node,
         clear_canvas,
         test_node_execution,
     ]
     # Bind tools explicitly to enforce structured tool call format
     llm_with_tools = llm.bind_tools(tools)
+    _TOOL_MAX = 4000
+
+    def _prompt(state):
+        messages = state if isinstance(state, list) else state.get("messages", [])
+        trimmed = []
+        for m in messages:
+            if hasattr(m, "type") and m.type == "tool" and isinstance(m.content, str) and len(m.content) > _TOOL_MAX:
+                m = m.copy(update={"content": m.content[:_TOOL_MAX] + "\n...[truncated]"})
+            trimmed.append(m)
+        return [{"role": "system", "content": SYSTEM_PROMPT}] + trimmed
+
     return create_react_agent(
         model=llm_with_tools,
         tools=tools,
-        state_modifier=SYSTEM_PROMPT,
+        prompt=_prompt,
         checkpointer=_checkpointer,
     )
 

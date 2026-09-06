@@ -53,12 +53,31 @@ class Settings(BaseSettings):
 
     # OpenRouter Config
     OPENROUTER_API_KEY: str = ""
-    OPENROUTER_MODEL: str = ""
+    OPENROUTER_API_KEY2: str = ""
+    OPENROUTER_API_KEY3: str = ""
+    OPENROUTER_MODEL: str = "meta-llama/llama-3.3-70b-instruct"
     OPENROUTER_MODEL1: str = ""
     OPENROUTER_MODEL2: str = ""
     OPENROUTER_MODEL3: str = ""
     OPENROUTER_CHAT_MODEL: str = "openrouter/free"
     OPENROUTER_API_URL: str = "https://openrouter.ai/api/v1"
+
+    def get_openrouter_keys(self) -> list[str]:
+        keys: list[str] = []
+        for val in [self.OPENROUTER_API_KEY, self.OPENROUTER_API_KEY2, self.OPENROUTER_API_KEY3]:
+            if val and val.strip():
+                for item in val.split(","):
+                    item = item.strip()
+                    if item and item not in keys:
+                        keys.append(item)
+        import os
+        for env_k, env_v in os.environ.items():
+            if env_k.startswith("OPENROUTER_API_KEY") and env_v and env_v.strip():
+                for item in env_v.split(","):
+                    item = item.strip()
+                    if item and item not in keys:
+                        keys.append(item)
+        return keys
 
     # Groq Config
     GROQ_API_KEY: str = ""

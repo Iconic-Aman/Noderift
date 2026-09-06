@@ -10,9 +10,21 @@ from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
 
 from ai.planner.guardrails import verify_graph
 from ai.planner.session import emit_canvas_patch, get_session_graph
+from ai.planner import tools
 
 logger = logging.getLogger("uvicorn")
 MAX_RETRIES = 3
+_TOOL_OUTPUT_MAX_CHARS = 4000  # cap large tool responses (e.g. huge API dumps)
+
+
+def _trim_tool_outputs(messages: list) -> list:
+    """Truncate oversized ToolMessage content to avoid context limit blowups."""
+    result = []
+    for m in messages:
+        if isinstance(m, ToolMessage) and isinstance(m.content, str) and len(m.content) > _TOOL_OUTPUT_MAX_CHARS:
+            m = m.copy(update={"content": m.content[:_TOOL_OUTPUT_MAX_CHARS] + "\n...[truncated]"})
+        result.append(m)
+    return result
 
 
 def _extract_reply(messages: list) -> str:
@@ -144,7 +156,7 @@ async def run_agent_loop(
         _log_canvas_state(db, session_id, label="AFTER:")
 
         # Run guardrails
-        error = verify_graph(db, session_id)
+        error = verify_graph(db, session_id, user_prompt=user_prompt)
         if error is None:
             logger.info("[Harness] ✅ Guardrails passed.")
             await emit_canvas_patch(session_id, "agent_step", {

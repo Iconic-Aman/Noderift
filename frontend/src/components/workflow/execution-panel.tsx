@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { X, Play, Loader2, Terminal } from "lucide-react";
 import { LogMessage } from "../../hooks/useWebSocket";
 import { cn } from "../../lib/utils";
@@ -33,7 +33,7 @@ function buildUnifiedLogs(logs: LogMessage[]): LogEntry[] {
           id: log.node_id,
           name: log.node_name || log.node_id,
           type: log.node_type || log.node_id.split("-")[0],
-          status: log.type === "node_started" ? "running" : log.type === "node_success" ? "success" : "failed",
+          status: log.type === "node_started" ? "running" : log.type === "node_success" ? "success" : log.type === "node_failed" || log.type === "needs_auth" ? "failed" : "running",
           message: "",
           duration_ms: log.duration_ms,
           output: log.output,
@@ -70,6 +70,19 @@ export function ExecutionPanel({ isOpen, onClose, logs, status, onRun, loading, 
 
   const unifiedLogs = buildUnifiedLogs(logs);
 
+  const [showRunningNotice, setShowRunningNotice] = useState(false);
+  const noticeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const handleRunClick = () => {
+    if (loading || status === "running") {
+      setShowRunningNotice(true);
+      if (noticeTimerRef.current) clearTimeout(noticeTimerRef.current);
+      noticeTimerRef.current = setTimeout(() => setShowRunningNotice(false), 3000);
+      return;
+    }
+    onRun();
+  };
+
   return (
     <div className={cn("fixed bottom-0 left-0 right-0 z-40 flex flex-col border-t border-slate-800 bg-slate-900/95 shadow-2xl backdrop-blur-md overflow-hidden", !isResizing && "transition-all duration-300")} style={{ height: isOpen ? `${panelHeight}px` : "0px" }}>
       {isOpen && onMouseDownResize && (
@@ -97,10 +110,26 @@ export function ExecutionPanel({ isOpen, onClose, logs, status, onRun, loading, 
               Connect {logs.find((l) => l.type === "needs_auth")?.provider === "slack" ? "Slack" : "Gmail"}
             </button>
           )}
-          <button onClick={onRun} disabled={loading || status === "running"} className="flex items-center gap-1.5 rounded bg-blue-600 px-3 py-1 text-xs font-medium text-white hover:bg-blue-500 disabled:opacity-50">
-            {loading ? <Loader2 className="h-3 w-3 animate-spin" /> : <Play className="h-3 w-3" />}
-            Run Workflow
-          </button>
+          <div className="relative">
+            <button
+              onClick={handleRunClick}
+              className={cn(
+                "flex items-center gap-1.5 rounded px-3 py-1 text-xs font-medium transition-all shadow-md active:scale-95 cursor-pointer",
+                loading || status === "running"
+                  ? "bg-blue-600/70 text-blue-200"
+                  : "bg-blue-600 text-white hover:bg-blue-500"
+              )}
+            >
+              {loading || status === "running" ? <Loader2 className="h-3 w-3 animate-spin text-blue-200" /> : <Play className="h-3 w-3" />}
+              <span>{loading || status === "running" ? "Running..." : "Run Workflow"}</span>
+            </button>
+            {showRunningNotice && (
+              <div className="absolute right-0 top-full mt-2 z-[99999] flex items-center gap-1.5 whitespace-nowrap rounded-lg bg-white px-2.5 py-1 text-[11px] font-semibold text-slate-900 border border-slate-200 shadow-2xl shadow-black/50 animate-in fade-in slide-in-from-top-1">
+                <Loader2 className="h-3 w-3 animate-spin text-slate-900" />
+                <span>It's running, wait to see output</span>
+              </div>
+            )}
+          </div>
           <button onClick={onClose} className="rounded p-1 text-slate-400 hover:bg-slate-800 hover:text-white"><X className="h-4 w-4" /></button>
         </div>
       </div>

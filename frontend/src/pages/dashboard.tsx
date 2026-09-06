@@ -34,29 +34,38 @@ export function Dashboard() {
     }
   };
 
+  const navigateToWorkflow = (id: string) => {
+    const savedMode = localStorage.getItem("noderift_preferred_mode");
+    if (savedMode) {
+      navigate(`/editor/${id}?mode=${savedMode}`);
+    } else {
+      setPendingWorkflowId(id);
+      setShowModePicker(true);
+    }
+  };
+
   const createWorkflow = async () => {
     try {
       const nw = await apiFetch("/workflows/", {
         method: "POST",
         body: JSON.stringify({ name: "New Workflow", description: "", is_active: false, graph: { nodes: [], edges: [] } }),
       });
-      // Show mode picker before going to editor
-      setPendingWorkflowId(nw.id);
-      setShowModePicker(true);
+      navigateToWorkflow(nw.id);
     } catch (e) { console.error(e); }
   };
 
   const openWorkflow = (id: string) => {
-    setPendingWorkflowId(id);
-    setShowModePicker(true);
+    navigateToWorkflow(id);
   };
 
   const handleSelectManual = () => {
+    localStorage.setItem("noderift_preferred_mode", "manual");
     setShowModePicker(false);
     navigate(`/editor/${pendingWorkflowId}?mode=manual`);
   };
 
   const handleSelectAI = async () => {
+    localStorage.setItem("noderift_preferred_mode", "automatic");
     try {
       const res = await apiFetch("/ai/llm-key-status");
       if (!res?.configured) {
@@ -196,6 +205,7 @@ export function Dashboard() {
           onClose={() => setShowLlmModal(false)}
           onSuccess={() => {
             setShowLlmModal(false);
+            localStorage.setItem("noderift_preferred_mode", "automatic");
             navigate(`/editor/${pendingWorkflowId}?mode=automatic`);
           }}
         />

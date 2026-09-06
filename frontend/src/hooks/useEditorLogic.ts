@@ -28,10 +28,12 @@ export function useEditorLogic() {
   const [isLeftOpen, setIsLeftOpen] = useState(true);
   const [isRightOpen, setIsRightOpen] = useState(true);
 
-  // Mode: read from ?mode= query param if present, default to "manual"
+  // Mode: read from ?mode= query param if present, fallback to saved preference, default to "manual"
   const [mode, setModeState] = useState<"manual" | "automatic">(() => {
     const urlMode = searchParams.get("mode");
     if (urlMode === "automatic" || urlMode === "manual") return urlMode;
+    const savedMode = localStorage.getItem("noderift_preferred_mode");
+    if (savedMode === "automatic" || savedMode === "manual") return savedMode;
     return "manual";
   });
   const setMode = useCallback((newMode: "manual" | "automatic") => {
@@ -85,17 +87,15 @@ export function useEditorLogic() {
   useEffect(() => {
     if (logs.length > 0) {
       const hasNeedsAuth = logs.some((l) => l.type === "needs_auth");
-      const hasFailed = logs.some(
-        (l) => l.type === "workflow_failed" || l.type === "node_failed" || Boolean(l.error)
-      );
-      const hasSuccess = logs.some(
-        (l) => l.type === "workflow_success" || (isSingleRun && l.type === "node_success")
-      );
+      const hasWorkflowFailed = logs.some((l) => l.type === "workflow_failed");
+      const hasWorkflowSuccess = logs.some((l) => l.type === "workflow_success");
+      const hasNodeFailed = logs.some((l) => l.type === "node_failed");
+      const hasNodeSuccess = isSingleRun && logs.some((l) => l.type === "node_success");
       const hasStarted = logs.some((l) => l.type === "workflow_started" || l.type === "node_started");
 
       if (hasNeedsAuth) setExecutionStatus("needs_auth");
-      else if (hasFailed) setExecutionStatus("failed");
-      else if (hasSuccess) setExecutionStatus("success");
+      else if (hasWorkflowSuccess || hasNodeSuccess) setExecutionStatus("success");
+      else if (hasWorkflowFailed || (isSingleRun && hasNodeFailed)) setExecutionStatus("failed");
       else if (hasStarted) setExecutionStatus("running");
       else setExecutionStatus("idle");
     }
@@ -178,6 +178,10 @@ export function useEditorLogic() {
           const styledNodes = wf.graph.nodes.map((node: any) => {
             const prefix = node.id.split("-")[0];
             const template = getNodeTemplate(prefix);
+            const cleanData = { ...node.data };
+            if (cleanData.status === "running") {
+              delete cleanData.status;
+            }
             if (template) {
               return {
                 ...node,
@@ -185,18 +189,14 @@ export function useEditorLogic() {
                   icon: template.icon,
                   color: template.color,
                   category: template.category,
-                  ...node.data,
+                  ...cleanData,
                 },
               };
             }
-            return node;
+            return { ...node, data: cleanData };
           });
           setNodes(styledNodes);
           setEdges(wf.graph.edges || []);
-        }
-        const history = await apiFetch(`/executions/${id}/history`);
-        if (history && history.length > 0) {
-          setActiveExecutionId(history[0].id);
         }
       } catch (err) {
         console.error("Failed to load workflow", err);
@@ -209,8 +209,15 @@ export function useEditorLogic() {
 
   const onSave = async () => {
     if (!id) return;
-    const currentNodes = rfInstance ? rfInstance.getNodes() : nodes;
+    const rawNodes = rfInstance ? rfInstance.getNodes() : nodes;
     const currentEdges = rfInstance ? rfInstance.getEdges() : edges;
+    const currentNodes = rawNodes.map((node) => {
+      if (node.data?.status === "running") {
+        const { status, ...restData } = node.data;
+        return { ...node, data: restData as NodeData };
+      }
+      return node;
+    });
     try {
       await apiFetch(`/workflows/${id}`, {
         method: "PATCH",

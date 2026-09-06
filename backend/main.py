@@ -128,6 +128,17 @@ def startup_event():
     db = SessionLocal()
     try:
         scheduler_manager.sync_triggers(db)
+        from models.execution import Execution
+        stale_runs = db.query(Execution).filter(Execution.status.in_(["running", "pending"])).all()
+        for r in stale_runs:
+            r.status = "failed"
+            r.error = "Server stopped or restarted during execution"
+            r.finished_at = datetime.now(timezone.utc)
+        if stale_runs:
+            db.commit()
+            logger.info(f"Cleaned up {len(stale_runs)} stale running executions on startup.")
+    except Exception as e:
+        logger.warning(f"Failed to sync triggers or clean stale executions: {e}")
     finally:
         db.close()
 

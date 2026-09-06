@@ -124,8 +124,8 @@ export function ExecutionPanel({ isOpen, onClose, logs, status, onRun, loading, 
               <span>{loading || status === "running" ? "Running..." : "Run Workflow"}</span>
             </button>
             {showRunningNotice && (
-              <div className="absolute right-0 top-full mt-2 z-50 flex items-center gap-1.5 whitespace-nowrap rounded-lg bg-amber-500/95 px-2.5 py-1 text-[11px] font-semibold text-slate-950 shadow-xl shadow-amber-950/30 animate-in fade-in slide-in-from-top-1">
-                <Loader2 className="h-3 w-3 animate-spin text-slate-950" />
+              <div className="absolute right-0 top-full mt-2 z-[99999] flex items-center gap-1.5 whitespace-nowrap rounded-lg bg-white px-2.5 py-1 text-[11px] font-semibold text-slate-900 border border-slate-200 shadow-2xl shadow-black/50 animate-in fade-in slide-in-from-top-1">
+                <Loader2 className="h-3 w-3 animate-spin text-slate-900" />
                 <span>It's running, wait to see output</span>
               </div>
             )}

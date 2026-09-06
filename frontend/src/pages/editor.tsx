@@ -111,6 +111,7 @@ export default function Editor() {
       setIsRightOpen(true);
     }
     setMode(newMode);
+    localStorage.setItem("noderift_preferred_mode", newMode);
   };
 
   // If page opens in automatic mode, verify credentials exist

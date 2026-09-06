@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { Node } from "@xyflow/react";
-import { X, Settings, Copy, Play } from "lucide-react";
+import { X, Settings, Copy, Play, Loader2 } from "lucide-react";
 import { NodeData } from "@/types/workflow";
 import { getNodeTemplate } from "@/lib/node-templates";
 import { NodeIcon } from "./node-icons";
@@ -17,16 +17,31 @@ interface Props {
   onClose: () => void;
   onConfigChange: (id: string, config: Record<string, any>) => void;
   onRunNode?: (nodeId: string) => void;
+  isRunning?: boolean;
 }
 
-export function NodeConfigPanel({ node, onClose, onConfigChange, onRunNode }: Props) {
+export function NodeConfigPanel({ node, onClose, onConfigChange, onRunNode, isRunning }: Props) {
   const [cfg, setCfg] = useState<Record<string, any>>({});
   const { edges, nodes } = useWorkflowStore();
   const { id } = useParams();
   const [triggerData, setTriggerData] = useState<any>(null);
   const [copied, setCopied] = useState(false);
+  const [showRunningNotice, setShowRunningNotice] = useState(false);
+  const noticeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const bodyRef = useRef<HTMLDivElement>(null);
   const [bodyHeight, setBodyHeight] = useState(400);
+
+  const handleRunNodeClick = () => {
+    if (isRunning || node?.data.status === "running") {
+      setShowRunningNotice(true);
+      if (noticeTimerRef.current) clearTimeout(noticeTimerRef.current);
+      noticeTimerRef.current = setTimeout(() => setShowRunningNotice(false), 3000);
+      return;
+    }
+    if (node && onRunNode) {
+      onRunNode(node.id);
+    }
+  };
 
   const template = node ? getNodeTemplate(node.data.label.toLowerCase().replace(/\s+/g, "-")) || getNodeTemplate(node.id.split("-")[0]) : null;
 
@@ -84,10 +99,36 @@ export function NodeConfigPanel({ node, onClose, onConfigChange, onRunNode }: Pr
         </div>
         <div className="flex items-center gap-1.5">
           {onRunNode && (
-            <button onClick={() => onRunNode(node.id)} title="Run only this node"
-              className="flex items-center gap-1 rounded bg-blue-600 hover:bg-blue-500 border border-blue-500/30 px-2 py-1 text-[11px] font-semibold text-white transition-all active:scale-95 cursor-pointer shadow-md">
-              <Play className="h-3 w-3" /><span>Run Node</span>
-            </button>
+            <div className="relative">
+              <button
+                onClick={handleRunNodeClick}
+                title="Run only this node"
+                className={cn(
+                  "flex items-center gap-1 rounded border px-2 py-1 text-[11px] font-semibold transition-all active:scale-95 cursor-pointer shadow-md",
+                  isRunning || node.data.status === "running"
+                    ? "bg-blue-600/70 text-blue-200 border-blue-500/30"
+                    : "bg-blue-600 hover:bg-blue-500 border-blue-500/30 text-white"
+                )}
+              >
+                {isRunning || node.data.status === "running" ? (
+                  <>
+                    <Loader2 className="h-3 w-3 animate-spin text-blue-200" />
+                    <span>Running...</span>
+                  </>
+                ) : (
+                  <>
+                    <Play className="h-3 w-3" />
+                    <span>Run Node</span>
+                  </>
+                )}
+              </button>
+              {showRunningNotice && (
+                <div className="absolute right-0 top-full mt-2 z-50 flex items-center gap-1.5 whitespace-nowrap rounded-lg bg-amber-500/95 px-2.5 py-1 text-[11px] font-semibold text-slate-950 shadow-xl shadow-amber-950/30 animate-in fade-in slide-in-from-top-1">
+                  <Loader2 className="h-3 w-3 animate-spin text-slate-950" />
+                  <span>It's running, wait to see output</span>
+                </div>
+              )}
+            </div>
           )}
           <button onClick={onClose} className="p-1.5 text-slate-400 hover:bg-slate-800 rounded-lg"><X className="h-4 w-4" /></button>
         </div>

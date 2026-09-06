@@ -230,6 +230,7 @@ export default function Editor() {
                 onClose={() => setSelectedNode(null)}
                 onConfigChange={updateNodeConfig}
                 onRunNode={handleRunNode}
+                isRunning={executionStatus === "running"}
               />
             </div>
             {isRightOpen && (
@@ -300,6 +301,7 @@ export default function Editor() {
                     onClose={() => setSelectedNode(null)}
                     onConfigChange={updateNodeConfig}
                     onRunNode={handleRunNode}
+                    isRunning={executionStatus === "running"}
                   />
                 </div>
               )}

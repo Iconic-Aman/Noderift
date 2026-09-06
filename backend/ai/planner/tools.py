@@ -113,17 +113,29 @@ async def add_node(node_type: str, label: str, node_config: Any, config: Runnabl
     node_id = f"{id_prefix}-{uuid.uuid4().hex[:8]}"
     
     current_graph = get_session_graph(db, session_id)
-    node_count = len(current_graph.get("nodes", []))
+    nodes = current_graph.get("nodes", [])
+    node_count = len(nodes)
 
     TRIGGER_TYPES = {"schedule", "webhook", "gmail_trigger"}
     if node_type in TRIGGER_TYPES and node_count > 0:
+        min_x = min(
+            (n.get("position", {}).get("x", 100) if isinstance(n.get("position"), dict) else 100 for n in nodes),
+            default=100
+        )
         # Shift all existing nodes right to make room for trigger at front
-        for existing in current_graph.get("nodes", []):
-            existing["position"]["x"] = existing["position"].get("x", 100) + 250
-            await patch_graph(db, session_id, "update_node", {"id": existing["id"], "position": existing["position"]})
-        position = {"x": 100, "y": 150}
+        for existing in nodes:
+            pos = existing.get("position")
+            if not isinstance(pos, dict):
+                pos = {"x": 100, "y": 150}
+            pos["x"] = pos.get("x", 100) + 280
+            await patch_graph(db, session_id, "update_node", {"id": existing["id"], "position": pos})
+        position = {"x": min_x, "y": 150}
     else:
-        position = {"x": 100 + node_count * 250, "y": 150}
+        max_x = max(
+            (n.get("position", {}).get("x", 100) if isinstance(n.get("position"), dict) else 100 for n in nodes),
+            default=-180
+        )
+        position = {"x": max_x + 280, "y": 150} if node_count > 0 else {"x": 100, "y": 150}
 
     node_payload = {
         "id": node_id,

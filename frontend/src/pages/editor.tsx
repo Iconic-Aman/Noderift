@@ -15,6 +15,7 @@ import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { ButtonEdge } from "@/components/workflow/custom-edge";
 import { useEditorLogic } from "@/hooks/useEditorLogic";
+import { useWorkflowStore } from "@/store/workflowStore";
 import { apiFetch } from "@/lib/api";
 
 const nodeTypes = {
@@ -130,6 +131,17 @@ export default function Editor() {
         });
     }
   }, []);
+
+  // Auto-fit and smoothly animate viewport whenever AI planner modifies nodes/edges
+  const aiCanvasRevision = useWorkflowStore((s) => s.aiCanvasRevision);
+  useEffect(() => {
+    if (aiCanvasRevision > 0 && rfInstance) {
+      const timer = setTimeout(() => {
+        rfInstance.fitView({ padding: 0.25, duration: 400 });
+      }, 50);
+      return () => clearTimeout(timer);
+    }
+  }, [aiCanvasRevision, rfInstance]);
 
   return (
     <div className={cn(

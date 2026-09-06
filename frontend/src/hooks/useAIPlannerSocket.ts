@@ -5,7 +5,7 @@ import { getNodeTemplate } from '../lib/node-templates';
 
 export function useAIPlannerSocket(sessionId: string | undefined, onAgentStep?: (step: string) => void) {
   const addNode = useWorkflowStore((state) => state.addNode);
-  const updateNodeConfig = useWorkflowStore((state) => state.updateNodeConfig);
+  const updateNodeWebSocket = useWorkflowStore((state) => state.updateNodeWebSocket);
   const addEdgeWebSocket = useWorkflowStore((state) => state.addEdgeWebSocket);
   const removeNodeWebSocket = useWorkflowStore((state) => state.removeNodeWebSocket);
   const clearCanvasWebSocket = useWorkflowStore((state) => state.clearCanvasWebSocket);
@@ -39,7 +39,7 @@ export function useAIPlannerSocket(sessionId: string | undefined, onAgentStep?: 
             break;
           }
           case 'node_updated':
-            updateNodeConfig(payload.id, payload.config);
+            updateNodeWebSocket(payload);
             break;
           case 'edge_added':
             addEdgeWebSocket(payload);
@@ -61,5 +61,5 @@ export function useAIPlannerSocket(sessionId: string | undefined, onAgentStep?: 
     return () => {
       ws.close();
     };
-  }, [sessionId, addNode, updateNodeConfig, addEdgeWebSocket, removeNodeWebSocket, clearCanvasWebSocket]);
+  }, [sessionId, addNode, updateNodeWebSocket, addEdgeWebSocket, removeNodeWebSocket, clearCanvasWebSocket]);
 }

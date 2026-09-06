@@ -75,6 +75,12 @@ def _is_obvious_conversation(message: str) -> bool:
     return any(lower.startswith(pat) or lower == pat for pat in _CONVERSATION_PATTERNS)
 
 
+def _normalize_keys(api_key: str | list[str]) -> list[str]:
+    if isinstance(api_key, list):
+        return [k for k in api_key if k and str(k).strip()]
+    return [str(api_key).strip()] if api_key and str(api_key).strip() else []
+
+
 def _get_chat_llm(api_key: str, base_url: str, model: str):
     logger.info(f"[ChatRouter] 🤖 Intent/Chat Model: '{model}'")
     return ChatOpenAI(
@@ -85,53 +91,71 @@ def _get_chat_llm(api_key: str, base_url: str, model: str):
     )
 
 
-async def classify_intent(user_message: str, api_key: str, base_url: str, model: str) -> str:
+async def classify_intent(user_message: str, api_key: str | list[str], base_url: str, model: str) -> str:
     """Returns 'BUILD_REQUEST' or 'CONVERSATION'."""
     # Fast-path: skip LLM for obvious conversations
     if _is_obvious_conversation(user_message):
         logger.info(f"[ChatRouter] Fast-path CONVERSATION for: '{user_message[:60]}'")
         return "CONVERSATION"
-    try:
-        llm = _get_chat_llm(api_key, base_url, model)
-        result = await llm.ainvoke([
-            SystemMessage(content=INTENT_SYSTEM_PROMPT),
-            HumanMessage(content=user_message),
-        ])
-        intent = result.content.strip().upper()
-        logger.info(f"[ChatRouter] LLM Intent classified: '{intent}' for: '{user_message[:60]}'")
-        if "BUILD" in intent:
-            return "BUILD_REQUEST"
-        return "CONVERSATION"
-    except Exception as e:
-        logger.error(f"[ChatRouter] Intent classification failed: {e}. Defaulting to BUILD_REQUEST.")
-        return "BUILD_REQUEST"
+
+    keys = _normalize_keys(api_key)
+    for idx, k in enumerate(keys):
+        try:
+            llm = _get_chat_llm(k, base_url, model)
+            result = await llm.ainvoke([
+                SystemMessage(content=INTENT_SYSTEM_PROMPT),
+                HumanMessage(content=user_message),
+            ])
+            intent = result.content.strip().upper()
+            logger.info(f"[ChatRouter] LLM Intent classified: '{intent}' for: '{user_message[:60]}'")
+            if "BUILD" in intent:
+                return "BUILD_REQUEST"
+            return "CONVERSATION"
+        except Exception as e:
+            masked_k = (k[:6] + "..." + k[-4:]) if len(k) > 10 else "••••"
+            logger.warning(f"[ChatRouter] Intent classification failed with key {masked_k}: {e}")
+            if idx < len(keys) - 1:
+                logger.info(f"[ChatRouter] Retrying intent classification with next key...")
+                continue
+            break
+
+    logger.warning(f"[ChatRouter] All keys failed intent classification. Defaulting to BUILD_REQUEST.")
+    return "BUILD_REQUEST"
 
 
-async def handle_conversation(user_message: str, history: list, api_key: str, base_url: str, model: str) -> str:
+async def handle_conversation(user_message: str, history: list, api_key: str | list[str], base_url: str, model: str) -> str:
     """Handle casual conversation using the lightweight model."""
-    try:
-        llm = _get_chat_llm(api_key, base_url, model)
+    keys = _normalize_keys(api_key)
+    for idx, k in enumerate(keys):
+        try:
+            llm = _get_chat_llm(k, base_url, model)
 
-        # Build message history for context (last 6 messages max)
-        messages = [SystemMessage(content=CHAT_SYSTEM_PROMPT)]
-        for msg in history[-6:]:
-            if getattr(msg, "type", "") == "human":
-                messages.append(HumanMessage(content=msg.content))
-            elif getattr(msg, "type", "") == "ai":
-                messages.append(AIMessage(content=msg.content))
+            # Build message history for context (last 6 messages max)
+            messages = [SystemMessage(content=CHAT_SYSTEM_PROMPT)]
+            for msg in history[-6:]:
+                if getattr(msg, "type", "") == "human":
+                    messages.append(HumanMessage(content=msg.content))
+                elif getattr(msg, "type", "") == "ai":
+                    messages.append(AIMessage(content=msg.content))
 
-        messages.append(HumanMessage(content=user_message))
+            messages.append(HumanMessage(content=user_message))
 
-        result = await llm.ainvoke(messages)
-        reply = result.content.strip()
-        logger.info(f"[ChatRouter] Conversation handled. Reply length: {len(reply)}")
-        return reply
-    except Exception as e:
-        logger.error(f"[ChatRouter] Conversation handler failed: {e}")
-        return "Hey! I'm here to help you build automations. What would you like to automate?"
+            result = await llm.ainvoke(messages)
+            reply = result.content.strip()
+            logger.info(f"[ChatRouter] Conversation handled. Reply length: {len(reply)}")
+            return reply
+        except Exception as e:
+            masked_k = (k[:6] + "..." + k[-4:]) if len(k) > 10 else "••••"
+            logger.warning(f"[ChatRouter] Conversation handler failed with key {masked_k}: {e}")
+            if idx < len(keys) - 1:
+                logger.info(f"[ChatRouter] Retrying conversation with next key...")
+                continue
+            break
+
+    return "Hey! I'm here to help you build automations. What would you like to automate?"
 
 
-async def route_message(user_message: str, history: list, api_key: str, base_url: str, model: str) -> tuple[str, bool]:
+async def route_message(user_message: str, history: list, api_key: str | list[str], base_url: str, model: str) -> tuple[str, bool]:
     """
     Route a user message through the dual-model system.
 
@@ -140,17 +164,18 @@ async def route_message(user_message: str, history: list, api_key: str, base_url
         - If should_build=True  → caller must run the heavy agent loop
         - If should_build=False → reply_text is the final response from model
     """
+    keys = _normalize_keys(api_key)
     logger.info(f"[ChatRouter] ── route_message() called ──")
     logger.info(f"[ChatRouter] Model: '{model}'")
     logger.info(f"[ChatRouter] API URL: '{base_url}'")
-    logger.info(f"[ChatRouter] API Key present: {bool(api_key)}")
+    logger.info(f"[ChatRouter] Available API Keys: {len(keys)}")
 
-    intent = await classify_intent(user_message, api_key, base_url, model)
+    intent = await classify_intent(user_message, keys, base_url, model)
     logger.info(f"[ChatRouter] Final intent decision: {intent}")
 
     if intent == "CONVERSATION":
         logger.info(f"[ChatRouter] → Handling as CONVERSATION")
-        reply = await handle_conversation(user_message, history, api_key, base_url, model)
+        reply = await handle_conversation(user_message, history, keys, base_url, model)
         logger.info(f"[ChatRouter] → reply: '{reply[:100]}'")
         # If model itself decided it's ready to build
         if "READY_TO_BUILD" in reply:
@@ -161,4 +186,3 @@ async def route_message(user_message: str, history: list, api_key: str, base_url
     # BUILD_REQUEST — pass to heavy model
     logger.info(f"[ChatRouter] → BUILD_REQUEST — heavy model will take over")
     return "", True
-

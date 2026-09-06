@@ -89,7 +89,12 @@ def get_planner_agent(api_key: str = "", base_url: str = "", model_name: str = "
     import logging
     logger = logging.getLogger("uvicorn")
 
-    resolved_api_key = api_key or settings.OPENROUTER_API_KEY
+    if not api_key:
+        openrouter_keys = settings.get_openrouter_keys()
+        resolved_api_key = openrouter_keys[0] if openrouter_keys else settings.OPENROUTER_API_KEY
+    else:
+        resolved_api_key = api_key
+
     if not resolved_api_key:
         raise ValueError("LLM API key is required. Please configure your LLM key in AI Mode settings.")
 

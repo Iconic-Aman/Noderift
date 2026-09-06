@@ -59,9 +59,28 @@ class PlanResponse(BaseModel):
 
 @router.get("/llm-key-status", dependencies=[Depends(bearer_scheme)])
 def llm_key_status(db: Session = Depends(get_db), user: User = Depends(get_current_user)):
-    """Check if the current user has a saved LLM API key or global env key."""
+    """Check if the current user has a saved LLM API key or global env key, with details."""
     cred_data = _get_llm_credential(db, user.id)
-    return {"configured": cred_data is not None or bool(settings.OPENROUTER_API_KEY)}
+    configured = cred_data is not None or bool(settings.OPENROUTER_API_KEY)
+    provider = "openrouter"
+    model = settings.OPENROUTER_MODEL or "meta-llama/llama-3.3-70b-instruct"
+    masked_key = ""
+
+    if cred_data:
+        provider = cred_data.get("provider", "openrouter")
+        model = cred_data.get("model") or model
+        raw_key = cred_data.get("api_key", "")
+        if raw_key:
+            masked_key = (raw_key[:6] + "..." + raw_key[-4:]) if len(raw_key) > 10 else "••••••••"
+    elif settings.OPENROUTER_API_KEY:
+        masked_key = (settings.OPENROUTER_API_KEY[:6] + "..." + settings.OPENROUTER_API_KEY[-4:]) if len(settings.OPENROUTER_API_KEY) > 10 else "••••••••"
+
+    return {
+        "configured": configured,
+        "provider": provider,
+        "model": model,
+        "masked_key": masked_key,
+    }
 
 @router.post("/plan", response_model=PlanResponse, dependencies=[Depends(bearer_scheme)])
 async def plan_workflow(req: PlanRequest, db: Session = Depends(get_db), user: User = Depends(get_current_user)):

@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { Save, Play, Check, Loader2, Clock, Undo, Power, ArrowLeft, Download, MousePointer, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Link } from "react-router-dom";
+import { UserMenu } from "@/components/user-menu";
 
 export function TopNavbar({
   workflowName,
@@ -166,6 +167,8 @@ export function TopNavbar({
           )}
         </button>
         <button onClick={onRun} disabled={status === "running"} className="flex items-center gap-2 rounded-lg bg-blue-600 px-3 py-1.5 text-sm text-white hover:bg-blue-500 disabled:opacity-50 cursor-pointer"><Play className="h-4 w-4" />Run</button>
+        <div className="h-4 w-[1px] bg-slate-800" />
+        <UserMenu />
       </div>
     </div>
   );

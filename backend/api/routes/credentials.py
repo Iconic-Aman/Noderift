@@ -38,14 +38,30 @@ def list_credentials(db: Session = Depends(get_db), current_user: User = Depends
 
 @router.post("/", response_model=CredentialSchema, status_code=201)
 def create_credential(body: CredentialCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    """Store a new credential. Data is AES-encrypted before save."""
-    cred = Credential(
-        user_id=current_user.id,
-        name=body.name,
-        type=body.type,
-        encrypted_data=_encrypt(body.data),
-    )
-    db.add(cred)
+    """Store a new credential or update existing one. Data is AES-encrypted before save."""
+    cred = db.query(Credential).filter(
+        Credential.user_id == current_user.id,
+        Credential.name == body.name,
+        Credential.type == body.type,
+    ).first()
+
+    if cred:
+        try:
+            existing_data = _decrypt(cred.encrypted_data)
+        except Exception:
+            existing_data = {}
+        # Merge: new fields override old, but old fields (like api_key) persist if not provided
+        merged_data = {**existing_data, **body.data}
+        cred.encrypted_data = _encrypt(merged_data)
+    else:
+        cred = Credential(
+            user_id=current_user.id,
+            name=body.name,
+            type=body.type,
+            encrypted_data=_encrypt(body.data),
+        )
+        db.add(cred)
+
     db.commit()
     db.refresh(cred)
     return cred

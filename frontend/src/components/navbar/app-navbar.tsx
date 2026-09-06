@@ -3,6 +3,7 @@ import { Link, useNavigate, useLocation } from "react-router-dom";
 import { ArrowLeft, Home, LayoutDashboard, KeyRound, LogOut, Menu, X } from "lucide-react";
 import { useUser } from "@/hooks/useUser";
 import { useScrollDirection } from "@/hooks/useScrollDirection";
+import { UserMenu } from "@/components/user-menu";
 
 interface AppNavbarProps {
   title?: string;
@@ -101,13 +102,7 @@ export function AppNavbar({ title, subtitle, showBack, backTo, children }: AppNa
 
           <div className="h-4 w-[1px] bg-slate-800" />
 
-          <button
-            onClick={logout}
-            className="relative py-1 text-slate-400 hover:text-red-400 transition-colors duration-300 text-xs font-semibold flex items-center gap-1.5 after:absolute after:bottom-0 after:left-0 after:h-[1.5px] after:w-0 hover:after:w-full after:bg-red-500 after:transition-all after:duration-300 cursor-pointer"
-          >
-            <LogOut size={13} />
-            Sign Out
-          </button>
+          <UserMenu />
         </div>
       )}
 

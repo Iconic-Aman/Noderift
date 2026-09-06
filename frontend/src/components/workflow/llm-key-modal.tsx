@@ -35,6 +35,23 @@ export function LlmKeyModal({ onClose, onSuccess }: LlmKeyModalProps) {
   const [showKey, setShowKey] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [existingConfig, setExistingConfig] = useState<{ configured: boolean; model?: string; masked_key?: string; provider?: string } | null>(null);
+
+  // Load existing key status on mount to prefill and show current state
+  useState(() => {
+    apiFetch("/ai/llm-key-status")
+      .then((data) => {
+        if (data && data.configured) {
+          setExistingConfig(data);
+          if (data.model) setModel(data.model);
+          if (data.provider) {
+            const matched = PROVIDERS.find((p) => p.id === data.provider);
+            if (matched) setProvider(matched);
+          }
+        }
+      })
+      .catch(() => {});
+  });
 
   const handleProviderChange = (id: string) => {
     const p = PROVIDERS.find((p) => p.id === id)!;
@@ -45,24 +62,30 @@ export function LlmKeyModal({ onClose, onSuccess }: LlmKeyModalProps) {
   };
 
   const handleSave = async () => {
-    if (!apiKey.trim()) {
+    const isOverride = apiKey.trim().length > 0;
+    if (!isOverride && !existingConfig?.configured) {
       setError("API key is required.");
       return;
     }
+
     setLoading(true);
     setError("");
     try {
+      const payloadData: Record<string, any> = {
+        provider: provider.id,
+        base_url: provider.base_url,
+        model: model.trim() || provider.model,
+      };
+      if (isOverride) {
+        payloadData.api_key = apiKey.trim();
+      }
+
       await apiFetch("/credentials/", {
         method: "POST",
         body: JSON.stringify({
           name: "llm_key",
           type: "api_key",
-          data: {
-            provider: provider.id,
-            api_key: apiKey.trim(),
-            base_url: provider.base_url,
-            model: model.trim() || provider.model,
-          },
+          data: payloadData,
         }),
       });
       onSuccess();
@@ -112,13 +135,22 @@ export function LlmKeyModal({ onClose, onSuccess }: LlmKeyModalProps) {
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-slate-300 mb-2">API Key</label>
+            <div className="flex items-center justify-between mb-2">
+              <label className="text-xs font-medium text-slate-300">
+                API Key {existingConfig?.configured && <span className="text-slate-500 font-normal">(enter new key to override)</span>}
+              </label>
+              {existingConfig?.masked_key && (
+                <span className="text-[11px] font-mono text-emerald-400 bg-emerald-950/40 border border-emerald-800/40 px-2 py-0.5 rounded">
+                  Current: {existingConfig.masked_key}
+                </span>
+              )}
+            </div>
             <div className="relative">
               <input
                 type={showKey ? "text" : "password"}
                 value={apiKey}
                 onChange={(e) => setApiKey(e.target.value)}
-                placeholder={provider.placeholder}
+                placeholder={existingConfig?.configured ? "Leave blank to keep current key, or type to override..." : provider.placeholder}
                 className="w-full rounded-lg border border-slate-800 bg-slate-900 px-3 py-2 pr-10 text-xs text-white placeholder-slate-600 outline-none focus:border-violet-500 transition-colors"
               />
               <button type="button" onClick={() => setShowKey((v) => !v)} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white cursor-pointer">

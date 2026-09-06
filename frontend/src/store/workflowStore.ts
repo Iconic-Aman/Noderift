@@ -26,10 +26,12 @@ export type WorkflowState = {
   setEdges: (edges: Edge[]) => void;
   setSelectedNode: (node: Node<NodeData> | null) => void;
   updateNodeConfig: (id: string, config: any) => void;
+  updateNodeWebSocket: (payload: { id: string; config?: any; position?: { x: number; y: number } }) => void;
   addNode: (node: Node<NodeData>) => void;
   addEdgeWebSocket: (edge: Edge) => void;
   removeNodeWebSocket: (id: string) => void;
   clearCanvasWebSocket: () => void;
+  aiCanvasRevision: number;
   takeHistorySnapshot: () => void;
   undo: () => void;
 };
@@ -79,6 +81,8 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
     set({ selectedNode: node });
   },
   
+  aiCanvasRevision: 0,
+
   updateNodeConfig: (id: string, config: any) => {
     get().takeHistorySnapshot();
     set({
@@ -90,10 +94,29 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
     });
   },
 
+  updateNodeWebSocket: (payload: { id: string; config?: any; position?: { x: number; y: number } }) => {
+    get().takeHistorySnapshot();
+    set({
+      nodes: get().nodes.map((node) => {
+        if (node.id !== payload.id) return node;
+        const nextNode = { ...node };
+        if (payload.position) {
+          nextNode.position = { ...payload.position };
+        }
+        if (payload.config !== undefined) {
+          nextNode.data = { ...nextNode.data, config: payload.config };
+        }
+        return nextNode;
+      }),
+      aiCanvasRevision: get().aiCanvasRevision + 1,
+    });
+  },
+
   addNode: (node: Node<NodeData>) => {
     get().takeHistorySnapshot();
     set({
       nodes: [...get().nodes, node],
+      aiCanvasRevision: get().aiCanvasRevision + 1,
     });
   },
 
@@ -101,6 +124,7 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
     get().takeHistorySnapshot();
     set({
       edges: [...get().edges, edge],
+      aiCanvasRevision: get().aiCanvasRevision + 1,
     });
   },
 
@@ -109,6 +133,7 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
     set({
       nodes: get().nodes.filter((n) => n.id !== id),
       edges: get().edges.filter((e) => e.source !== id && e.target !== id),
+      aiCanvasRevision: get().aiCanvasRevision + 1,
     });
   },
 
@@ -117,6 +142,7 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
     set({
       nodes: [],
       edges: [],
+      aiCanvasRevision: get().aiCanvasRevision + 1,
     });
   },
 

@@ -265,4 +265,51 @@ def verify_graph(db: Session, session_id: str, user_prompt: str = "") -> str | N
                             "Call set_node_code with the fix."
                         )
 
+            # Dry-run execution test for code nodes with upstream inputs
+            if incoming_map.get(node_id):
+                from nodes.code_node import safe_json
+                test_samples = [
+                    # Sample 1: Parsed dict (typical JSON API response from http_request)
+                    {
+                        "response": {
+                            "items": [{"name": "repo1", "stargazers_count": 1200, "description": "test"}],
+                            "data": [{"name": "item1", "value": 100}],
+                            "status": "success",
+                        },
+                        "status_code": 200,
+                        "headers": {},
+                    },
+                    # Sample 2: Stringified JSON response
+                    {
+                        "response": '{"items": [{"name": "repo1", "stargazers_count": 1200, "description": "test"}], "status": "success"}',
+                        "status_code": 200,
+                        "headers": {},
+                    },
+                ]
+                for sample_input in test_samples:
+                    test_locals = {
+                        "input_data": sample_input,
+                        "output_data": {},
+                        "safe_json": safe_json,
+                        "json": __import__("json"),
+                        "datetime": __import__("datetime"),
+                        "math": __import__("math"),
+                        "re": __import__("re"),
+                        "csv": __import__("csv"),
+                        "os": __import__("os"),
+                        "OUTPUT_DIR": "/tmp",
+                    }
+                    try:
+                        exec(code_str, {}, test_locals)
+                    except TypeError as te:
+                        if "must be str, bytes or bytearray, not dict" in str(te):
+                            return (
+                                f"Node '{label}' (id: {node_id}) crashed with TypeError: {te}. "
+                                "You called json.loads() on an object that is ALREADY a dict! "
+                                "Use the defensive pattern: `raw = input_data.get('response'); data = json.loads(raw) if isinstance(raw, str) else (raw or {})` "
+                                "or `data = safe_json(input_data.get('response'))`. Call set_node_code with the fix."
+                            )
+                    except Exception:
+                        pass
+
     return None

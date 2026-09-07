@@ -223,6 +223,11 @@ async def plan_workflow(req: PlanRequest, db: Session = Depends(get_db), user: U
         final_reply = ""
         invalid_keys: set[str] = set()
 
+        # Map each key to its environment variable name (e.g. OPENROUTER_API_KEY, OPENROUTER_API_KEY2)
+        key_var_map = settings.get_openrouter_key_map()
+        if cred_data and cred_data.get("api_key"):
+            key_var_map[cred_data["api_key"].strip()] = "USER_CREDENTIAL_KEY"
+
         for model_idx, current_model in enumerate(candidate_models):
             logger.info(f"🤖 [AI PLANNER] Attempt {model_idx + 1}/{len(candidate_models)} with Model: '{current_model}'")
             model_success = False
@@ -234,12 +239,17 @@ async def plan_workflow(req: PlanRequest, db: Session = Depends(get_db), user: U
                 break
 
             for key_idx, active_key in enumerate(keys_to_try):
-                masked_k = (active_key[:6] + "..." + active_key[-4:]) if len(active_key) > 10 else "••••"
+                active_var_name = key_var_map.get(active_key, f"OPENROUTER_API_KEY_{key_idx + 1}")
                 logger.info(
-                    f"🔑 [AI PLANNER] Model '{current_model}' | Key {key_idx + 1}/{len(keys_to_try)} ({masked_k})"
+                    f"🔑 [AI PLANNER] Model: '{current_model}' | Key Variable: '{active_var_name}' ({key_idx + 1}/{len(keys_to_try)})"
                 )
                 try:
-                    agent = get_planner_agent(api_key=active_key, base_url=base_url, model_name=current_model)
+                    agent = get_planner_agent(
+                        api_key=active_key,
+                        base_url=base_url,
+                        model_name=current_model,
+                        key_var_name=active_var_name,
+                    )
                     reply, final_messages = await run_agent_loop(
                         agent=agent,
                         user_prompt=req.message,
@@ -250,40 +260,40 @@ async def plan_workflow(req: PlanRequest, db: Session = Depends(get_db), user: U
                     )
                     guardrail_err = verify_graph(db, req.session_id, user_prompt=req.message)
                     if guardrail_err is None:
-                        logger.info(f"✓ [AI PLANNER] Workflow successfully created with Model: '{current_model}' on key {masked_k}")
+                        logger.info(f"✓ [AI PLANNER] Workflow successfully created with Model: '{current_model}' using Key Variable: '{active_var_name}'")
                         workflow_built = True
                         final_reply = reply
                         model_success = True
                         break
                     else:
-                        logger.warning(f"⚠ [AI PLANNER] Model '{current_model}' guardrail check failed: {guardrail_err}")
+                        logger.warning(f"⚠ [AI PLANNER] Model: '{current_model}' guardrail check failed: {guardrail_err}")
                         if model_idx < len(candidate_models) - 1:
                             await emit_canvas_patch(req.session_id, "agent_step", {
                                 "text": "Refining workflow with alternative model..."
                             })
                         break
                 except Exception as model_exc:
-                    logger.error(f"❌ [AI PLANNER] Model '{current_model}' error with key {masked_k}: {type(model_exc).__name__}: {model_exc}")
+                    logger.error(f"❌ [AI PLANNER] Model: '{current_model}' error with Key Variable '{active_var_name}': {type(model_exc).__name__}: {model_exc}")
                     err_msg = str(model_exc).lower()
                     status_code = getattr(model_exc, "status_code", None) or getattr(model_exc, "code", None)
                     if status_code == 401 or "invalid api key" in err_msg or "unauthorized" in err_msg:
                         invalid_keys.add(active_key)
-                        logger.warning(f"🚫 [AI PLANNER] Key {masked_k} marked invalid (401).")
+                        logger.warning(f"🚫 [AI PLANNER] Key Variable '{active_var_name}' marked invalid (401).")
 
                     # Try next key for current model
                     if key_idx < len(keys_to_try) - 1:
                         next_k = keys_to_try[key_idx + 1]
-                        next_masked = (next_k[:6] + "..." + next_k[-4:]) if len(next_k) > 10 else "••••"
+                        next_var_name = key_var_map.get(next_k, f"OPENROUTER_API_KEY_{key_idx + 2}")
                         logger.warning(
-                            f"🔄 [AI PLANNER] Key {masked_k} failed for model '{current_model}'. Rotating to next key {next_masked}..."
+                            f"🔄 [AI PLANNER] Key Variable '{active_var_name}' failed for Model: '{current_model}'. Rotating to next key '{next_var_name}' for Model: '{current_model}'..."
                         )
                         await emit_canvas_patch(req.session_id, "agent_step", {
-                            "text": f"Switching to backup API key for {current_model}..."
+                            "text": f"Switching to backup API key ({next_var_name}) for {current_model}..."
                         })
                         continue
                     else:
                         logger.warning(
-                            f"⚠ [AI PLANNER] All {len(keys_to_try)} keys failed for model '{current_model}'."
+                            f"⚠ [AI PLANNER] All {len(keys_to_try)} keys failed for Model: '{current_model}'."
                         )
                         if model_idx < len(candidate_models) - 1:
                             next_model = candidate_models[model_idx + 1]

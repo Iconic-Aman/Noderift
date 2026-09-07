@@ -222,7 +222,7 @@ use the exact node_id returned by add_node — never a placeholder like
 """
 
 def get_planner_agent(api_key: str = "", base_url: str = "", model_name: str = "", temperature: float = 0.2, key_var_name: str = ""):
-    """Factory to create a ReAct planner agent using the provided API key and base URL."""
+    """Factory to create a ReAct planner agent using OpenRouter or Groq."""
     from core.config import settings
     import logging
     logger = logging.getLogger("uvicorn")
@@ -246,10 +246,15 @@ def get_planner_agent(api_key: str = "", base_url: str = "", model_name: str = "
         or ""
     )
 
+    resolved_var_name = key_var_name or settings.get_openrouter_key_map().get(resolved_api_key, "OPENROUTER_API_KEY")
+
     logger.info("🤖 [AI PLANNER DIAGNOSTICS]")
     logger.info(f"   -> Model: '{target_model}'")
     logger.info(f"   -> API Base: '{resolved_base_url}'")
-    logger.info(f"   -> API Key Length: {len(resolved_api_key)}")
+    logger.info(f"   -> API Key Variable: '{resolved_var_name}'")
+
+    if not resolved_api_key:
+        logger.error("❌ [AI PLANNER ERROR] API Key is EMPTY!")
 
     from langchain_openai import ChatOpenAI
 

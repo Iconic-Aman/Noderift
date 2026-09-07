@@ -90,6 +90,27 @@ class Settings(BaseSettings):
                         keys.append(item)
         return keys
 
+    def get_openrouter_key_map(self) -> dict[str, str]:
+        mapping: dict[str, str] = {}
+        for var_name, val in [
+            ("OPENROUTER_API_KEY", self.OPENROUTER_API_KEY),
+            ("OPENROUTER_API_KEY2", self.OPENROUTER_API_KEY2),
+            ("OPENROUTER_API_KEY3", self.OPENROUTER_API_KEY3),
+        ]:
+            if val and val.strip():
+                for item in val.split(","):
+                    item = item.strip()
+                    if item and item not in mapping:
+                        mapping[item] = var_name
+        import os
+        for env_k, env_v in os.environ.items():
+            if env_k.startswith("OPENROUTER_API_KEY") and env_v and env_v.strip():
+                for item in env_v.split(","):
+                    item = item.strip()
+                    if item and item not in mapping:
+                        mapping[item] = env_k
+        return mapping
+
     # Groq Config
     GROQ_API_KEY: str = ""
     GROQ_MODEL: str = ""

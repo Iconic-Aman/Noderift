@@ -7,6 +7,7 @@ import { useWorkflowStore } from "@/store/workflowStore";
 import { useExecution } from "@/hooks/useExecution";
 import { useWebSocket } from "@/hooks/useWebSocket";
 import { getNodeTemplate } from "@/lib/node-templates";
+import toast from "react-hot-toast";
 
 export function useEditorLogic() {
   const { id } = useParams();
@@ -231,8 +232,10 @@ export function useEditorLogic() {
       await onSave();
       const res = await apiFetch(`/workflows/${id}/activate`, { method: "PATCH" });
       setIsActive(res.is_active);
-    } catch (err) {
+      toast.success(res.is_active ? "Workflow deployed successfully!" : "Workflow undeployed!");
+    } catch (err: any) {
       console.error("Failed to toggle workflow triggers state", err);
+      toast.error(err?.message || "Failed to toggle deployment status");
     } finally {
       setIsDeploying(false);
     }

@@ -148,6 +148,7 @@ class DAGRunner:
                 "whatsapp": "whatsapp",
                 "ai_agent": "ai_agent",
                 "resend": "resend",
+                "gmail": "gmail",
             }
             node_type = type_mapping.get(raw_type, raw_type)
 
@@ -217,7 +218,7 @@ class DAGRunner:
             resolved_config = resolve_config(node_config, upstream_data)
 
             # JIT Gmail auth check — stop if user hasn't connected Gmail
-            if node_type == "gmail_trigger":
+            if node_type in ("gmail_trigger", "gmail"):
                 from services.gmail_service import get_user_gmail_credential
                 user_id = workflow.user_id
                 if not user_id or not get_user_gmail_credential(db, user_id):

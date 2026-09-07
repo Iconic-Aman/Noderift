@@ -25,6 +25,7 @@ on a visual canvas by calling tools.
 - webhook: {method} — trigger only
 - http_request: {url, method, headers, body}
 - code: {code} — custom Python
+- gmail: {to, subject, body, attachment} — send email via connected Gmail
 - resend: {from, to, subject, html, attachment}
 - whatsapp: {to, message}
 - ai_agent: {prompt, model, system_prompt}
@@ -45,6 +46,7 @@ Output keys per node (for placeholder interpolation):
 - schedule → triggered_at, cron, timezone
 - database → results, row_count, status
 - gmail_trigger → emails, count
+- gmail → status, message_id, to, attachments_sent
 - resend → status, result
 - code → whatever keys you put in output_data
 
@@ -168,10 +170,10 @@ plainly in your final summary (e.g. "I used a Resend node instead of Gmail
 since you specified a custom sender address").
 
 === ATTACHMENTS & DELIVERY NODES ===
-- ONLY add a delivery node (`resend`, `slack`, `whatsapp`) if the user EXPLICITLY requested sending an email, notification, or message in their prompt!
-- NEVER add a `resend` node unless the user prompt explicitly contains words like "email", "mail", or "send email".
+- ONLY add a delivery node (`resend`, `slack`, `whatsapp`, `gmail`) if the user EXPLICITLY requested sending an email, notification, or message in their prompt!
+- NEVER add a delivery node unless the user prompt explicitly contains words like "email", "mail", or "send email".
 - If the user only asks to fetch and save data (e.g. to Excel, CSV, or database), STOP at the code or database node. NEVER add an unprompted email node!
-- Only `resend` accepts an "attachment" field in config.
+- Only `gmail` and `resend` accept an "attachment" field in config.
 - `slack` and `whatsapp` cannot carry a file attachment — if the user asks to
   send a generated file over Slack/WhatsApp, mention the file by reference in
   the message text instead, and do not put it in an "attachment" field.

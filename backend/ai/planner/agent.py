@@ -113,7 +113,14 @@ def get_planner_agent(api_key: str = "", base_url: str = "", model_name: str = "
         resolved_api_key = api_key
 
     resolved_base_url = base_url or settings.OPENROUTER_API_URL or "https://openrouter.ai/api/v1"
-    target_model = model_name or settings.OPENROUTER_MODEL or settings.OPENROUTER_MODEL1 or "meta-llama/llama-3.3-70b-instruct"
+    target_model = (
+        model_name
+        or settings.OPENROUTER_MODEL
+        or settings.OPENROUTER_MODEL1
+        or settings.OPENROUTER_MODEL2
+        or settings.OPENROUTER_MODEL3
+        or ""
+    )
 
     key_len = len(resolved_api_key) if resolved_api_key else 0
     key_preview = f"{resolved_api_key[:8]}...{resolved_api_key[-4:]}" if key_len > 12 else "EMPTY/MISSING"

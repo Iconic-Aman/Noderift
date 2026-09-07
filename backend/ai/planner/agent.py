@@ -46,12 +46,14 @@ STRICT RULES FOR TOOL CALLS:
 3. Third batch: call update_node_config to fill placeholders. For code nodes: ALWAYS call set_node_code(node_id, code) to write complete Python code.
 4. NEVER call connect_nodes in the same batch as add_node.
 5. ALWAYS end with a plain text summary message to the user listing what you built (e.g. "I built a 2-node workflow: Gmail Trigger → Code node, connected.").
-6. TRIGGER INSERTION RULE: If the user asks to add a schedule/webhook/gmail_trigger node to an EXISTING workflow, you MUST:
+6. TRIGGER INSERTION RULE: ONLY `schedule` and `webhook` are eligible for 1st position (root triggers).
+   If the user asks to add a schedule or webhook trigger node to an EXISTING workflow, you MUST:
    a. First call get_current_graph to find the current first node (the one with no incoming edges).
    b. Add the trigger node with add_node.
    c. Call connect_nodes(trigger_node_id → existing_first_node_id) to prepend it.
    d. DO NOT remove or re-add existing edges — they stay as-is.
-   e. Trigger nodes MUST have zero incoming edges. They are always the root/source.
+   e. Trigger nodes MUST have zero incoming edges. ONLY `schedule` and `webhook` are allowed to be root/1st position.
+   f. GMAIL PLACEMENT: Gmail nodes (`gmail` or `gmail_trigger`) MUST NEVER be in the 1st position. Gmail is an action node and MUST always be at the LAST position (downstream).
 
 POST-BUILD DATA HANDLING (MANDATORY when workflow has http_request + code nodes):
 When you have an http_request feeding into a code node:
@@ -72,8 +74,12 @@ When writing Python code for `code` nodes:
 - Always set `output_data = {"status": "success", ...}`.
 
 SPECIAL RULES FOR GMAIL & FILE ATTACHMENTS:
-When the user asks to send an email via Gmail or send files/reports/Excel via Gmail:
-- ALWAYS use the `gmail` action node (NOT `gmail_trigger`, which is only for reading incoming emails).
+- ONLY `schedule` and `webhook` are eligible for the 1st position in automated workflows.
+- Gmail nodes MUST NEVER be at the 1st position. Gmail belongs at the LAST position (downstream destination).
+- When the user asks to build an automation with Gmail:
+  - Put `schedule` (e.g. cron) or `webhook` at the 1st position.
+  - Put intermediate nodes (e.g. `http_request`, `database`, `code`) in between.
+  - Put `gmail` at the LAST position to send the output/email/file.
 - Connect the upstream node (e.g. `code` node) to the `gmail` node.
 - In `gmail` node config:
   - "to": recipient email address (e.g. user prompt email or placeholder).
@@ -113,7 +119,14 @@ def get_planner_agent(api_key: str = "", base_url: str = "", model_name: str = "
         resolved_api_key = api_key
 
     resolved_base_url = base_url or settings.OPENROUTER_API_URL or "https://openrouter.ai/api/v1"
-    target_model = model_name or settings.OPENROUTER_MODEL or settings.OPENROUTER_MODEL1 or "meta-llama/llama-3.3-70b-instruct"
+    target_model = (
+        model_name
+        or settings.OPENROUTER_MODEL
+        or settings.OPENROUTER_MODEL1
+        or settings.OPENROUTER_MODEL2
+        or settings.OPENROUTER_MODEL3
+        or ""
+    )
 
     key_len = len(resolved_api_key) if resolved_api_key else 0
     key_preview = f"{resolved_api_key[:8]}...{resolved_api_key[-4:]}" if key_len > 12 else "EMPTY/MISSING"

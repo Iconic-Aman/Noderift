@@ -35,9 +35,30 @@ def list_workflows(db: Session = Depends(get_db), current_user: User = Depends(g
     ]
 
 
+MAX_DEPLOYED_WORKFLOWS = 5
+
+
+def _check_deploy_limit(db: Session, user_id: str, exclude_workflow_id: str | None = None):
+    """Ensure user does not exceed maximum deployed (active) workflows."""
+    query = db.query(Workflow).filter(
+        Workflow.user_id == user_id,
+        Workflow.is_active == True,
+    )
+    if exclude_workflow_id:
+        query = query.filter(Workflow.id != exclude_workflow_id)
+    active_count = query.count()
+    if active_count >= MAX_DEPLOYED_WORKFLOWS:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Deployment limit reached. You can only deploy up to {MAX_DEPLOYED_WORKFLOWS} workflows. Please undeploy an active workflow first."
+        )
+
+
 @router.post("/", response_model=WorkflowSchema, status_code=201)
 def create_workflow(body: WorkflowCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     """Create a new workflow for the current user."""
+    if body.is_active:
+        _check_deploy_limit(db, current_user.id)
     wf = Workflow(**body.model_dump(), user_id=current_user.id)
     db.add(wf)
     db.commit()
@@ -71,6 +92,10 @@ def update_workflow(workflow_id: str, body: WorkflowUpdate, db: Session = Depend
     try:
         update_data = body.model_dump(exclude_none=True)
         logger.warning(f"[PATCH WORKFLOW] Updating fields: {list(update_data.keys())}")
+
+        # Enforce max 5 deployed workflows limit if activating
+        if update_data.get("is_active") is True and not wf.is_active:
+            _check_deploy_limit(db, current_user.id, exclude_workflow_id=wf.id)
         
         for field, value in update_data.items():
             setattr(wf, field, value)
@@ -85,6 +110,9 @@ def update_workflow(workflow_id: str, body: WorkflowUpdate, db: Session = Depend
             
         logger.warning(f"[PATCH WORKFLOW] Successfully updated workflow {workflow_id}")
         return wf
+    except HTTPException:
+        db.rollback()
+        raise
     except Exception as e:
         logger.error(f"[PATCH WORKFLOW] Database error during update: {str(e)}")
         db.rollback()
@@ -107,6 +135,11 @@ def activate_workflow(workflow_id: str, db: Session = Depends(get_db), current_u
     wf = db.query(Workflow).filter(Workflow.id == workflow_id, Workflow.user_id == current_user.id).first()
     if not wf:
         raise HTTPException(status_code=404, detail="Workflow not found")
+
+    # Enforce max 5 deployed workflows limit if activating
+    if not wf.is_active:
+        _check_deploy_limit(db, current_user.id, exclude_workflow_id=wf.id)
+
     wf.is_active = not wf.is_active
     wf.updated_at = datetime.now(timezone.utc)
     db.commit()

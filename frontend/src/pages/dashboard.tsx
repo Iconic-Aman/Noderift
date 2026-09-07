@@ -106,6 +106,14 @@ export function Dashboard() {
 
       <main className="flex-1 max-w-5xl mx-auto w-full px-6 md:px-8 pt-28 pb-12">
         <div>
+          <div className="mb-6 flex items-center justify-between">
+            <h1 className="text-xl font-bold text-white tracking-tight">Your Workflows</h1>
+            <span className="text-xs px-2.5 py-1 rounded-full border border-slate-800 bg-slate-900 text-slate-400 font-medium">
+              <span className={workflows.filter(w => w.is_active).length >= 5 ? "text-amber-400 font-semibold" : "text-emerald-400 font-semibold"}>
+                {workflows.filter(w => w.is_active).length}
+              </span> / 5 Deployed
+            </span>
+          </div>
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
             {workflows.map((wf) => {
               const isDeleting = deletingId === wf.id;

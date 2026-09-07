@@ -61,7 +61,8 @@ def verify_graph(db: Session, session_id: str, user_prompt: str = "") -> str | N
         )
 
     # Trigger nodes must be roots (no incoming edges)
-    TRIGGER_TYPES = {"schedule", "webhook", "gmail_trigger"}
+    # ONLY schedule and webhook are eligible for 1st position (root triggers)
+    TRIGGER_TYPES = {"schedule", "webhook"}
     target_ids = {e.get("target") for e in edges}
     for n in nodes:
         ntype = n.get("data", {}).get("node_type", "")
@@ -71,6 +72,17 @@ def verify_graph(db: Session, session_id: str, user_prompt: str = "") -> str | N
                 "Trigger nodes must be the starting point — no node should connect INTO them. "
                 "Fix the edge direction so the trigger node is the source."
             )
+
+    # Gmail nodes must never be at 1st position (root); they belong at the last position (downstream)
+    if len(nodes) > 1:
+        for n in nodes:
+            ntype = n.get("data", {}).get("node_type", "")
+            if ntype in ("gmail", "gmail_trigger") and n["id"] not in target_ids:
+                return (
+                    f"Node '{n.get('data', {}).get('label', n['id'])}' is in the 1st position with no incoming edges. "
+                    "Gmail nodes cannot be in the 1st position. Only 'schedule' and 'webhook' are eligible for the 1st position. "
+                    "Place a schedule or webhook trigger at the start and connect Gmail at the last position."
+                )
 
     # Validate code nodes
     incoming_map = {n["id"]: [] for n in nodes}

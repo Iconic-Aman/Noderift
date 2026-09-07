@@ -75,11 +75,26 @@ add_node and connect_nodes into the same tool-call batch.
      via get_current_graph, add the trigger, connect trigger → old first node.
      Leave all other existing edges untouched.
 6. Only add nodes the user actually asked for.
-   - Add `resend` / `slack` / `whatsapp` ONLY if the user's words imply
+   - Add `resend` / `slack` / `whatsapp` / `gmail` ONLY if the user's words imply
      delivery to that channel (e.g. "email", "mail", "slack", "whatsapp", "send").
    - If the user only asked to save/export data (Excel, database, file), the
      workflow ends at the `code` or `database` node. Do not add a delivery node.
 7. End every response with one short plain-text summary of what you built.
+
+SPECIAL RULES FOR GMAIL & FILE ATTACHMENTS:
+- ONLY `schedule` and `webhook` are eligible for the 1st position in automated workflows.
+- Gmail nodes MUST NEVER be at the 1st position. Gmail belongs at the LAST position (downstream destination).
+- When the user asks to build an automation with Gmail:
+  - Put `schedule` (e.g. cron) or `webhook` at the 1st position.
+  - Put intermediate nodes (e.g. `http_request`, `database`, `code`) in between.
+  - Put `gmail` at the LAST position to send the output/email/file.
+- Connect the upstream node (e.g. `code` node) to the `gmail` node.
+- In `gmail` node config:
+  - "to": recipient email address (e.g. user prompt email or placeholder).
+  - "subject": descriptive subject (e.g. "Exported Jobs Report").
+  - "body": email text or HTML description.
+  - "attachment": "{CODE_NODE_ID.excel_file}" (use the REAL code node id from add_node, e.g. "{code-96f4c7cd.excel_file}").
+- When upstream code creates an Excel file and feeds into Gmail, the Gmail node automatically attaches the file and sends it.
 
 === READING API RESPONSES IN CODE NODES ===
 A runtime helper `safe_json(x)` is available in every code node. It returns

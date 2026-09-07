@@ -121,7 +121,7 @@ async def add_node(node_type: str, label: str, node_config: Any, config: Runnabl
     nodes = current_graph.get("nodes", [])
     node_count = len(nodes)
 
-    TRIGGER_TYPES = {"schedule", "webhook", "gmail_trigger"}
+    TRIGGER_TYPES = {"schedule", "webhook"}
     if node_type in TRIGGER_TYPES and node_count > 0:
         min_x = min(
             (n.get("position", {}).get("x", 100) if isinstance(n.get("position"), dict) else 100 for n in nodes),

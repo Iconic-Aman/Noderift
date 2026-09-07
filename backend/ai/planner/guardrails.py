@@ -115,11 +115,22 @@ def verify_graph(db: Session, session_id: str, user_prompt: str = "") -> str | N
                 "Fix the edge direction so the trigger node is the source."
             )
 
+    # Gmail send action node must not be in 1st position
+    if len(nodes) > 1:
+        for n in nodes:
+            ntype = n.get("data", {}).get("node_type", "")
+            if ntype == "gmail" and n["id"] not in target_ids:
+                return (
+                    f"Node '{n.get('data', {}).get('label', n['id'])}' is in the 1st position with no incoming edges. "
+                    "Gmail send node cannot be in the 1st position. "
+                    "Place a trigger at the start and connect Gmail downstream."
+                )
+
     prompt_lower = user_prompt.lower()
 
     # Reject unrequested delivery nodes — covers delivery channels
     DELIVERY_KEYWORDS = {
-        ("resend",): ["email", "e-mail", "mail", "send an email", "send email", "notify me by email"],
+        ("resend", "gmail"): ["email", "e-mail", "mail", "send an email", "send email", "notify me by email"],
         ("slack",): ["slack"],
         ("whatsapp",): ["whatsapp", "whats app"],
     }

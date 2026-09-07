@@ -119,7 +119,7 @@ STRICT RULES FOR VARIABLE INTERPOLATION (PLACEHOLDERS):
 5. In step 1 (add_node), set downstream node configs with placeholder "{UPSTREAM_NODE_ID.field}" using the REAL id you just received.
 """
 
-def get_planner_agent(api_key: str = "", base_url: str = "", model_name: str = "", temperature: float = 0.2):
+def get_planner_agent(api_key: str = "", base_url: str = "", model_name: str = "", temperature: float = 0.2, key_var_name: str = ""):
     """Factory to create a ReAct planner agent using OpenRouter or Groq."""
     from core.config import settings
 
@@ -142,16 +142,15 @@ def get_planner_agent(api_key: str = "", base_url: str = "", model_name: str = "
         or ""
     )
 
-    key_len = len(resolved_api_key) if resolved_api_key else 0
-    key_preview = f"{resolved_api_key[:8]}...{resolved_api_key[-4:]}" if key_len > 12 else "EMPTY/MISSING"
+    resolved_var_name = key_var_name or settings.get_openrouter_key_map().get(resolved_api_key, "OPENROUTER_API_KEY")
 
     logger.info("🤖 [AI PLANNER DIAGNOSTICS]")
     logger.info(f"   -> Model: '{target_model}'")
     logger.info(f"   -> API Base: '{resolved_base_url}'")
-    logger.info(f"   -> API Key Length: {key_len} ({key_preview})")
+    logger.info(f"   -> API Key Variable: '{resolved_var_name}'")
 
     if not resolved_api_key:
-        logger.error("❌ [AI PLANNER ERROR] OPENROUTER_API_KEY is EMPTY in settings!")
+        logger.error("❌ [AI PLANNER ERROR] API Key is EMPTY!")
 
     from langchain_openai import ChatOpenAI
 

@@ -112,8 +112,9 @@ async def classify_intent(user_message: str, api_key: str | list[str], base_url:
                 return "BUILD_REQUEST"
             return "CONVERSATION"
         except Exception as e:
-            masked_k = (k[:6] + "..." + k[-4:]) if len(k) > 10 else "••••"
-            logger.warning(f"[ChatRouter] Intent classification failed with key {masked_k}: {e}")
+            from core.config import settings
+            key_name = settings.get_openrouter_key_map().get(k, f"API_KEY_{idx + 1}")
+            logger.warning(f"[ChatRouter] Intent classification failed with key variable '{key_name}': {e}")
             if idx < len(keys) - 1:
                 logger.info(f"[ChatRouter] Retrying intent classification with next key...")
                 continue
@@ -145,8 +146,9 @@ async def handle_conversation(user_message: str, history: list, api_key: str | l
             logger.info(f"[ChatRouter] Conversation handled. Reply length: {len(reply)}")
             return reply
         except Exception as e:
-            masked_k = (k[:6] + "..." + k[-4:]) if len(k) > 10 else "••••"
-            logger.warning(f"[ChatRouter] Conversation handler failed with key {masked_k}: {e}")
+            from core.config import settings
+            key_name = settings.get_openrouter_key_map().get(k, f"API_KEY_{idx + 1}")
+            logger.warning(f"[ChatRouter] Conversation handler failed with key variable '{key_name}': {e}")
             if idx < len(keys) - 1:
                 logger.info(f"[ChatRouter] Retrying conversation with next key...")
                 continue

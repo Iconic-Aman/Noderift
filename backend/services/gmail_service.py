@@ -126,3 +126,127 @@ async def fetch_gmail_messages(access_token: str, query: str = "", max_results: 
                 })
 
         return messages
+
+
+import os
+import mimetypes
+from pathlib import Path
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
+from email.mime.base import MIMEBase
+from email import encoders
+
+OUTPUT_DIR = Path(os.environ.get("NODERIFT_OUTPUT_DIR", "/tmp/noderift_outputs"))
+
+
+def resolve_attachment_path(file_ref: str) -> Path | None:
+    """Find file on filesystem from path, filename, or output dir."""
+    if not file_ref or not isinstance(file_ref, str):
+        return None
+    raw = file_ref.strip()
+    if not raw:
+        return None
+
+    # Check candidates
+    candidates = [
+        Path(raw),
+        OUTPUT_DIR / raw,
+        Path.cwd() / raw,
+        Path("/tmp/noderift_outputs") / raw,
+        Path.home() / raw,
+    ]
+    for p in candidates:
+        if p.is_file() and p.exists():
+            return p
+
+    # If raw is a path like /path/to/report.xlsx, check basename in OUTPUT_DIR
+    basename = Path(raw).name
+    base_candidate = OUTPUT_DIR / basename
+    if base_candidate.is_file() and base_candidate.exists():
+        return base_candidate
+
+    return None
+
+
+async def send_gmail_message(
+    access_token: str,
+    to: str,
+    subject: str,
+    body: str,
+    attachments: List[str] | str | None = None,
+) -> Dict[str, Any]:
+    """Send an email via Gmail API with optional file attachments (Excel, CSV, PDF, etc.)."""
+    message = MIMEMultipart()
+    message["to"] = to
+    message["subject"] = subject
+
+    # Attach text or html body
+    body_str = body or ""
+    if any(tag in body_str.lower() for tag in ["<html", "<p>", "<div>", "<br>", "<table"]):
+        message.attach(MIMEText(body_str, "html", "utf-8"))
+    else:
+        message.attach(MIMEText(body_str, "plain", "utf-8"))
+
+    # Process attachments
+    attached_files = []
+    if attachments:
+        if isinstance(attachments, str):
+            attachments = [attachments]
+
+        for att in attachments:
+            if not att:
+                continue
+            resolved_path = resolve_attachment_path(str(att))
+            if resolved_path and resolved_path.exists():
+                filename = resolved_path.name
+                mime_type, _ = mimetypes.guess_type(filename)
+                if not mime_type:
+                    if filename.endswith(".xlsx"):
+                        mime_type = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                    elif filename.endswith(".xls"):
+                        mime_type = "application/vnd.ms-excel"
+                    elif filename.endswith(".csv"):
+                        mime_type = "text/csv"
+                    elif filename.endswith(".pdf"):
+                        mime_type = "application/pdf"
+                    elif filename.endswith(".json"):
+                        mime_type = "application/json"
+                    elif filename.endswith(".png"):
+                        mime_type = "image/png"
+                    elif filename.endswith(".jpg") or filename.endswith(".jpeg"):
+                        mime_type = "image/jpeg"
+                    else:
+                        mime_type = "application/octet-stream"
+
+                maintype, subtype = mime_type.split("/", 1)
+                part = MIMEBase(maintype, subtype)
+                with open(resolved_path, "rb") as f:
+                    part.set_payload(f.read())
+                encoders.encode_base64(part)
+                part.add_header("Content-Disposition", f'attachment; filename="{filename}"')
+                message.attach(part)
+                attached_files.append(filename)
+
+    raw_bytes = message.as_bytes()
+    raw_b64 = base64.urlsafe_b64encode(raw_bytes).decode("utf-8")
+
+    headers = {
+        "Authorization": f"Bearer {access_token}",
+        "Content-Type": "application/json",
+    }
+    payload = {"raw": raw_b64}
+
+    async with httpx.AsyncClient() as client:
+        res = await client.post(
+            "https://gmail.googleapis.com/gmail/v1/users/me/messages/send",
+            headers=headers,
+            json=payload,
+            timeout=30.0,
+        )
+
+    if res.status_code not in (200, 201):
+        raise ValueError(f"Gmail API error sending email ({res.status_code}): {res.text}")
+
+    result = res.json()
+    result["attachments"] = attached_files
+    return result

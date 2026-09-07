@@ -25,7 +25,8 @@ Allowed node types:
 - webhook: Trigger workflow via HTTP webhook. Config: {method}
 - http_request: Make an HTTP request. Config: {url, method, headers, body}
 - code: Execute custom Python code. Config: {code}
-- resend: Send an email via Resend. Config: {from, to, subject, html}
+- gmail: Send an email via user's Gmail account. Config: {to, subject, body, attachment}
+- resend: Send an email via Resend. Config: {from, to, subject, html, attachment}
 - whatsapp: Send a WhatsApp message. Config: {to, message}
 - ai_agent: Run an AI agent step. Config: {prompt, model, system_prompt}
 - filter: Filter data based on a condition. Config: {condition}
@@ -59,7 +60,7 @@ When you have an http_request feeding into a code node:
 3. Call set_node_code on the code node with Python code extracting the target fields.
 4. DO NOT call test_node_execution on the code node — just write and update it.
 
-SPECIAL RULES FOR CODE NODES:
+SPECIAL RULES FOR CODE NODES & EXCEL EXPORT:
 When writing Python code for `code` nodes:
 - ALWAYS read inputs using `input_data.get("key")` — NEVER hardcode static data.
 - Upstream HTTP response is in `input_data.get("response", {})`.
@@ -67,8 +68,19 @@ When writing Python code for `code` nodes:
   - ALWAYS use `import pandas as pd` and `df.to_excel(filename, index=False)`.
   - NEVER import xlsxwriter (not installed; openpyxl is installed for pandas).
   - Use a descriptive filename matching the task (e.g. 'jobs.xlsx', 'report.xlsx', 'output.xlsx').
-  - Include 'excel_file': filename in output_data.
+  - Include 'excel_file': filename in output_data (e.g. `output_data = {"status": "success", "excel_file": filename}`).
 - Always set `output_data = {"status": "success", ...}`.
+
+SPECIAL RULES FOR GMAIL & FILE ATTACHMENTS:
+When the user asks to send an email via Gmail or send files/reports/Excel via Gmail:
+- ALWAYS use the `gmail` action node (NOT `gmail_trigger`, which is only for reading incoming emails).
+- Connect the upstream node (e.g. `code` node) to the `gmail` node.
+- In `gmail` node config:
+  - "to": recipient email address (e.g. user prompt email or placeholder).
+  - "subject": descriptive subject (e.g. "Exported Jobs Report").
+  - "body": email text or HTML description.
+  - "attachment": "{CODE_NODE_ID.excel_file}" (use the REAL code node id from add_node, e.g. "{code-96f4c7cd.excel_file}").
+- When upstream code creates an Excel file and feeds into Gmail, the Gmail node automatically attaches the file and sends it.
 
 STRICT RULES FOR VARIABLE INTERPOLATION (PLACEHOLDERS):
 1. When a downstream node needs data from an upstream node, use: {REAL_NODE_ID.field_name}
@@ -80,6 +92,8 @@ STRICT RULES FOR VARIABLE INTERPOLATION (PLACEHOLDERS):
    - schedule: triggered_at, cron, timezone
    - database: results (array), row_count, status
    - gmail_trigger: emails (array), count (number)
+   - gmail: status (string), message_id (string), to (string), attachments_sent (array)
+   - resend: status (string), result (object)
 4. Example: if add_node returned node_id="http-96f4c7cd", and the resend node html needs the dog image URL:
    html = "<img src='{http-96f4c7cd.response.message}'/>"
 5. In step 1 (add_node), set downstream node configs with placeholder "{UPSTREAM_NODE_ID.field}" using the REAL id you just received.

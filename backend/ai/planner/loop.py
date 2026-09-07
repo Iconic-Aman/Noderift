@@ -99,7 +99,14 @@ async def run_agent_loop(
     }
 
     from core.config import settings
-    active_model = model_name or settings.OPENROUTER_MODEL or "default"
+    active_model = (
+        model_name
+        or settings.OPENROUTER_MODEL
+        or settings.OPENROUTER_MODEL1
+        or settings.OPENROUTER_MODEL2
+        or settings.OPENROUTER_MODEL3
+        or "default"
+    )
     logger.info(f"━━━ [Loop] thread_id={session_id} | model={active_model} ━━━")
     logger.info(f"[Loop] 💬 User prompt: '{user_prompt[:120]}'")
 

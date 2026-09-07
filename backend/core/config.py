@@ -66,11 +66,11 @@ class Settings(BaseSettings):
     OPENROUTER_API_KEY: str = ""
     OPENROUTER_API_KEY2: str = ""
     OPENROUTER_API_KEY3: str = ""
-    OPENROUTER_MODEL: str = "meta-llama/llama-3.3-70b-instruct"
+    OPENROUTER_MODEL: str = ""
     OPENROUTER_MODEL1: str = ""
     OPENROUTER_MODEL2: str = ""
     OPENROUTER_MODEL3: str = ""
-    OPENROUTER_CHAT_MODEL: str = "meta-llama/llama-3.3-70b-instruct"
+    OPENROUTER_CHAT_MODEL: str = ""
     OPENROUTER_API_URL: str = "https://openrouter.ai/api/v1"
 
     def get_openrouter_keys(self) -> list[str]:

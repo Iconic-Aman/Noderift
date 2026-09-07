@@ -28,6 +28,7 @@ def get_available_nodes() -> List[dict]:
         "composio": {"result": "object"},
         "database": {"results": "array (for select/find)", "row_count": "number", "status": "string"},
         "gmail_trigger": {"emails": "array [{id,subject,from,date,snippet,body}]", "count": "number"},
+        "gmail": {"status": "string", "message_id": "string", "to": "string", "attachments_sent": "array"},
         "slack": {"status": "string", "channel": "string", "ts": "string", "message": "string"},
     }
     return [
@@ -110,6 +111,7 @@ async def add_node(node_type: str, label: str, node_config: Any, config: Runnabl
         "set_variable": "set_variable",
         "database": "database",
         "gmail_trigger": "gmail_trigger",
+        "gmail": "gmail",
         "slack": "slack",
     }
     id_prefix = prefix_map.get(node_type, node_type)

@@ -13,7 +13,7 @@ router = APIRouter(prefix="/oauth/gmail", tags=["Gmail OAuth"])
 
 import urllib.parse
 
-GMAIL_SCOPE = "openid email profile https://www.googleapis.com/auth/gmail.readonly"
+GMAIL_SCOPE = "openid email profile https://www.googleapis.com/auth/gmail.readonly https://www.googleapis.com/auth/gmail.send"
 
 
 @router.get("/start")

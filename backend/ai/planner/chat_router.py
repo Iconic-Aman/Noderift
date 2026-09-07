@@ -31,7 +31,7 @@ STRICT RULES:
 - Do NOT explain what you're going to do step by step. Be brief.
 
 Noderift can automate:
-- Gmail (read emails, filter by sender)
+- Gmail (read emails, filter by sender, send emails with Excel/file attachments)
 - Webhooks (receive HTTP events)
 - Schedules (run on cron)
 - HTTP requests (call any API)

@@ -58,14 +58,28 @@ STRICT RULES FOR TOOL CALLS:
 POST-BUILD DATA HANDLING (MANDATORY when workflow has http_request + code nodes):
 When you have an http_request feeding into a code node:
 1. Call test_node_execution on the http_request node to inspect the real API response structure.
-2. Upstream HTTP response arrives in `input_data.get("response", {})`.
-3. Call set_node_code on the code node with Python code extracting the target fields.
-4. DO NOT call test_node_execution on the code node — just write and update it.
+2. The response from http_request arrives in `input_data.get("response")`.
+3. DEFENSIVE DATA PARSING (CRITICAL):
+   `input_data.get("response")` can be an already-parsed dict/list OR a raw JSON string.
+   ALWAYS parse defensively:
+   ```python
+   raw_resp = input_data.get("response")
+   if isinstance(raw_resp, str):
+       data = json.loads(raw_resp)
+   else:
+       data = raw_resp or {}
+   # Or use the built-in helper:
+   # data = safe_json(input_data.get("response"))
+   ```
+   NEVER call `json.loads(input_data.get("response"))` directly without checking `isinstance(..., str)` first!
+4. Call set_node_code on the code node with this defensive Python code.
+5. MANDATORY VERIFICATION: Call test_node_execution on the code node using sample or upstream inputs to verify execution before completing.
 
 SPECIAL RULES FOR CODE NODES & EXCEL EXPORT:
 When writing Python code for `code` nodes:
 - ALWAYS read inputs using `input_data.get("key")` — NEVER hardcode static data.
-- Upstream HTTP response is in `input_data.get("response", {})`.
+- Built-in helper `safe_json(x)` is available in all code nodes:
+  `data = safe_json(input_data.get("response"))`
 - For Excel export:
   - ALWAYS use `import pandas as pd` and `df.to_excel(filename, index=False)`.
   - NEVER import xlsxwriter (not installed; openpyxl is installed for pandas).

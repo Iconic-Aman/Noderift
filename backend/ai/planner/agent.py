@@ -147,6 +147,26 @@ just set output_data to whatever the user asked for (e.g. a filtered list).
   upstream output) to confirm it runs without error. If it errors, fix the
   code and test again.
 
+=== CHOOSING BETWEEN gmail AND resend ===
+Users don't know your node names or their exact capabilities — they may say
+"gmail", "email", "mail", etc. regardless of which node actually fits. Decide
+based on what they're asking for, not the literal word they used:
+
+- The `gmail` node has NO "from" field — it always sends from the user's own
+  connected Gmail account. It cannot send from a custom/arbitrary address.
+- The `resend` node HAS a "from" field — use it whenever the user specifies,
+  implies, or names a custom sender address (e.g. "sender should be
+  noreply@...", "send it from support@...", "from our domain").
+
+Rule: if the user's prompt specifies any custom sender address, ALWAYS use
+`resend`, even if the user literally said the word "gmail". Never attempt to
+put a "from" field into a `gmail` node's config — that field does not exist
+on that node type and will produce an invalid tool call.
+
+If you substitute `resend` for a user's literal "gmail" mention, say so
+plainly in your final summary (e.g. "I used a Resend node instead of Gmail
+since you specified a custom sender address").
+
 === ATTACHMENTS & DELIVERY NODES ===
 - ONLY add a delivery node (`resend`, `slack`, `whatsapp`) if the user EXPLICITLY requested sending an email, notification, or message in their prompt!
 - NEVER add a `resend` node unless the user prompt explicitly contains words like "email", "mail", or "send email".
@@ -155,7 +175,7 @@ just set output_data to whatever the user asked for (e.g. a filtered list).
 - `slack` and `whatsapp` cannot carry a file attachment — if the user asks to
   send a generated file over Slack/WhatsApp, mention the file by reference in
   the message text instead, and do not put it in an "attachment" field.
-- To send a code node's output file (WHEN REQUESTED): attachment = "{CODE_NODE_ID.excel_file}"
+- To send a code node's output file: attachment = "{CODE_NODE_ID.excel_file}"
   using the real node_id from add_node (e.g. "{code-96f4c7cd.excel_file}").
 
 === PLACEHOLDER SYNTAX ===
@@ -164,8 +184,9 @@ use the exact node_id returned by add_node — never a placeholder like
 "http-xxxxxxxx".
 """
 
-def get_planner_agent(api_key: str = "", base_url: str = "", model_name: str = "", temperature: float = 0.2):
+def get_planner_agent(api_key: str = "", base_url: str = "", model_name: str = "", temperature: float = 0.2, key_var_name: str = ""):
     """Factory to create a ReAct planner agent using the provided API key and base URL."""
+    from core.config import settings
     import logging
     logger = logging.getLogger("uvicorn")
 

@@ -38,30 +38,61 @@ def list_credentials(db: Session = Depends(get_db), current_user: User = Depends
 
 @router.post("/", response_model=CredentialSchema, status_code=201)
 def create_credential(body: CredentialCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    """Store a new credential or update existing one. Data is AES-encrypted before save."""
-    cred = db.query(Credential).filter(
+    """Store a new credential. Data is AES-encrypted before save."""
+    clean_name = body.name.strip()
+
+    # Special case: llm_key updates existing
+    if clean_name == "llm_key":
+        cred = db.query(Credential).filter(
+            Credential.user_id == current_user.id,
+            Credential.name == "llm_key",
+        ).first()
+        if cred:
+            try:
+                existing_data = _decrypt(cred.encrypted_data)
+            except Exception:
+                existing_data = {}
+            merged_data = {**existing_data, **body.data}
+            cred.encrypted_data = _encrypt(merged_data)
+            db.commit()
+            db.refresh(cred)
+            return cred
+
+    # Check for duplicate name
+    existing_name = db.query(Credential).filter(
         Credential.user_id == current_user.id,
-        Credential.name == body.name,
-        Credential.type == body.type,
+        Credential.name == clean_name
     ).first()
-
-    if cred:
-        try:
-            existing_data = _decrypt(cred.encrypted_data)
-        except Exception:
-            existing_data = {}
-        # Merge: new fields override old, but old fields (like api_key) persist if not provided
-        merged_data = {**existing_data, **body.data}
-        cred.encrypted_data = _encrypt(merged_data)
-    else:
-        cred = Credential(
-            user_id=current_user.id,
-            name=body.name,
-            type=body.type,
-            encrypted_data=_encrypt(body.data),
+    if existing_name:
+        raise HTTPException(
+            status_code=400,
+            detail=f"A credential named '{clean_name}' already exists."
         )
-        db.add(cred)
 
+    # Check for duplicate secret value
+    user_creds = db.query(Credential).filter(Credential.user_id == current_user.id).all()
+    new_values = {str(v).strip() for v in body.data.values() if isinstance(v, (str, int, float)) and str(v).strip()}
+    for c in user_creds:
+        try:
+            existing_data = _decrypt(c.encrypted_data)
+            existing_vals = {str(v).strip() for v in existing_data.values() if isinstance(v, (str, int, float)) and str(v).strip()}
+            if new_values.intersection(existing_vals):
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"This secret value is already saved under credential '{c.name}'."
+                )
+        except HTTPException:
+            raise
+        except Exception:
+            pass
+
+    cred = Credential(
+        user_id=current_user.id,
+        name=clean_name,
+        type=body.type,
+        encrypted_data=_encrypt(body.data),
+    )
+    db.add(cred)
     db.commit()
     db.refresh(cred)
     return cred

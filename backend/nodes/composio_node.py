@@ -16,9 +16,17 @@ class ComposioNode(BaseNode):
         except ImportError:
             raise RuntimeError("composio not installed. Run: pip install composio-core")
 
-        api_key = config.get("_composio_api_key") or os.environ.get("COMPOSIO_API_KEY", "")
+        from core.config import settings
+
+        cred_data: dict = config.get("_credential") or {}
+        api_key = (
+            config.get("api_key")
+            or cred_data.get("api_key")
+            or next((v for v in cred_data.values() if isinstance(v, str) and v.strip()), None)
+            or os.environ.get("COMPOSIO_API_KEY", "")
+        )
         if not api_key:
-            raise ValueError("COMPOSIO_API_KEY not set and no credential bound")
+            raise ValueError("API key not found. Please attach a credential with 'api_key' or set COMPOSIO_API_KEY in environment.")
 
         action = config.get("action", "").strip()
         parameters = config.get("parameters", {})

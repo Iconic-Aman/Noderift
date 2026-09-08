@@ -157,6 +157,13 @@ async def run_agent_loop(
                         except Exception as tool_err:
                             logger.error(f"[Harness] Error executing recovered tool {func_name}: {tool_err}")
             else:
+                current_graph = get_session_graph(db, session_id)
+                if current_graph.get("nodes"):
+                    logger.warning(
+                        f"[Harness] Agent exception on attempt {attempt}, but canvas already has "
+                        f"{len(current_graph['nodes'])} nodes. Preserving canvas work."
+                    )
+                    break
                 raise e
 
         # Log canvas state AFTER agent ran
@@ -193,5 +200,12 @@ async def run_agent_loop(
         logger.info(f"[Harness] 💉 Injecting correction into thread: '{error[:80]}'")
         input_messages = {"messages": [HumanMessage(content=correction_text)]}
 
-    return _extract_reply(final_messages), final_messages
+    reply = _extract_reply(final_messages)
+    current_graph = get_session_graph(db, session_id)
+    nodes = current_graph.get("nodes", [])
+    if nodes and (not reply or reply == "Workflow built on canvas. Check the nodes above."):
+        node_labels = [n.get("data", {}).get("label", n.get("id")) for n in nodes]
+        reply = f"Workflow created with {len(nodes)} nodes on canvas: {', '.join(node_labels)}."
+
+    return reply, final_messages
 

@@ -300,6 +300,11 @@ def verify_graph(db: Session, session_id: str, user_prompt: str = "") -> str | N
                         "OUTPUT_DIR": "/tmp",
                     }
                     try:
+                        import pandas as pd
+                        test_locals["pd"] = pd
+                    except Exception:
+                        pass
+                    try:
                         exec(code_str, {}, test_locals)
                     except TypeError as te:
                         if "must be str, bytes or bytearray, not dict" in str(te):

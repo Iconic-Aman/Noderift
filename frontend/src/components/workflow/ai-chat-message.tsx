@@ -38,7 +38,7 @@ export function AIChatMessage({ message }: { message: Message }) {
             </ul>
           </details>
         )}
-        <div>{message.content}</div>
+        <div className="break-words whitespace-pre-wrap overflow-hidden">{message.content}</div>
       </div>
     </div>
   );

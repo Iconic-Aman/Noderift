@@ -173,8 +173,14 @@ export function useEditorLogic() {
         setIsActive(wf.is_active);
         if (wf.graph && wf.graph.nodes) {
           const styledNodes = wf.graph.nodes.map((node: any) => {
+            const nodeType: string = node.data?.node_type || '';
             const prefix = node.id.split("-")[0];
-            const template = getNodeTemplate(prefix);
+            // Prefer node_type from data, then id prefix
+            const BACKEND_TYPE_TO_TEMPLATE_ID: Record<string, string> = {
+              http_request: 'http',
+            };
+            const templateId = BACKEND_TYPE_TO_TEMPLATE_ID[nodeType] ?? (nodeType || prefix);
+            const template = getNodeTemplate(templateId) ?? getNodeTemplate(prefix);
             const cleanData = { ...node.data };
             if (cleanData.status === "running") {
               delete cleanData.status;

@@ -12,7 +12,7 @@ from models.user import User
 from models.workflow import Workflow
 from ai.planner.agent import get_planner_agent
 from ai.planner.loop import run_agent_loop
-from ai.planner.session import get_session_messages, save_session_messages
+from ai.planner.session import get_session_messages, save_session_messages, get_session_graph
 from ai.planner.chat_router import route_message
 from core.security import bearer_scheme
 

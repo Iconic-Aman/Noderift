@@ -51,6 +51,9 @@ class Settings(BaseSettings):
     LLM_MODEL: str = ""
     EMBEDDING_MODEL: str = ""
 
+    # Integrations
+    COMPOSIO_API_KEY: str = ""
+
     # OpenRouter Config
     OPENROUTER_API_KEY: str = ""
     OPENROUTER_API_KEY2: str = ""

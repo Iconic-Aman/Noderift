@@ -11,6 +11,21 @@ from nodes import register_node
 OUTPUT_DIR = Path(os.environ.get("NODERIFT_OUTPUT_DIR", "/tmp/noderift_outputs"))
 OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
+def safe_json(val, default=None):
+    """Safely parse or return JSON data (handles dict, list, string, bytes, None)."""
+    import json
+    if val is None:
+        return default if default is not None else {}
+    if isinstance(val, (dict, list)):
+        return val
+    if isinstance(val, (str, bytes, bytearray)):
+        try:
+            return json.loads(val)
+        except Exception:
+            return default if default is not None else {}
+    return val
+
+
 @register_node
 class CodeNode(BaseNode):
     node_type = "code"
@@ -26,6 +41,8 @@ class CodeNode(BaseNode):
         local_vars = {
             "input_data": inputs.data,
             "output_data": {},
+            # Provide safe JSON helper
+            "safe_json": safe_json,
             # Provide standard modules for convenience
             "json": __import__("json"),
             "datetime": __import__("datetime"),

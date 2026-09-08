@@ -1,5 +1,5 @@
 import { FormEvent, useEffect, useState } from "react";
-import { KeyRound, Loader2, Plus, Trash2, WalletCards } from "lucide-react";
+import { AlertTriangle, KeyRound, Loader2, Plus, Trash2, WalletCards } from "lucide-react";
 import { apiFetch } from "@/lib/api";
 import { AppNavbar } from "@/components/navbar/app-navbar";
 
@@ -10,16 +10,14 @@ type Credential = {
   created_at: string;
 };
 
-const defaultSecretJson = '{\n  "_composio_api_key": ""\n}';
-
 export function Credentials() {
   const [credentials, setCredentials] = useState<Credential[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [name, setName] = useState("");
-  const [type, setType] = useState("custom");
-  const [secretJson, setSecretJson] = useState(defaultSecretJson);
+  const [keyName, setKeyName] = useState("api_key");
+  const [keyValue, setKeyValue] = useState("");
 
   useEffect(() => {
     loadCredentials();
@@ -41,16 +39,26 @@ export function Credentials() {
     event.preventDefault();
     setError("");
 
-    let parsedData: Record<string, unknown>;
-    try {
-      parsedData = JSON.parse(secretJson);
-    } catch {
-      setError("Credential data must be valid JSON.");
+    const cleanName = name.trim();
+    if (!cleanName) {
+      setError("Credential name is required.");
       return;
     }
 
-    if (!name.trim()) {
-      setError("Credential name is required.");
+    const duplicate = credentials.find(
+      (c) => c.name.trim().toLowerCase() === cleanName.toLowerCase()
+    );
+    if (duplicate) {
+      setError(`A credential named "${cleanName}" already exists.`);
+      return;
+    }
+
+    if (!keyName.trim()) {
+      setError("Key name is required (e.g. api_key, connection_string, token).");
+      return;
+    }
+    if (!keyValue.trim()) {
+      setError("Secret value is required.");
       return;
     }
 
@@ -60,14 +68,14 @@ export function Credentials() {
         method: "POST",
         body: JSON.stringify({
           name: name.trim(),
-          type,
-          data: parsedData,
+          type: keyName.trim(),
+          data: { [keyName.trim()]: keyValue.trim() },
         }),
       });
       setCredentials((prev) => [created, ...prev]);
       setName("");
-      setType("custom");
-      setSecretJson(defaultSecretJson);
+      setKeyName("api_key");
+      setKeyValue("");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to save credential");
     } finally {
@@ -101,35 +109,39 @@ export function Credentials() {
                 </div>
               </div>
 
-              <label className="mb-2 block text-xs font-medium text-slate-400">Name</label>
+              <label className="mb-2 block text-xs font-medium text-slate-400">Credential Name</label>
               <input
                 value={name}
                 onChange={(event) => setName(event.target.value)}
-                placeholder="Composio production key"
+                placeholder="e.g. OpenAI Key, Database URL, Stripe"
                 className="mb-4 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-white outline-none focus:border-blue-500"
               />
 
-              <label className="mb-2 block text-xs font-medium text-slate-400">Type</label>
-              <select
-                value={type}
-                onChange={(event) => setType(event.target.value)}
-                className="mb-4 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-white outline-none focus:border-blue-500"
-              >
-                <option value="custom">Custom</option>
-                <option value="api_key">API Key</option>
-                <option value="oauth2">OAuth2</option>
-                <option value="basic_auth">Basic Auth</option>
-              </select>
-
-              <label className="mb-2 block text-xs font-medium text-slate-400">Credential Data JSON</label>
-              <textarea
-                value={secretJson}
-                onChange={(event) => setSecretJson(event.target.value)}
-                spellCheck={false}
-                className="h-36 w-full resize-none rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 font-mono text-xs text-slate-100 outline-none focus:border-blue-500"
+              <label className="mb-2 block text-xs font-medium text-slate-400">
+                Key Name <span className="text-slate-500">(e.g. api_key, connection_string, token)</span>
+              </label>
+              <input
+                value={keyName}
+                onChange={(event) => setKeyName(event.target.value)}
+                placeholder="api_key"
+                className="mb-4 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-white font-mono outline-none focus:border-blue-500"
               />
 
-              {error && <div className="mt-4 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-300">{error}</div>}
+              <label className="mb-2 block text-xs font-medium text-slate-400">Secret Value</label>
+              <input
+                type="password"
+                value={keyValue}
+                onChange={(event) => setKeyValue(event.target.value)}
+                placeholder="Paste secret value..."
+                className="mb-4 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-white font-mono outline-none focus:border-blue-500"
+              />
+
+              {error && (
+                <div className="mt-4 flex items-start gap-2.5 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3.5 py-2.5 text-xs text-amber-300">
+                  <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0 text-amber-400" />
+                  <span>{error}</span>
+                </div>
+              )}
 
               <button
                 type="submit"

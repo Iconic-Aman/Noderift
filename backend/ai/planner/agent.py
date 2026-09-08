@@ -75,16 +75,43 @@ When you have an http_request feeding into a code node:
 4. Call set_node_code on the code node with this defensive Python code.
 5. MANDATORY VERIFICATION: Call test_node_execution on the code node using sample or upstream inputs to verify execution before completing.
 
-SPECIAL RULES FOR CODE NODES & EXCEL EXPORT:
+SPECIAL RULES FOR CODE NODES & EXCEL EXPORT (CRITICAL):
 When writing Python code for `code` nodes:
 - ALWAYS read inputs using `input_data.get("key")` — NEVER hardcode static data.
 - Built-in helper `safe_json(x)` is available in all code nodes:
   `data = safe_json(input_data.get("response"))`
-- For Excel export:
-  - ALWAYS use `import pandas as pd` and `df.to_excel(filename, index=False)`.
-  - NEVER import xlsxwriter (not installed; openpyxl is installed for pandas).
-  - Use a descriptive filename matching the task (e.g. 'jobs.xlsx', 'report.xlsx', 'output.xlsx').
-  - Include 'excel_file': filename in output_data (e.g. `output_data = {"status": "success", "excel_file": filename}`).
+- MANDATORY EXCEL EXPORT (MUST DO ON ATTEMPT 1):
+  If user prompt asks for "excel", ".xlsx", "spreadsheet", or saving data to a sheet:
+  1. You MUST `import pandas as pd`.
+  2. Parse data defensively:
+     ```python
+     import pandas as pd
+     import json
+
+     raw = input_data.get("response")
+     if isinstance(raw, str):
+         data = json.loads(raw)
+     else:
+         data = raw or {}
+
+     # Extract list of items from API response (e.g. data.get("items") or data)
+     items = data.get("items", []) if isinstance(data, dict) else (data if isinstance(data, list) else [])
+     rows = []
+     for item in items:
+         rows.append({
+             "name": item.get("name"),
+             "stars": item.get("stargazers_count", item.get("stars", 0)),
+             "description": item.get("description", "")
+         })
+
+     df = pd.DataFrame(rows)
+     filename = "output.xlsx"
+     df.to_excel(filename, index=False)
+     output_data = {"status": "success", "excel_file": filename, "row_count": len(df)}
+     ```
+  3. ALWAYS use `import pandas as pd` and `df.to_excel(filename, index=False)`.
+  4. NEVER import xlsxwriter (not installed; openpyxl is installed for pandas).
+  5. Include 'excel_file': filename in output_data (e.g. `output_data = {"status": "success", "excel_file": filename}`).
 - Always set `output_data = {"status": "success", ...}`.
 
 SPECIAL RULES FOR GMAIL & FILE ATTACHMENTS:

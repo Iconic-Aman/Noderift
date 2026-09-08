@@ -257,14 +257,29 @@ async def plan_workflow(req: PlanRequest, db: Session = Depends(get_db), user: U
                         model_name=current_model,
                     )
                     guardrail_err = verify_graph(db, req.session_id, user_prompt=req.message)
+                    graph = get_session_graph(db, req.session_id)
+                    nodes = graph.get("nodes", [])
+
                     if guardrail_err is None:
                         logger.info(f"✓ [AI PLANNER] Workflow successfully created with Model: '{current_model}' using Key Variable: '{active_var_name}'")
                         workflow_built = True
                         final_reply = reply
                         model_success = True
                         break
+                    elif len(nodes) > 0:
+                        # Model successfully placed nodes on canvas; preserve work instead of failing or cascading
+                        logger.warning(f"⚠ [AI PLANNER] Model: '{current_model}' placed {len(nodes)} nodes with guardrail notice: {guardrail_err}")
+                        workflow_built = True
+                        node_labels = [n.get("data", {}).get("label", n.get("id")) for n in nodes]
+                        guardrail_note = f"\n\nNote: {guardrail_err}" if guardrail_err else ""
+                        if reply and reply.strip() and reply != "Workflow built on canvas. Check the nodes above.":
+                            final_reply = f"{reply}{guardrail_note}"
+                        else:
+                            final_reply = f"Workflow created on canvas with {len(nodes)} nodes: {', '.join(node_labels)}.{guardrail_note}"
+                        model_success = True
+                        break
                     else:
-                        logger.warning(f"⚠ [AI PLANNER] Model: '{current_model}' guardrail check failed: {guardrail_err}")
+                        logger.warning(f"⚠ [AI PLANNER] Model: '{current_model}' guardrail check failed and no nodes built: {guardrail_err}")
                         if model_idx < len(candidate_models) - 1:
                             await emit_canvas_patch(req.session_id, "agent_step", {
                                 "text": "Refining workflow with alternative model..."
@@ -272,6 +287,17 @@ async def plan_workflow(req: PlanRequest, db: Session = Depends(get_db), user: U
                         break
                 except Exception as model_exc:
                     logger.error(f"❌ [AI PLANNER] Model: '{current_model}' error with Key Variable '{active_var_name}': {type(model_exc).__name__}: {model_exc}")
+                    # If model already created nodes on canvas, preserve them instead of crashing
+                    graph = get_session_graph(db, req.session_id)
+                    nodes = graph.get("nodes", [])
+                    if len(nodes) > 0:
+                        logger.info(f"[AI PLANNER] Preserving {len(nodes)} nodes already created on canvas.")
+                        workflow_built = True
+                        node_labels = [n.get("data", {}).get("label", n.get("id")) for n in nodes]
+                        final_reply = f"Workflow created with {len(nodes)} nodes on canvas: {', '.join(node_labels)}. Saved for your review."
+                        model_success = True
+                        break
+
                     err_msg = str(model_exc).lower()
                     status_code = getattr(model_exc, "status_code", None) or getattr(model_exc, "code", None)
                     if status_code == 401 or "invalid api key" in err_msg or "unauthorized" in err_msg:
@@ -305,8 +331,18 @@ async def plan_workflow(req: PlanRequest, db: Session = Depends(get_db), user: U
                 break
 
         if not workflow_built:
-            logger.warning(f"[AI PLANNER] All candidate models {candidate_models} failed for session {req.session_id}.")
-            final_reply = "I couldn't generate the workflow right now. Please try again or rephrase your request."
+            graph = get_session_graph(db, req.session_id)
+            nodes = graph.get("nodes", [])
+            if nodes:
+                node_labels = [n.get("data", {}).get("label", n.get("id")) for n in nodes]
+                final_reply = (
+                    f"Workflow nodes were created on canvas ({', '.join(node_labels)}). "
+                    "You can test or adjust them directly."
+                )
+                workflow_built = True
+            else:
+                logger.warning(f"[AI PLANNER] All candidate models {candidate_models} failed for session {req.session_id}.")
+                final_reply = "I couldn't generate the workflow right now. Please try again or rephrase your request."
 
         clean_history = list(history) + [
             HumanMessage(content=req.message),
@@ -317,7 +353,19 @@ async def plan_workflow(req: PlanRequest, db: Session = Depends(get_db), user: U
 
     except Exception as e:
         logger.error(f"[AI PLANNER] ❌ EXCEPTION: {type(e).__name__}: {e}")
-        fallback_reply = "I couldn't generate the workflow right now. Please try again or rephrase your request."
+        try:
+            graph = get_session_graph(db, req.session_id) if db else {"nodes": []}
+            nodes = graph.get("nodes", [])
+        except Exception:
+            nodes = []
+        if nodes:
+            node_labels = [n.get("data", {}).get("label", n.get("id")) for n in nodes]
+            fallback_reply = (
+                f"Workflow created with {len(nodes)} nodes ({', '.join(node_labels)}). "
+                "Saved on canvas for your review."
+            )
+        else:
+            fallback_reply = "I couldn't generate the workflow right now. Please try again or rephrase your request."
         try:
             from langchain_core.messages import HumanMessage, AIMessage
             clean_history = list(history) + [

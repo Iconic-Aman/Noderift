@@ -64,10 +64,34 @@ def _log_agent_tool_calls(messages: list):
     """Log which tools the agent called in the last run."""
     tool_calls = []
     for m in messages:
-        if isinstance(m, AIMessage) and getattr(m, "tool_calls", None):
-            for tc in m.tool_calls:
-                args_preview = str(tc.get("args", {}))[:80]
-                tool_calls.append(f"  → {tc['name']}({args_preview})")
+        if isinstance(m, AIMessage):
+            # Log OpenRouter provider from response metadata (tells us who actually served the request)
+            meta = getattr(m, "response_metadata", {}) or {}
+            provider = (
+                meta.get("x-openrouter-provider")
+                or meta.get("openrouter-provider")
+                or (meta.get("headers") or {}).get("x-openrouter-provider")
+                or meta.get("model")  # fallback: at least log the routed model
+                or "unknown"
+            )
+            if meta:
+                logger.info(f"[OpenRouter] 🌐 Provider for this response: '{provider}' | raw_meta_keys={list(meta.keys())}")
+
+            if getattr(m, "tool_calls", None):
+                for tc in m.tool_calls:
+                    name = tc["name"]
+                    args = tc.get("args", {})
+                    if name == "set_node_code":
+                        # Full untruncated code for debugging
+                        logger.info(
+                            f"[Agent] 🔧 set_node_code FULL ARGS:\n"
+                            f"  node_id = {args.get('node_id')}\n"
+                            f"  code =\n{args.get('code', '(empty)')}"
+                        )
+                        tool_calls.append(f"  → {name}(node_id={args.get('node_id')}, code=<see above>)")
+                    else:
+                        args_preview = str(args)[:80]
+                        tool_calls.append(f"  → {name}({args_preview})")
     if tool_calls:
         logger.info(f"[Agent] 🔧 Tool calls made:\n" + "\n".join(tool_calls))
     else:

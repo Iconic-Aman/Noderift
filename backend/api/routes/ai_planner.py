@@ -162,7 +162,8 @@ async def plan_workflow(req: PlanRequest, db: Session = Depends(get_db), user: U
         # Step 2: Build request — try candidate models in sequence with key rotation
         # First use all different API keys for Model 1, then fallback to Model 2, etc.
         from ai.planner.guardrails import verify_graph
-        from ai.planner.session import emit_canvas_patch
+        from ai.planner.session import emit_canvas_patch, clear_step_buffer
+        clear_step_buffer(req.session_id)  # Reset replay buffer for this new run
 
         workflow_built = False
         final_reply = ""
@@ -353,9 +354,17 @@ async def get_messages(session_id: str, db: Session = Depends(get_db), user: Use
 async def websocket_ai_plan(websocket: WebSocket, session_id: str):
     """WebSocket endpoint to subscribe to real-time canvas patch events."""
     await websocket.accept()
-    from ai.planner.session import register_session_websocket, unregister_session_websocket
+    from ai.planner.session import register_session_websocket, unregister_session_websocket, _STEP_BUFFER
     register_session_websocket(session_id, websocket)
     logger.info(f"AI Planner WebSocket client connected to session {session_id}")
+
+    # Replay buffered agent_step events so late-connecting clients see all steps
+    buffered = list(_STEP_BUFFER.get(session_id, []))
+    for msg in buffered:
+        try:
+            await websocket.send_text(msg)
+        except Exception:
+            break
 
     try:
         while True:

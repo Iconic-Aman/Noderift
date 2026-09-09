@@ -4,10 +4,27 @@ from sqlalchemy.orm import Session
 from core.config import settings
 from models.workflow import Workflow
 
-from typing import Dict, Set
+from typing import Dict, Set, List
+from collections import deque
 from fastapi import WebSocket
 
 _ACTIVE_WEBSOCKETS: Dict[str, Set[WebSocket]] = {}
+
+# Per-session buffer of recent agent_step events — replayed to late-connecting clients
+_STEP_BUFFER_MAX = 50
+_STEP_BUFFER: Dict[str, deque] = {}
+
+
+def _buffer_event(session_id: str, message_str: str):
+    """Add an event to the session replay buffer."""
+    if session_id not in _STEP_BUFFER:
+        _STEP_BUFFER[session_id] = deque(maxlen=_STEP_BUFFER_MAX)
+    _STEP_BUFFER[session_id].append(message_str)
+
+
+def clear_step_buffer(session_id: str):
+    """Clear the replay buffer when a new AI run starts."""
+    _STEP_BUFFER.pop(session_id, None)
 
 
 def register_session_websocket(session_id: str, ws: WebSocket):
@@ -26,6 +43,10 @@ def unregister_session_websocket(session_id: str, ws: WebSocket):
 async def emit_canvas_patch(session_id: str, event_type: str, payload: dict):
     """Publish graph changes to in-memory WebSockets and Redis."""
     message_str = json.dumps({"type": event_type, "payload": payload})
+
+    # Buffer agent_step events so late-connecting clients can replay them
+    if event_type == "agent_step":
+        _buffer_event(session_id, message_str)
 
     # Direct in-memory broadcast to connected WebSockets
     connections = list(_ACTIVE_WEBSOCKETS.get(session_id, []))

@@ -88,10 +88,25 @@ export function AIChatPanel({ isDocked = false, onClose }: { isDocked?: boolean;
       });
       // Only show execution steps for actual build requests, not conversation
       const finalSteps = res.is_build ? [...stepsRef.current] : [];
+      const assistantId = `res-${Date.now()}`;
       setMessages((prev) => [
         ...prev,
-        { id: `res-${Date.now()}`, role: "assistant", content: res.reply, steps: finalSteps },
+        { id: assistantId, role: "assistant", content: res.reply, steps: finalSteps },
       ]);
+      // Keep collecting steps for 3s after response — catches late buffer-replay steps
+      if (res.is_build) {
+        const snapLen = stepsRef.current.length;
+        setTimeout(() => {
+          const lateSteps = stepsRef.current;
+          if (lateSteps.length > snapLen) {
+            setMessages((prev) =>
+              prev.map((m) =>
+                m.id === assistantId ? { ...m, steps: [...lateSteps] } : m
+              )
+            );
+          }
+        }, 3000);
+      }
     } catch (err) {
       setMessages((prev) => [
         ...prev,

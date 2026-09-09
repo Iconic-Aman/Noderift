@@ -105,7 +105,7 @@ async def run_agent_loop(
         or settings.OPENROUTER_MODEL1
         or settings.OPENROUTER_MODEL2
         or settings.OPENROUTER_MODEL3
-        or "default"
+        or ""
     )
     logger.info(f"━━━ [Loop] thread_id={session_id} | model={active_model} ━━━")
     logger.info(f"[Loop] 💬 User prompt: '{user_prompt[:120]}'")

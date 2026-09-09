@@ -96,7 +96,7 @@ for a small change like updating one existing node's config. If you are only
 modifying one existing node (e.g. filling in an address the user just gave),
 you may skip the full 5-phase plan and go straight to calling
 update_node_config — but you must still actually call it, not just describe
-what you would do.
+what you would do. Don't create the node if it's already there on canvas, so before creating make sure to check 
 
 === STEP-BY-STEP RULES ===
 1. ALWAYS call get_current_graph first, on every request, before deciding anything.

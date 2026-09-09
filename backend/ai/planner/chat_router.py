@@ -106,6 +106,16 @@ async def classify_intent(user_message: str, api_key: str | list[str], base_url:
                 SystemMessage(content=INTENT_SYSTEM_PROMPT),
                 HumanMessage(content=user_message),
             ])
+            # Log which OpenRouter provider actually served this request
+            meta = getattr(result, "response_metadata", {}) or {}
+            provider = (
+                meta.get("x-openrouter-provider")
+                or meta.get("openrouter-provider")
+                or (meta.get("headers") or {}).get("x-openrouter-provider")
+                or meta.get("model")
+                or "unknown"
+            )
+            logger.info(f"[ChatRouter] 🌐 OpenRouter provider: '{provider}' | meta_keys={list(meta.keys())}")
             intent = result.content.strip().upper()
             logger.info(f"[ChatRouter] LLM Intent classified: '{intent}' for: '{user_message[:60]}'")
             if "BUILD" in intent:
@@ -142,6 +152,15 @@ async def handle_conversation(user_message: str, history: list, api_key: str | l
             messages.append(HumanMessage(content=user_message))
 
             result = await llm.ainvoke(messages)
+            meta = getattr(result, "response_metadata", {}) or {}
+            provider = (
+                meta.get("x-openrouter-provider")
+                or meta.get("openrouter-provider")
+                or (meta.get("headers") or {}).get("x-openrouter-provider")
+                or meta.get("model")
+                or "unknown"
+            )
+            logger.info(f"[ChatRouter] 🌐 OpenRouter provider: '{provider}' | meta_keys={list(meta.keys())}")
             reply = result.content.strip()
             logger.info(f"[ChatRouter] Conversation handled. Reply length: {len(reply)}")
             return reply

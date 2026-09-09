@@ -152,6 +152,36 @@ def verify_graph(db: Session, session_id: str, user_prompt: str = "") -> str | N
         if tgt in incoming_map and src:
             incoming_map[tgt].append(src)
 
+    # Resend node must have real subject/html content — never blank.
+    # (Unlike "to"/"from", which are allowed to be blank for the user to fill in.)
+    PLACEHOLDER_SUBJECTS = {"", "report", "subject", "email", "notification", "n/a", "test"}
+    for n in nodes:
+        ntype = n.get("data", {}).get("node_type", "")
+        if ntype != "resend":
+            continue
+
+        node_id = n["id"]
+        label = n.get("data", {}).get("label", node_id)
+        cfg = n.get("data", {}).get("config", {})
+
+        subject = str(cfg.get("subject", "")).strip()
+        html_body = str(cfg.get("html", "")).strip()
+
+        if not subject or subject.lower() in PLACEHOLDER_SUBJECTS:
+            return (
+                f"Node '{label}' (id: {node_id}) has no real 'subject', or a placeholder one ('{subject}'). "
+                "Write a specific subject describing what this workflow sends (e.g. mentioning the data "
+                "source and schedule), then call update_node_config with the fix."
+            )
+
+        if not html_body or len(html_body) < 15:
+            return (
+                f"Node '{label}' (id: {node_id}) has an empty or near-empty 'html' body ('{html_body}'). "
+                "Write a real HTML email body describing what this workflow sends and what's attached "
+                "(e.g. 2-3 sentences), then call update_node_config with the fix. Do not leave this blank — "
+                "only 'to' and 'from' may be left blank, never the message content."
+            )
+
     wants_excel = any(w in prompt_lower for w in ["excel", ".xlsx", "spreadsheet"])
 
     for n in nodes:

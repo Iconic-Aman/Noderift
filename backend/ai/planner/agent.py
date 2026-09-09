@@ -50,6 +50,28 @@ Output keys per node (for placeholder interpolation):
 - resend → status, result
 - code → whatever keys you put in output_data
 
+=== SELF-CHECK — DO NOT SKIP ===
+Before ending your turn, go through this checklist in order. Do not move to
+the next item until the current one is confirmed true. If any item fails,
+fix it now, in this same turn — do not finish with an unfixed item.
+
+1. Every node I called add_node for — did I also call connect_nodes for it?
+   If any node has no connection, call connect_nodes now.
+2. Every `code` node — did I call set_node_code with real, non-empty Python?
+   A code node with blank code, or code that isn't written yet, is not done.
+   If any code node is missing its code, call set_node_code now, before
+   doing anything else.
+3. Every node needing config (database query, gmail/resend to/from, url) —
+   did I call update_node_config with real values (or intentionally blank,
+   per the email-address rule above)? A node left with placeholder or empty
+   required config is not done.
+4. Did I call test_node_execution on every code node that has upstream
+   input? If not, call it now and fix the code if it errors.
+5. Only after 1-4 are all true: write the final plain-text summary.
+
+Do these checks one at a time, in this order, every single turn — including
+when modifying an existing workflow, not just when building a new one.
+
 === PLAN BEFORE YOU ACT ===
 Before calling any tool, write a short numbered plan with exactly these phases:
 1. Inspect current graph
@@ -184,25 +206,18 @@ just set output_data to whatever the user asked for (e.g. a filtered list).
   upstream output) to confirm it runs without error. If it errors, fix the
   code and test again.
 
-=== CHOOSING BETWEEN gmail AND resend ===
-Users don't know your node names or their exact capabilities — they may say
-"gmail", "email", "mail", etc. regardless of which node actually fits. Decide
-based on what they're asking for, not the literal word they used:
+=== EMAIL DELIVERY (always uses the resend node) ===
+Users may say "gmail", "email", "mail", or name resend directly — regardless
+of wording, ANY request to deliver output by email uses the `resend` node.
+There is no separate gmail node type to choose between; always add `resend`.
 
-- The `gmail` node has NO "from" field — it always sends from the user's own
-  connected Gmail account. It cannot send from a custom/arbitrary address.
-- The `resend` node HAS a "from" field — use it whenever the user specifies,
-  implies, or names a custom sender address (e.g. "sender should be
-  noreply@...", "send it from support@...", "from our domain").
-
-Rule: if the user's prompt specifies any custom sender address, ALWAYS use
-`resend`, even if the user literally said the word "gmail". Never attempt to
-put a "from" field into a `gmail` node's config — that field does not exist
-on that node type and will produce an invalid tool call.
-
-If you substitute `resend` for a user's literal "gmail" mention, say so
-plainly in your final summary (e.g. "I used a Resend node instead of Gmail
-since you specified a custom sender address").
+Filling "to" / "from":
+- If the user explicitly states an address in their prompt, use it exactly.
+- If the user does NOT state a "to" or "from" address, leave that field BLANK
+  ("") — do not invent, guess, or default an email address. The user will
+  fill it in on the canvas themselves after the workflow is built.
+- Never fill "from" with anything the user didn't explicitly provide, even a
+  placeholder-looking one like "noreply@example.com".
 
 === ATTACHMENTS & DELIVERY NODES ===
 - ONLY add a delivery node (`resend`, `slack`, `whatsapp`, `gmail`) if the user EXPLICITLY requested sending an email, notification, or message in their prompt!
@@ -212,13 +227,21 @@ since you specified a custom sender address").
 - `slack` and `whatsapp` cannot carry a file attachment — if the user asks to
   send a generated file over Slack/WhatsApp, mention the file by reference in
   the message text instead, and do not put it in an "attachment" field.
-- To send a code node's output file: attachment = "{CODE_NODE_ID.excel_file}"
-  using the real node_id from add_node (e.g. "{code-96f4c7cd.excel_file}").
+- To send a code node's output file, set the attachment field to:
+  { <the code node's actual id from add_node> }.excel_file
+  wrapped in curly braces as one string — using that node's real id, not any
+  id shown as an example elsewhere in these instructions.
 
 === PLACEHOLDER SYNTAX ===
-Use {REAL_NODE_ID.field_name} to reference an upstream node's output. Always
-use the exact node_id returned by add_node — never a placeholder like
-"http-xxxxxxxx".
+Use {REAL_NODE_ID.field_name} to reference an upstream node's output.
+REAL_NODE_ID means the exact id string that the add_node tool result
+returned to you earlier in this conversation for that specific node —
+copy it character-for-character from that tool result.
+
+CRITICAL: Never write a node_id you did not receive from an actual add_node
+tool result. If you are unsure of a node's id, call get_current_graph again
+and read the id from its response — do not guess, shorten, or reuse an id
+shape you've seen written as an example anywhere in these instructions.
 """
 
 def get_planner_agent(api_key: str = "", base_url: str = "", model_name: str = "", temperature: float = 0.2, key_var_name: str = ""):

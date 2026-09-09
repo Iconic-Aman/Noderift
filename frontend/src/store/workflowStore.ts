@@ -34,6 +34,7 @@ export type WorkflowState = {
   aiCanvasRevision: number;
   takeHistorySnapshot: () => void;
   undo: () => void;
+  clearWorkflow: () => void;
 };
 
 export const useWorkflowStore = create<WorkflowState>((set, get) => ({
@@ -143,6 +144,15 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
       nodes: [],
       edges: [],
       aiCanvasRevision: get().aiCanvasRevision + 1,
+    });
+  },
+
+  clearWorkflow: () => {
+    set({
+      nodes: [],
+      edges: [],
+      selectedNode: null,
+      pastStates: [],
     });
   },
 

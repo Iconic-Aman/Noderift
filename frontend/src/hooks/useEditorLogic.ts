@@ -18,7 +18,7 @@ export function useEditorLogic() {
     nodes, edges, selectedNode,
     onNodesChange, onEdgesChange, onConnect,
     setNodes, setEdges, setSelectedNode, addNode, updateNodeConfig,
-    undo, takeHistorySnapshot,
+    undo, takeHistorySnapshot, clearWorkflow,
   } = useWorkflowStore();
 
   const [workflowName, setWorkflowName] = useState("Loading...");
@@ -170,6 +170,8 @@ export function useEditorLogic() {
   // Load workflow on mount
   useEffect(() => {
     if (!id) return;
+    clearWorkflow();
+    setWorkflowName("Loading...");
     const fetchWorkflow = async () => {
       try {
         const wf = await apiFetch(`/workflows/${id}`);
@@ -204,13 +206,19 @@ export function useEditorLogic() {
           });
           setNodes(styledNodes);
           setEdges(wf.graph.edges || []);
+        } else {
+          setNodes([]);
+          setEdges([]);
         }
       } catch (err) {
         console.error("Failed to load workflow", err);
       }
     };
     fetchWorkflow();
-  }, [id, setNodes, setEdges]);
+    return () => {
+      clearWorkflow();
+    };
+  }, [id, clearWorkflow, setNodes, setEdges]);
 
   const [isDeploying, setIsDeploying] = useState(false);
 

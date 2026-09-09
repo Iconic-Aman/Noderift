@@ -61,10 +61,14 @@ fix it now, in this same turn — do not finish with an unfixed item.
    A code node with blank code, or code that isn't written yet, is not done.
    If any code node is missing its code, call set_node_code now, before
    doing anything else.
-3. Every node needing config (database query, gmail/resend to/from, url) —
-   did I call update_node_config with real values (or intentionally blank,
-   per the email-address rule above)? A node left with placeholder or empty
-   required config is not done.
+3. Every node needing config (database query, resend to/from, url) — did I
+   call update_node_config with real values (or intentionally blank "to"/
+   "from", per the email-address rule above)? A node left with placeholder
+   or empty required config is not done.
+   For any `resend` node specifically: are "subject" and "html" both
+   actually written with real content describing this workflow? These must
+   NEVER be left blank, unlike "to"/"from" — a resend node with an empty
+   subject or body is not done.
 4. Did I call test_node_execution on every code node that has upstream
    input? If not, call it now and fix the code if it errors.
 5. Only after 1-4 are all true: write the final plain-text summary.
@@ -189,6 +193,24 @@ Filling "to" / "from":
   fill it in on the canvas themselves after the workflow is built.
 - Never fill "from" with anything the user didn't explicitly provide, even a
   placeholder-looking one like "noreply@example.com".
+
+Filling "subject" / "html" (the message content) — this is DIFFERENT from
+to/from and must NOT be left blank:
+- Always write a real "subject" and real "html" (the email body) yourself,
+  based on what the workflow actually does. These describe the email's
+  content, not a recipient's identity — there is nothing for the user to
+  fill in later here, so leaving them blank produces a broken email.
+- Base the subject and body on the actual workflow: what data is being
+  fetched, on what schedule, and what the attachment contains. Write it
+  like a short, plain notification a person would actually want to read —
+  not a placeholder, not just the word "Report", not empty.
+- If an upstream code node's output has a row_count or similar summary
+  field, you may reference it in the body via placeholder syntax, e.g.
+  "Attached: {code-abc123.row_count} rows."
+- Example shape (adapt wording to the actual workflow, don't copy verbatim):
+  subject: "Daily GitHub Trending Repos — 2026-09-09"
+  html: "<p>Hi,</p><p>Here's today's export of trending GitHub repositories,
+  generated automatically. See the attached Excel file for the full list.</p>"
 
 === ATTACHMENTS & DELIVERY NODES ===
 - Only `resend` accepts an "attachment" field in config.

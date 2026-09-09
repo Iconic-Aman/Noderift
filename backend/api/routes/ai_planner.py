@@ -12,51 +12,42 @@ from models.user import User
 from models.workflow import Workflow
 from ai.planner.agent import get_planner_agent
 from ai.planner.loop import run_agent_loop
-from ai.planner.session import get_session_messages, save_session_messages
+from ai.planner.session import get_session_messages, save_session_messages, get_session_graph
 from ai.planner.chat_router import route_message
 from core.security import bearer_scheme
 
 router = APIRouter(prefix="/ai", tags=["AI Planner"])
 logger = logging.getLogger("uvicorn")
-import json
-from cryptography.fernet import Fernet
-from models.credential import Credential
-
-_fernet = Fernet(settings.SECRET_KEY.encode())
-
 _PROVIDER_DEFAULTS = {
     "openrouter": {
         "base_url": settings.OPENROUTER_API_URL or "https://openrouter.ai/api/v1",
-        "model": settings.OPENROUTER_MODEL or settings.OPENROUTER_MODEL1 or "openrouter/free"
+        "model": (
+            settings.OPENROUTER_MODEL
+            or settings.OPENROUTER_MODEL1
+            or settings.OPENROUTER_MODEL2
+            or settings.OPENROUTER_MODEL3
+            or ""
+        ),
     },
     "groq": {
         "base_url": "https://api.groq.com/openai/v1",
-        "model": "llama-3.1-8b-instant",
+        "model": "",
     },
 }
 
-def _get_llm_credential(db: Session, user_id: str) -> dict | None:
-    """Fetch and decrypt the user's saved LLM API key from DB, fallback to settings."""
-    cred = db.query(Credential).filter(
-        Credential.user_id == user_id,
-        Credential.name == "llm_key",
-        Credential.type == "api_key",
-    ).first()
-    if cred:
-        try:
-            return json.loads(_fernet.decrypt(cred.encrypted_data.encode()).decode())
-        except Exception:
-            pass
+def _is_quota_or_key_error(exc: Exception) -> bool:
+    """Check if exception indicates quota exceeded, rate limit, or invalid key."""
+    err_msg = str(exc).lower()
+    status_code = getattr(exc, "status_code", None) or getattr(exc, "code", None)
+    if status_code in (401, 402, 429):
+        return True
+    keywords = [
+        "rate limit", "rate_limit", "quota", "credit", "exceeded", "balance",
+        "429", "402", "insufficient", "too many requests", "payment required",
+        "key invalid", "invalid api key", "unauthorized"
+    ]
+    return any(k in err_msg for k in keywords)
 
-    # Cloud fallback to env vars if configured
-    if settings.OPENROUTER_API_KEY:
-        return {
-            "api_key": settings.OPENROUTER_API_KEY,
-            "base_url": settings.OPENROUTER_API_URL or "https://openrouter.ai/api/v1",
-            "model": settings.OPENROUTER_MODEL or "meta-llama/llama-3.3-70b-instruct",
-            "provider": "openrouter",
-        }
-    return None
 
 class PlanRequest(BaseModel):
     message: str
@@ -68,10 +59,32 @@ class PlanResponse(BaseModel):
     is_build: bool = False
 
 @router.get("/llm-key-status", dependencies=[Depends(bearer_scheme)])
-def llm_key_status(db: Session = Depends(get_db), user: User = Depends(get_current_user)):
-    """Check if LLM API key is configured (either in DB or environment)."""
-    cred_data = _get_llm_credential(db, user.id)
-    return {"configured": cred_data is not None and bool(cred_data.get("api_key"))}
+def llm_key_status():
+    """Check if LLM API key is configured in environment / GitHub variables."""
+    env_keys = settings.get_openrouter_keys()
+    configured = len(env_keys) > 0
+    provider = "openrouter"
+    model = (
+        settings.OPENROUTER_MODEL
+        or settings.OPENROUTER_MODEL1
+        or settings.OPENROUTER_MODEL2
+        or settings.OPENROUTER_MODEL3
+        or ""
+    )
+    masked_key = ""
+
+    if env_keys:
+        primary = env_keys[0]
+        masked_key = (primary[:6] + "..." + primary[-4:]) if len(primary) > 10 else "••••••••"
+        if len(env_keys) > 1:
+            masked_key += f" (+{len(env_keys)-1} backup keys)"
+
+    return {
+        "configured": configured,
+        "provider": provider,
+        "model": model,
+        "masked_key": masked_key,
+    }
 
 @router.post("/plan", response_model=PlanResponse, dependencies=[Depends(bearer_scheme)])
 async def plan_workflow(req: PlanRequest, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
@@ -80,37 +93,37 @@ async def plan_workflow(req: PlanRequest, db: Session = Depends(get_db), user: U
     if not workflow:
         raise HTTPException(status_code=404, detail="Workflow not found")
 
-    cred_data = _get_llm_credential(db, user.id)
-    if not cred_data or not cred_data.get("api_key"):
+    # Resolve LLM keys from environment / GitHub variables
+    candidate_keys: list[str] = settings.get_openrouter_keys()
+
+    if not candidate_keys:
         raise HTTPException(status_code=428, detail="no_llm_key")
 
-    provider = cred_data.get("provider", "openrouter")
+    provider = "openrouter"
     defaults = _PROVIDER_DEFAULTS.get(provider, _PROVIDER_DEFAULTS["openrouter"])
-    api_key = cred_data["api_key"]
-    base_url = cred_data.get("base_url") or defaults["base_url"]
+    base_url = defaults["base_url"]
 
-    # Candidate models in priority order:
-    # 1. Custom model in user credential (if set)
-    # 2. settings.OPENROUTER_MODEL
-    # 3. settings.OPENROUTER_MODEL2
-    # 4. settings.OPENROUTER_MODEL3
+    # Candidate models in priority order from GitHub variables / environment:
+    # 1. settings.OPENROUTER_MODEL  (Primary model from GitHub variable, e.g. Llama 70B)
+    # 2. settings.OPENROUTER_MODEL1 (Fallback model 1 from GitHub variable)
+    # 3. settings.OPENROUTER_MODEL2 (Fallback model 2 from GitHub variable)
+    # 4. settings.OPENROUTER_MODEL3 (Fallback model 3 from GitHub variable)
     candidate_models: list[str] = []
-    if cred_data.get("model") and cred_data["model"].strip():
-        candidate_models.append(cred_data["model"].strip())
-
     for env_m in [
         getattr(settings, "OPENROUTER_MODEL", None),
         getattr(settings, "OPENROUTER_MODEL1", None),
         getattr(settings, "OPENROUTER_MODEL2", None),
         getattr(settings, "OPENROUTER_MODEL3", None),
     ]:
-        if env_m and env_m.strip() and env_m.strip() not in candidate_models:
-            candidate_models.append(env_m.strip())
+        if env_m and str(env_m).strip() and str(env_m).strip() not in candidate_models:
+            candidate_models.append(str(env_m).strip())
 
     if not candidate_models:
-        candidate_models = [defaults["model"]]
+        fallback = defaults.get("model") or ""
+        if fallback:
+            candidate_models = [fallback]
 
-    primary_model = candidate_models[0]
+    primary_model = candidate_models[0] if candidate_models else ""
 
     raw_history = await get_session_messages(req.session_id, db=db)
     history = [
@@ -122,7 +135,7 @@ async def plan_workflow(req: PlanRequest, db: Session = Depends(get_db), user: U
     logger.info(f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
     logger.info(f"[AI PLANNER] Request from: '{user.email or getattr(user, 'username', 'user')}'")
     logger.info(f"[AI PLANNER] Message: '{req.message[:120]}'")
-    logger.info(f"[AI PLANNER] Session: {req.session_id} | Models to try: {candidate_models}")
+    logger.info(f"[AI PLANNER] Session: {req.session_id} | Provider: '{provider}' | Available keys: {len(candidate_keys)} | Models to try: {candidate_models}")
     logger.info(f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
 
     try:
@@ -132,8 +145,11 @@ async def plan_workflow(req: PlanRequest, db: Session = Depends(get_db), user: U
         history_with_user = list(history) + [HumanMessage(content=req.message)]
         await save_session_messages(req.session_id, history_with_user, db=db)
 
-        # Step 1: Route through lightweight model
-        chat_reply, should_build = await route_message(req.message, history, api_key, base_url, primary_model)
+        # Step 1: Route through chat model
+        chat_model = getattr(settings, "OPENROUTER_CHAT_MODEL", None) or getattr(settings, "OPENROUTER_MODEL2", None) or primary_model
+        logger.info(f"[AI PLANNER] STEP 1 → Calling chat_router.route_message()...")
+        chat_reply, should_build = await route_message(req.message, history, candidate_keys, base_url, chat_model)
+        logger.info(f"[AI PLANNER] STEP 1 RESULT → should_build={should_build}, reply_preview='{chat_reply[:80] if chat_reply else 'N/A'}'")
 
         if not should_build:
             clean_history = list(history) + [
@@ -143,47 +159,135 @@ async def plan_workflow(req: PlanRequest, db: Session = Depends(get_db), user: U
             await save_session_messages(req.session_id, clean_history, db=db)
             return PlanResponse(reply=chat_reply, session_id=req.session_id, is_build=False)
 
-        # Step 2: Build request — try candidate models in sequence
+        # Step 2: Build request — try candidate models in sequence with key rotation
+        # First use all different API keys for Model 1, then fallback to Model 2, etc.
         from ai.planner.guardrails import verify_graph
         from ai.planner.session import emit_canvas_patch
 
         workflow_built = False
         final_reply = ""
+        invalid_keys: set[str] = set()
 
-        for idx, current_model in enumerate(candidate_models):
-            logger.info(f"🤖 [AI PLANNER] Attempt {idx + 1}/{len(candidate_models)} with Model: '{current_model}'")
-            try:
-                agent = get_planner_agent(api_key=api_key, base_url=base_url, model_name=current_model)
-                reply, final_messages = await run_agent_loop(
-                    agent=agent,
-                    user_prompt=req.message,
-                    history=[],  # checkpointer manages state via thread_id; history arg unused
-                    session_id=req.session_id,
-                    db=db,
-                    model_name=current_model,
+        # Map each key to its environment variable name (e.g. OPENROUTER_API_KEY, OPENROUTER_API_KEY2)
+        key_var_map = settings.get_openrouter_key_map()
+
+        for model_idx, current_model in enumerate(candidate_models):
+            logger.info(f"🤖 [AI PLANNER] Attempt {model_idx + 1}/{len(candidate_models)} with Model: '{current_model}'")
+            model_success = False
+
+            # Active keys for this model: all candidate keys except those marked permanently invalid (401)
+            keys_to_try = [k for k in candidate_keys if k not in invalid_keys]
+            if not keys_to_try:
+                logger.warning("[AI PLANNER] No valid API keys available to try.")
+                break
+
+            for key_idx, active_key in enumerate(keys_to_try):
+                active_var_name = key_var_map.get(active_key, f"OPENROUTER_API_KEY_{key_idx + 1}")
+                logger.info(
+                    f"🔑 [AI PLANNER] Model: '{current_model}' | Key Variable: '{active_var_name}' ({key_idx + 1}/{len(keys_to_try)})"
                 )
-                guardrail_err = verify_graph(db, req.session_id)
-                if guardrail_err is None:
-                    logger.info(f"✓ [AI PLANNER] Workflow successfully created with Model: '{current_model}'")
-                    workflow_built = True
-                    final_reply = reply
-                    break
-                else:
-                    logger.warning(f"⚠ [AI PLANNER] Model '{current_model}' guardrail check failed: {guardrail_err}")
-                    if idx < len(candidate_models) - 1:
+                try:
+                    agent = get_planner_agent(
+                        api_key=active_key,
+                        base_url=base_url,
+                        model_name=current_model,
+                        key_var_name=active_var_name,
+                    )
+                    reply, final_messages = await run_agent_loop(
+                        agent=agent,
+                        user_prompt=req.message,
+                        history=[],  # checkpointer manages state via thread_id; history arg unused
+                        session_id=req.session_id,
+                        db=db,
+                        model_name=current_model,
+                    )
+                    guardrail_err = verify_graph(db, req.session_id, user_prompt=req.message)
+                    graph = get_session_graph(db, req.session_id)
+                    nodes = graph.get("nodes", [])
+
+                    if guardrail_err is None:
+                        logger.info(f"✓ [AI PLANNER] Workflow successfully created with Model: '{current_model}' using Key Variable: '{active_var_name}'")
+                        workflow_built = True
+                        final_reply = reply
+                        model_success = True
+                        break
+                    elif len(nodes) > 0:
+                        # Model successfully placed nodes on canvas; preserve work instead of failing or cascading
+                        logger.warning(f"⚠ [AI PLANNER] Model: '{current_model}' placed {len(nodes)} nodes with guardrail notice: {guardrail_err}")
+                        workflow_built = True
+                        node_labels = [n.get("data", {}).get("label", n.get("id")) for n in nodes]
+                        guardrail_note = f"\n\nNote: {guardrail_err}" if guardrail_err else ""
+                        if reply and reply.strip() and reply != "Workflow built on canvas. Check the nodes above.":
+                            final_reply = f"{reply}{guardrail_note}"
+                        else:
+                            final_reply = f"Workflow created on canvas with {len(nodes)} nodes: {', '.join(node_labels)}.{guardrail_note}"
+                        model_success = True
+                        break
+                    else:
+                        logger.warning(f"⚠ [AI PLANNER] Model: '{current_model}' guardrail check failed and no nodes built: {guardrail_err}")
+                        if model_idx < len(candidate_models) - 1:
+                            await emit_canvas_patch(req.session_id, "agent_step", {
+                                "text": "Refining workflow with alternative model..."
+                            })
+                        break
+                except Exception as model_exc:
+                    logger.error(f"❌ [AI PLANNER] Model: '{current_model}' error with Key Variable '{active_var_name}': {type(model_exc).__name__}: {model_exc}")
+                    # If model already created nodes on canvas, preserve them instead of crashing
+                    graph = get_session_graph(db, req.session_id)
+                    nodes = graph.get("nodes", [])
+                    if len(nodes) > 0:
+                        logger.info(f"[AI PLANNER] Preserving {len(nodes)} nodes already created on canvas.")
+                        workflow_built = True
+                        node_labels = [n.get("data", {}).get("label", n.get("id")) for n in nodes]
+                        final_reply = f"Workflow created with {len(nodes)} nodes on canvas: {', '.join(node_labels)}. Saved for your review."
+                        model_success = True
+                        break
+
+                    err_msg = str(model_exc).lower()
+                    status_code = getattr(model_exc, "status_code", None) or getattr(model_exc, "code", None)
+                    if status_code == 401 or "invalid api key" in err_msg or "unauthorized" in err_msg:
+                        invalid_keys.add(active_key)
+                        logger.warning(f"🚫 [AI PLANNER] Key Variable '{active_var_name}' marked invalid (401).")
+
+                    # Try next key for current model
+                    if key_idx < len(keys_to_try) - 1:
+                        next_k = keys_to_try[key_idx + 1]
+                        next_var_name = key_var_map.get(next_k, f"OPENROUTER_API_KEY_{key_idx + 2}")
+                        logger.warning(
+                            f"🔄 [AI PLANNER] Key Variable '{active_var_name}' failed for Model: '{current_model}'. Rotating to next key '{next_var_name}' for Model: '{current_model}'..."
+                        )
                         await emit_canvas_patch(req.session_id, "agent_step", {
-                            "text": "Refining workflow with alternative model..."
+                            "text": f"Switching to backup API key ({next_var_name}) for {current_model}..."
                         })
-            except Exception as model_exc:
-                logger.error(f"❌ [AI PLANNER] Model '{current_model}' error: {type(model_exc).__name__}: {model_exc}")
-                if idx < len(candidate_models) - 1:
-                    await emit_canvas_patch(req.session_id, "agent_step", {
-                        "text": "Retrying with alternative model..."
-                    })
+                        continue
+                    else:
+                        logger.warning(
+                            f"⚠ [AI PLANNER] All {len(keys_to_try)} keys failed for Model: '{current_model}'."
+                        )
+                        if model_idx < len(candidate_models) - 1:
+                            next_model = candidate_models[model_idx + 1]
+                            logger.info(f"🔄 [AI PLANNER] Escalating to next model: '{next_model}'")
+                            await emit_canvas_patch(req.session_id, "agent_step", {
+                                "text": f"Switching to alternative model: {next_model}..."
+                            })
+                        break
+
+            if model_success:
+                break
 
         if not workflow_built:
-            logger.warning(f"[AI PLANNER] All candidate models {candidate_models} failed for session {req.session_id}.")
-            final_reply = "I couldn't generate the workflow right now. Please try again or rephrase your request."
+            graph = get_session_graph(db, req.session_id)
+            nodes = graph.get("nodes", [])
+            if nodes:
+                node_labels = [n.get("data", {}).get("label", n.get("id")) for n in nodes]
+                final_reply = (
+                    f"Workflow nodes were created on canvas ({', '.join(node_labels)}). "
+                    "You can test or adjust them directly."
+                )
+                workflow_built = True
+            else:
+                logger.warning(f"[AI PLANNER] All candidate models {candidate_models} failed for session {req.session_id}.")
+                final_reply = "I couldn't generate the workflow right now. Please try again or rephrase your request."
 
         clean_history = list(history) + [
             HumanMessage(content=req.message),
@@ -194,7 +298,19 @@ async def plan_workflow(req: PlanRequest, db: Session = Depends(get_db), user: U
 
     except Exception as e:
         logger.error(f"[AI PLANNER] ❌ EXCEPTION: {type(e).__name__}: {e}")
-        fallback_reply = "I couldn't generate the workflow right now. Please try again or rephrase your request."
+        try:
+            graph = get_session_graph(db, req.session_id) if db else {"nodes": []}
+            nodes = graph.get("nodes", [])
+        except Exception:
+            nodes = []
+        if nodes:
+            node_labels = [n.get("data", {}).get("label", n.get("id")) for n in nodes]
+            fallback_reply = (
+                f"Workflow created with {len(nodes)} nodes ({', '.join(node_labels)}). "
+                "Saved on canvas for your review."
+            )
+        else:
+            fallback_reply = "I couldn't generate the workflow right now. Please try again or rephrase your request."
         try:
             from langchain_core.messages import HumanMessage, AIMessage
             clean_history = list(history) + [

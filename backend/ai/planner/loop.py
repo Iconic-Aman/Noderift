@@ -10,9 +10,21 @@ from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
 
 from ai.planner.guardrails import verify_graph
 from ai.planner.session import emit_canvas_patch, get_session_graph
+from ai.planner import tools
 
 logger = logging.getLogger("uvicorn")
 MAX_RETRIES = 3
+_TOOL_OUTPUT_MAX_CHARS = 4000  # cap large tool responses (e.g. huge API dumps)
+
+
+def _trim_tool_outputs(messages: list) -> list:
+    """Truncate oversized ToolMessage content to avoid context limit blowups."""
+    result = []
+    for m in messages:
+        if isinstance(m, ToolMessage) and isinstance(m.content, str) and len(m.content) > _TOOL_OUTPUT_MAX_CHARS:
+            m = m.copy(update={"content": m.content[:_TOOL_OUTPUT_MAX_CHARS] + "\n...[truncated]"})
+        result.append(m)
+    return result
 
 
 def _extract_reply(messages: list) -> str:
@@ -52,10 +64,34 @@ def _log_agent_tool_calls(messages: list):
     """Log which tools the agent called in the last run."""
     tool_calls = []
     for m in messages:
-        if isinstance(m, AIMessage) and getattr(m, "tool_calls", None):
-            for tc in m.tool_calls:
-                args_preview = str(tc.get("args", {}))[:80]
-                tool_calls.append(f"  → {tc['name']}({args_preview})")
+        if isinstance(m, AIMessage):
+            # Log OpenRouter provider from response metadata (tells us who actually served the request)
+            meta = getattr(m, "response_metadata", {}) or {}
+            provider = (
+                meta.get("x-openrouter-provider")
+                or meta.get("openrouter-provider")
+                or (meta.get("headers") or {}).get("x-openrouter-provider")
+                or meta.get("model")  # fallback: at least log the routed model
+                or "unknown"
+            )
+            if meta:
+                logger.info(f"[OpenRouter] 🌐 Provider for this response: '{provider}' | raw_meta_keys={list(meta.keys())}")
+
+            if getattr(m, "tool_calls", None):
+                for tc in m.tool_calls:
+                    name = tc["name"]
+                    args = tc.get("args", {})
+                    if name == "set_node_code":
+                        # Full untruncated code for debugging
+                        logger.info(
+                            f"[Agent] 🔧 set_node_code FULL ARGS:\n"
+                            f"  node_id = {args.get('node_id')}\n"
+                            f"  code =\n{args.get('code', '(empty)')}"
+                        )
+                        tool_calls.append(f"  → {name}(node_id={args.get('node_id')}, code=<see above>)")
+                    else:
+                        args_preview = str(args)[:80]
+                        tool_calls.append(f"  → {name}({args_preview})")
     if tool_calls:
         logger.info(f"[Agent] 🔧 Tool calls made:\n" + "\n".join(tool_calls))
     else:
@@ -87,7 +123,14 @@ async def run_agent_loop(
     }
 
     from core.config import settings
-    active_model = model_name or settings.OPENROUTER_MODEL or "default"
+    active_model = (
+        model_name
+        or settings.OPENROUTER_MODEL
+        or settings.OPENROUTER_MODEL1
+        or settings.OPENROUTER_MODEL2
+        or settings.OPENROUTER_MODEL3
+        or ""
+    )
     logger.info(f"━━━ [Loop] thread_id={session_id} | model={active_model} ━━━")
     logger.info(f"[Loop] 💬 User prompt: '{user_prompt[:120]}'")
 
@@ -138,13 +181,20 @@ async def run_agent_loop(
                         except Exception as tool_err:
                             logger.error(f"[Harness] Error executing recovered tool {func_name}: {tool_err}")
             else:
+                current_graph = get_session_graph(db, session_id)
+                if current_graph.get("nodes"):
+                    logger.warning(
+                        f"[Harness] Agent exception on attempt {attempt}, but canvas already has "
+                        f"{len(current_graph['nodes'])} nodes. Preserving canvas work."
+                    )
+                    break
                 raise e
 
         # Log canvas state AFTER agent ran
         _log_canvas_state(db, session_id, label="AFTER:")
 
         # Run guardrails
-        error = verify_graph(db, session_id)
+        error = verify_graph(db, session_id, user_prompt=user_prompt)
         if error is None:
             logger.info("[Harness] ✅ Guardrails passed.")
             await emit_canvas_patch(session_id, "agent_step", {
@@ -174,5 +224,12 @@ async def run_agent_loop(
         logger.info(f"[Harness] 💉 Injecting correction into thread: '{error[:80]}'")
         input_messages = {"messages": [HumanMessage(content=correction_text)]}
 
-    return _extract_reply(final_messages), final_messages
+    reply = _extract_reply(final_messages)
+    current_graph = get_session_graph(db, session_id)
+    nodes = current_graph.get("nodes", [])
+    if nodes and (not reply or reply == "Workflow built on canvas. Check the nodes above."):
+        node_labels = [n.get("data", {}).get("label", n.get("id")) for n in nodes]
+        reply = f"Workflow created with {len(nodes)} nodes on canvas: {', '.join(node_labels)}."
+
+    return reply, final_messages
 

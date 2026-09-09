@@ -44,17 +44,18 @@ async def websocket_execution_logs(websocket: WebSocket, execution_id: str):
                     "node_type": log.node_type,
                     "timestamp": log.started_at.isoformat() if log.started_at else "",
                 }))
-                await websocket.send_text(json.dumps({
-                    "type": "node_success" if log.status == "success" else "node_failed",
-                    "execution_id": execution_id,
-                    "node_id": log.node_id,
-                    "node_name": log.node_id,
-                    "node_type": log.node_type,
-                    "duration_ms": log.duration_ms,
-                    "output": log.output,
-                    "error": log.error,
-                    "timestamp": log.finished_at.isoformat() if log.finished_at else "",
-                }))
+                if log.status in ("success", "failed"):
+                    await websocket.send_text(json.dumps({
+                        "type": "node_success" if log.status == "success" else "node_failed",
+                        "execution_id": execution_id,
+                        "node_id": log.node_id,
+                        "node_name": log.node_id,
+                        "node_type": log.node_type,
+                        "duration_ms": log.duration_ms,
+                        "output": log.output,
+                        "error": log.error,
+                        "timestamp": log.finished_at.isoformat() if log.finished_at else "",
+                    }))
             if execution.status in ("success", "failed", "needs_auth"):
                 await websocket.send_text(json.dumps({
                     "type": "workflow_success" if execution.status == "success" else "needs_auth" if execution.status == "needs_auth" else "workflow_failed",

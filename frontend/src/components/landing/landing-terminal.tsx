@@ -5,45 +5,77 @@ interface Step {
   num: number;
   title: string;
   desc: string;
-  command: string;
-  output: string;
+  command: {
+    linux: string;
+    windows: string;
+  };
+  output: {
+    linux: string;
+    windows: string;
+  };
 }
 
-const COMPOSE_URL = "https://raw.githubusercontent.com/Iconic-Aman/Noderift/main/docker-compose.yml";
+const COMPOSE_URL = "https://raw.githubusercontent.com/Iconic-Aman/Noderift/feature/open-source/docker-compose.yml";
 
 const steps: Step[] = [
   {
     num: 1,
-    title: "Start Docker Desktop",
-    desc: "Make sure Docker Desktop is active on your machine.",
-    command: "docker --version",
-    output: "Docker version 24.0.7, build afdd53b\n[SUCCESS] Docker environment active & running!",
+    title: "Download Compose File",
+    desc: "Fetch the official docker-compose.yml from GitHub.",
+    command: {
+      linux: `curl -O ${COMPOSE_URL}`,
+      windows: `curl.exe -O ${COMPOSE_URL}`,
+    },
+    output: {
+      linux: "  % Total    % Received\n100   3428  100   3428\n[SUCCESS] docker-compose.yml downloaded!",
+      windows: "  % Total    % Received\n100   3428  100   3428\n[SUCCESS] docker-compose.yml downloaded!",
+    },
   },
   {
     num: 2,
-    title: "Download Compose File",
-    desc: "Fetch the official docker-compose.yml from GitHub.",
-    command: `curl -O ${COMPOSE_URL}`,
-    output: "  % Total    % Received\n100   3428  100   3428\n[SUCCESS] docker-compose.yml downloaded!",
+    title: "Start All Services",
+    desc: "Pulls images and starts Noderift, Postgres & Redis.",
+    command: {
+      linux: "docker compose up -d",
+      windows: "docker compose up -d",
+    },
+    output: {
+      linux: "✔ Container noderift-postgres-1  Started\n✔ Container noderift-redis-1     Started\n✔ Container noderift-noderift-1  Started\n[SUCCESS] Noderift running on port 3000!",
+      windows: "✔ Container noderift-postgres-1  Started\n✔ Container noderift-redis-1     Started\n✔ Container noderift-noderift-1  Started\n[SUCCESS] Noderift running on port 3000!",
+    },
   },
   {
     num: 3,
-    title: "Start All Services",
-    desc: "Pulls images and starts Noderift, Postgres & Redis.",
-    command: "docker compose up -d",
-    output: "✔ Container noderift_postgres_1  Started\n✔ Container noderift_redis_1     Started\n✔ Container noderift_noderift_1  Started\n[SUCCESS] Noderift running on port 3000!",
+    title: "Launch Web Canvas",
+    desc: "Open local application editor in browser.",
+    command: {
+      linux: "open http://localhost:3000",
+      windows: "start http://localhost:3000",
+    },
+    output: {
+      linux: "[INFO] Access local visual workflow editor at:\n----> http://localhost:3000",
+      windows: "[INFO] Access local visual workflow editor at:\n----> http://localhost:3000",
+    },
   },
   {
     num: 4,
-    title: "Launch Web Canvas",
-    desc: "Open local application editor in browser.",
-    command: "start http://localhost:3000",
-    output: "[INFO] Access local visual workflow editor at:\n----> http://localhost:3000",
+    title: "Configure LLM in UI",
+    desc: "No .env editing needed. Pick provider & model in UI.",
+    command: {
+      linux: "# Configure OpenRouter or Groq key directly in the web UI",
+      windows: "# Configure OpenRouter or Groq key directly in the web UI",
+    },
+    output: {
+      linux: "[INFO] Prompt appears in editor when switching to AI Mode.\n[INFO] Enter OpenRouter/Groq key & select any model.\n[SUCCESS] Credentials encrypted and saved in Postgres.",
+      windows: "[INFO] Prompt appears in editor when switching to AI Mode.\n[INFO] Enter OpenRouter/Groq key & select any model.\n[SUCCESS] Credentials encrypted and saved in Postgres.",
+    },
   },
 ];
 
+
 export function LandingTerminal() {
   const [activeStep, setActiveStep] = useState(0);
+  const [os, setOs] = useState<"linux" | "windows">("linux");
   const [copied, setCopied] = useState(false);
 
   const handleCopy = (text: string) => {
@@ -106,10 +138,28 @@ export function LandingTerminal() {
                 <div className="w-2.5 h-2.5 rounded-full bg-yellow-500/80" />
                 <div className="w-2.5 h-2.5 rounded-full bg-green-500/80" />
               </div>
-              <span className="text-[10px] text-slate-600 font-semibold tracking-wider font-mono">noderift-installer.sh</span>
+              <div className="flex items-center gap-1 bg-slate-950/70 p-0.5 rounded-lg border border-slate-800 text-[10px] font-mono">
+                <button
+                  onClick={() => setOs("linux")}
+                  className={`px-2 py-0.5 rounded transition-all cursor-pointer ${
+                    os === "linux" ? "bg-blue-600 text-white font-bold" : "text-slate-400 hover:text-slate-200"
+                  }`}
+                >
+                  macOS / Linux
+                </button>
+                <button
+                  onClick={() => setOs("windows")}
+                  className={`px-2 py-0.5 rounded transition-all cursor-pointer ${
+                    os === "windows" ? "bg-blue-600 text-white font-bold" : "text-slate-400 hover:text-slate-200"
+                  }`}
+                >
+                  Windows (PowerShell)
+                </button>
+              </div>
               <button
-                onClick={() => handleCopy(steps[activeStep].command)}
+                onClick={() => handleCopy(steps[activeStep].command[os])}
                 className="text-slate-500 hover:text-white hover:bg-slate-800 p-1.5 rounded-lg border border-slate-800/80 transition-all cursor-pointer"
+                title="Copy command"
               >
                 {copied ? <Check size={12} className="text-emerald-500" /> : <Copy size={12} />}
               </button>
@@ -118,9 +168,9 @@ export function LandingTerminal() {
             {/* Code / Shell Output Terminal */}
             <div className="p-6 font-mono text-xs leading-relaxed min-h-[180px] bg-slate-950/80 flex flex-col justify-between">
               <div className="text-slate-300">
-                <span className="text-blue-400 select-none">$ </span>
-                <span className="text-white font-semibold">{steps[activeStep].command}</span>
-                <div className="text-slate-500 whitespace-pre-line mt-3 font-medium">{steps[activeStep].output}</div>
+                <span className="text-blue-400 select-none">{os === "windows" ? "PS> " : "$ "}</span>
+                <span className="text-white font-semibold">{steps[activeStep].command[os]}</span>
+                <div className="text-slate-500 whitespace-pre-line mt-3 font-medium">{steps[activeStep].output[os]}</div>
               </div>
               <div className="text-slate-700 mt-6 flex items-center justify-between border-t border-slate-900 pt-3 select-none">
                 <span>Step {steps[activeStep].num} of 4</span>

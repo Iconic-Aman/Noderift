@@ -30,5 +30,5 @@ from nodes.ai_agent_node import AiAgentNode
 from nodes.resend_node import ResendNode
 from nodes.database_node import DatabaseNode
 from nodes.logic_nodes import FilterNode, MergeNode, LoopNode, SetVariableNode
-from nodes.gmail_node import GmailNode
+from nodes.gmail_node import GmailNode, GmailSendNode
 from nodes.slack_node import SlackNode

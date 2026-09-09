@@ -25,10 +25,21 @@ export function useWebSocket(executionId: string | null) {
       return;
     }
 
-    const apiUrl = import.meta.env.VITE_API_URL;
-    const wsProto = apiUrl.startsWith("https") ? "wss" : "ws";
-    const urlObj = new URL(apiUrl);
-    const wsUrl = `${wsProto}://${urlObj.host}/ws/executions/${executionId}/logs`;
+    const apiUrl = import.meta.env.VITE_API_URL || "";
+    let wsUrl: string;
+    try {
+      if (apiUrl && (apiUrl.startsWith("http://") || apiUrl.startsWith("https://"))) {
+        const urlObj = new URL(apiUrl);
+        const wsProto = urlObj.protocol === "https:" ? "wss:" : "ws:";
+        wsUrl = `${wsProto}//${urlObj.host}/ws/executions/${executionId}/logs`;
+      } else {
+        const wsProto = window.location.protocol === "https:" ? "wss:" : "ws:";
+        wsUrl = `${wsProto}//${window.location.host}/ws/executions/${executionId}/logs`;
+      }
+    } catch {
+      const wsProto = window.location.protocol === "https:" ? "wss:" : "ws:";
+      wsUrl = `${wsProto}//${window.location.host}/ws/executions/${executionId}/logs`;
+    }
 
     const ws = new WebSocket(wsUrl);
 

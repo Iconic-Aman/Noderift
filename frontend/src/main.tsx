@@ -11,6 +11,7 @@ import History from './pages/history'
 import { ReportVulnerability } from './pages/report-vulnerability'
 import { Privacy } from './pages/privacy'
 import { Terms } from './pages/terms'
+import { Toaster } from 'react-hot-toast'
 import './index.css'
 
 const PrivateRoute = ({ children }: { children: React.ReactNode }) => {
@@ -37,6 +38,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
         <Route path="/oauth/success" element={<OAuthSuccess />} />
         <Route path="/oauth-success" element={<OAuthSuccess />} />
       </Routes>
+      <Toaster position="bottom-right" toastOptions={{ style: { background: '#0f172a', color: '#f8fafc', border: '1px solid #1e293b' } }} />
     </BrowserRouter>
   </React.StrictMode>,
 )

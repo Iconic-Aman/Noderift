@@ -57,6 +57,19 @@ async def trigger_execution(
             log.info(f"[EXEC] _async_run_execution COMPLETED for exec_id={exec_id}")
         except Exception as e:
             log.error(f"[EXECUTION ERROR] Execution {exec_id} failed: {e}")
+            from core.database import SessionLocal
+            fail_db = SessionLocal()
+            try:
+                fail_exec = fail_db.query(Execution).filter(Execution.id == exec_id).first()
+                if fail_exec and fail_exec.status in ("pending", "running"):
+                    fail_exec.status = "failed"
+                    fail_exec.error = str(e)
+                    fail_exec.finished_at = datetime.now(timezone.utc)
+                    fail_db.commit()
+            except Exception:
+                pass
+            finally:
+                fail_db.close()
 
     asyncio.create_task(_async_run_execution(execution.id, target_node_id))
     return execution

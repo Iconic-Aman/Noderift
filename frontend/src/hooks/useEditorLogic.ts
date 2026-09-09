@@ -7,6 +7,7 @@ import { useWorkflowStore } from "@/store/workflowStore";
 import { useExecution } from "@/hooks/useExecution";
 import { useWebSocket } from "@/hooks/useWebSocket";
 import { getNodeTemplate } from "@/lib/node-templates";
+import toast from "react-hot-toast";
 
 export function useEditorLogic() {
   const { id } = useParams();
@@ -83,21 +84,19 @@ export function useEditorLogic() {
   useEffect(() => {
     if (logs.length > 0) {
       const hasNeedsAuth = logs.some((l) => l.type === "needs_auth");
-      const hasFailed = logs.some(
-        (l) => l.type === "workflow_failed" || l.type === "node_failed" || Boolean(l.error)
-      );
-      const hasSuccess = logs.some(
-        (l) => l.type === "workflow_success" || (isSingleRun && l.type === "node_success")
-      );
+      const hasWorkflowFailed = logs.some((l) => l.type === "workflow_failed");
+      const hasWorkflowSuccess = logs.some((l) => l.type === "workflow_success");
+      const hasNodeFailed = logs.some((l) => l.type === "node_failed");
+      const hasNodeSuccess = isSingleRun && logs.some((l) => l.type === "node_success");
       const hasStarted = logs.some((l) => l.type === "workflow_started" || l.type === "node_started");
 
       if (hasNeedsAuth) setExecutionStatus("needs_auth");
-      else if (hasFailed) setExecutionStatus("failed");
-      else if (hasSuccess) setExecutionStatus("success");
-      else if (!connected && hasStarted) setExecutionStatus(hasFailed ? "failed" : "idle");
+      else if (hasWorkflowSuccess || hasNodeSuccess) setExecutionStatus("success");
+      else if (hasWorkflowFailed || (isSingleRun && hasNodeFailed)) setExecutionStatus("failed");
       else if (hasStarted) setExecutionStatus("running");
+      else setExecutionStatus("idle");
     }
-  }, [logs, connected, isSingleRun]);
+  }, [logs, isSingleRun]);
 
   // Sync individual node execution states from live websocket logs
   useEffect(() => {
@@ -116,9 +115,7 @@ export function useEditorLogic() {
       return;
     }
 
-    const hasFailed = logs.some(
-      (l) => l.type === "workflow_failed" || l.type === "node_failed" || Boolean(l.error)
-    );
+    const workflowFailed = logs.some((l) => l.type === "workflow_failed");
     const latestStatuses: Record<string, "running" | "success" | "failed"> = {};
     const latestOutputs: Record<string, any> = {};
     const latestErrors: Record<string, any> = {};
@@ -130,7 +127,7 @@ export function useEditorLogic() {
       else if (log.type === "needs_auth") { latestStatuses[log.node_id] = "failed"; latestErrors[log.node_id] = "Gmail account not connected"; }
     }
 
-    if (hasFailed || !connected) {
+    if (workflowFailed) {
       for (const nid of Object.keys(latestStatuses)) {
         if (latestStatuses[nid] === "running") {
           latestStatuses[nid] = "failed";
@@ -176,8 +173,18 @@ export function useEditorLogic() {
         setIsActive(wf.is_active);
         if (wf.graph && wf.graph.nodes) {
           const styledNodes = wf.graph.nodes.map((node: any) => {
+            const nodeType: string = node.data?.node_type || '';
             const prefix = node.id.split("-")[0];
-            const template = getNodeTemplate(prefix);
+            // Prefer node_type from data, then id prefix
+            const BACKEND_TYPE_TO_TEMPLATE_ID: Record<string, string> = {
+              http_request: 'http',
+            };
+            const templateId = BACKEND_TYPE_TO_TEMPLATE_ID[nodeType] ?? (nodeType || prefix);
+            const template = getNodeTemplate(templateId) ?? getNodeTemplate(prefix);
+            const cleanData = { ...node.data };
+            if (cleanData.status === "running") {
+              delete cleanData.status;
+            }
             if (template) {
               return {
                 ...node,
@@ -185,18 +192,14 @@ export function useEditorLogic() {
                   icon: template.icon,
                   color: template.color,
                   category: template.category,
-                  ...node.data,
+                  ...cleanData,
                 },
               };
             }
-            return node;
+            return { ...node, data: cleanData };
           });
           setNodes(styledNodes);
           setEdges(wf.graph.edges || []);
-        }
-        const history = await apiFetch(`/executions/${id}/history`);
-        if (history && history.length > 0) {
-          setActiveExecutionId(history[0].id);
         }
       } catch (err) {
         console.error("Failed to load workflow", err);
@@ -209,8 +212,15 @@ export function useEditorLogic() {
 
   const onSave = async () => {
     if (!id) return;
-    const currentNodes = rfInstance ? rfInstance.getNodes() : nodes;
+    const rawNodes = rfInstance ? rfInstance.getNodes() : nodes;
     const currentEdges = rfInstance ? rfInstance.getEdges() : edges;
+    const currentNodes = rawNodes.map((node) => {
+      if (node.data?.status === "running") {
+        const { status, ...restData } = node.data;
+        return { ...node, data: restData as NodeData };
+      }
+      return node;
+    });
     try {
       await apiFetch(`/workflows/${id}`, {
         method: "PATCH",
@@ -228,19 +238,23 @@ export function useEditorLogic() {
       await onSave();
       const res = await apiFetch(`/workflows/${id}/activate`, { method: "PATCH" });
       setIsActive(res.is_active);
-    } catch (err) {
+      toast.success(res.is_active ? "Workflow deployed successfully!" : "Workflow undeployed!");
+    } catch (err: any) {
       console.error("Failed to toggle workflow triggers state", err);
+      toast.error(err?.message || "Failed to toggle deployment status");
     } finally {
       setIsDeploying(false);
     }
   };
 
+  const isStartingRunRef = useRef(false);
+
   const handleRun = async () => {
-    if (!id) return;
-    await onSave();
+    if (!id || executionStatus === "running" || isStartingRunRef.current) return;
+    isStartingRunRef.current = true;
+    setExecutionStatus("running");
     setIsSingleRun(false);
     setLogs([]);
-    setExecutionStatus("running");
     setIsExecutionPanelOpen(true);
     const currentNodes = useWorkflowStore.getState().nodes;
     const clearedNodes = currentNodes.map((n) => {
@@ -252,20 +266,23 @@ export function useEditorLogic() {
     });
     setNodes(clearedNodes);
     try {
+      await onSave();
       const runData = await triggerExecution(id);
       setActiveExecutionId(runData.id);
     } catch (err) {
       console.error("Failed to execute workflow", err);
       setExecutionStatus("idle");
+    } finally {
+      isStartingRunRef.current = false;
     }
   };
 
   const handleRunNode = async (nodeId: string) => {
-    if (!id) return;
-    await onSave();
+    if (!id || executionStatus === "running" || isStartingRunRef.current) return;
+    isStartingRunRef.current = true;
+    setExecutionStatus("running");
     setIsSingleRun(true);
     setLogs([]);
-    setExecutionStatus("running");
     setIsExecutionPanelOpen(true);
     const currentNodes = useWorkflowStore.getState().nodes;
     const clearedNodes = currentNodes.map((n) => {
@@ -277,11 +294,14 @@ export function useEditorLogic() {
     });
     setNodes(clearedNodes);
     try {
+      await onSave();
       const runData = await triggerExecution(id, nodeId);
       setActiveExecutionId(runData.id);
     } catch (err) {
       console.error("Failed to execute node", err);
       setExecutionStatus("idle");
+    } finally {
+      isStartingRunRef.current = false;
     }
   };
 

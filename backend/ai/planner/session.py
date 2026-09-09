@@ -76,9 +76,10 @@ async def patch_graph(db: Session, session_id: str, action: str, payload: dict):
                 # Merge config
                 current_data = n.get("data", {})
                 current_config = current_data.get("config", {})
-                new_config = payload.get("config", {})
-                current_data["config"] = {**current_config, **new_config}
-                n["data"] = current_data
+                new_config = payload.get("config")
+                if new_config is not None:
+                    current_data["config"] = {**current_config, **new_config}
+                    n["data"] = current_data
                 # Merge position if provided
                 if "position" in payload:
                     n["position"] = payload["position"]

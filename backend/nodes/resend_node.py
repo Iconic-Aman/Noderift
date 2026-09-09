@@ -60,11 +60,45 @@ class ResendNode(BaseNode):
         if not html:
             raise ValueError("Missing email body. Fill the HTML Body field in the node config.")
 
-        resend.api_key = api_key
-        result = resend.Emails.send(_resolve({
+        # Check for attachments
+        attachments_to_send = []
+        raw_att = config.get("attachment") or config.get("attachments") or config.get("file") or config.get("file_path")
+        if raw_att:
+            if isinstance(raw_att, list):
+                attachments_to_send.extend(raw_att)
+            elif isinstance(raw_att, str):
+                for item in raw_att.split(","):
+                    if item.strip():
+                        attachments_to_send.append(item.strip())
+
+        if not attachments_to_send:
+            for key in ["excel_file", "file", "file_path", "filename", "csv_file"]:
+                val = inputs.data.get(key)
+                if val and isinstance(val, str) and val.strip():
+                    attachments_to_send.append(val.strip())
+
+        resend_attachments = []
+        if attachments_to_send:
+            from services.gmail_service import resolve_attachment_path
+            for att in attachments_to_send:
+                p = resolve_attachment_path(str(att))
+                if p and p.exists():
+                    with open(p, "rb") as f:
+                        resend_attachments.append({
+                            "filename": p.name,
+                            "content": list(f.read()),
+                        })
+
+        email_payload = _resolve({
             "from": from_email,
             "to": to_email,
             "subject": subject,
             "html": html,
-        }, inputs.data))
-        return NodeOutput(data={"status": "sent", "result": result})
+        }, inputs.data)
+
+        if resend_attachments:
+            email_payload["attachments"] = resend_attachments
+
+        resend.api_key = api_key
+        result = resend.Emails.send(email_payload)
+        return NodeOutput(data={"status": "sent", "result": result, "attachments_sent": [a["filename"] for a in resend_attachments]})
